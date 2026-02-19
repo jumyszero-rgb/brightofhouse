@@ -1,0 +1,15 @@
+# ./docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brightofhouse-web
+    ports:
+      - "3000:3000"
+    restart: always
+    # 今後、サーバー側で.envを読み込む際に以下のコメントアウトを外します
+    # env_file:
+    #   - .env
