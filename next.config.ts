@@ -1,9 +1,20 @@
+// @/next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  // Dockerコンテナデプロイ用に、必要なファイルだけを出力する設定
-  output: "standalone",
+  output: "standalone", // ← これが必須です
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
+        hostname: "pub-*.r2.dev",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

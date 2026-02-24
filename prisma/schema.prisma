@@ -1,0 +1,144 @@
+// @/prisma/schema.prisma
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // ← これを追加！(記事の解決策)
+}
+
+model BeforeAfter {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  beforeUrl   String
+  afterUrl    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// 管理画面2段階認証用コード
+model AdminCode {
+  id        String   @id @default(uuid())
+  code      String   // 6桁の数字
+  expiresAt DateTime // 有効期限
+  createdAt DateTime @default(now())
+}
+
+// 会社概要（1レコードのみ使用）
+model CompanyProfile {
+  id              String   @id @default("main")
+  name            String   @default("北海道ブライトハウス")
+  representative  String?  // 代表者
+  address         String?  // 住所
+  tel             String?  // 電話番号
+  businessContent String?  // 事業内容
+  businessHours   String?  // 営業時間
+  mapCode         String?  // Googleマップの埋め込みコード
+  updatedAt       DateTime @updatedAt
+}
+
+// @/prisma/schema.prisma (末尾に追加)
+
+// @/prisma/schema.prisma
+
+// ヒーローエリア設定
+model HeroSettings {
+  id          String   @id @default("main")
+  title       String   @default("北海道ブライトオブハウス")
+  subtitle    String   @default("ハウスクリーニング / エアコン清掃 / 特殊清掃")
+  
+  // ▼ 追加: 高さ設定 (Tailwindのクラス名を保存)
+  mobileHeight String  @default("h-[50vh]") // スマホ用
+  pcHeight     String  @default("md:h-[65vh]") // PC用
+  
+  btn1Text    String   @default("無料お見積り")
+  btn1Link    String   @default("/contact")
+  btn2Text    String   @default("料金を見る")
+  btn2Link    String   @default("/service")
+  updatedAt   DateTime @updatedAt
+}
+
+// プロモーション動画管理 (変更なし)
+model PromotionVideo {
+  id          String   @id @default(uuid())
+  title       String
+  videoUrl    String
+  deviceType  String
+  createdAt   DateTime @default(now())
+}
+
+// 実績ギャラリー（トップページのスライダー用など）
+model GalleryImage {
+  id        String   @id @default(uuid())
+  imageUrl  String   // R2のURL
+  title     String?  // 画像タイトル（任意）
+  createdAt DateTime @default(now())
+}
+
+// 人気メニュー・料金表
+model ServiceMenu {
+  id          String   @id @default(uuid())
+  title       String   // メニュー名（例：水回りセットプラン）
+  price       String   // 価格表記（例：16,640）
+  unit        String   @default("円〜") // 単位
+  description String?  // 説明文
+  priceNote   String?
+  features    String?  // 特徴リスト（改行区切りで保存）
+  isPopular   Boolean  @default(false) // 人気No.1フラグ
+  order       Int      @default(0)     // 表示順
+  link        String   @default("/service") // 詳しく見るボタンのリンク先
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// @/prisma/schema.prisma (末尾に追加)
+
+// 大分類（例：水回りセットプラン、空室清掃）
+model ServiceCategory {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int      @default(0)
+  items     ServiceItem[]
+  createdAt DateTime @default(now())
+}
+
+// 中分類（例：水回り2点セット、1LDK）※これがアコーディオンの開閉バーになります
+model ServiceItem {
+  id          String   @id @default(uuid())
+  title       String
+  subTitle    String?  // 補足（例：一番人気！）
+  order       Int      @default(0)
+  categoryId  String
+  category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  details     ServiceDetail[]
+    // ▼ 追加: 価格設定
+  regularPrice  String?  // 通常価格（例: 20,000円）
+  discountPrice String?  // 特別価格（例: 16,000円）
+}
+
+// 小分類・詳細
+model ServiceDetail {
+  id          String   @id @default(uuid())
+  label       String?
+  value       String
+  isPrice     Boolean  @default(false) // ※後方互換のため残しますが、スタイル設定で代用可能です
+  isNote      Boolean  @default(false) // 同上
+
+  // ▼ ラベル（左側）のスタイル
+  labelColor  String   @default("default") // default, red, blue
+  labelSize   String   @default("sm")      // xs, sm, base, lg, xl
+  labelAlign  String   @default("left")    // left, center, right
+
+  // ▼ 値（右側）のスタイル
+  valueColor  String   @default("default")
+  valueSize   String   @default("base")
+  valueAlign  String   @default("right")
+
+  order       Int      @default(0)
+  itemId      String
+  item        ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
