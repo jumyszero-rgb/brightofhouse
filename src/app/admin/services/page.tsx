@@ -12,11 +12,7 @@ type Detail = {
   valueColor: string; valueSize: string; valueAlign: string;
   order: number 
 };
-type Item = { 
-  id: string; title: string; subTitle: string; 
-  regularPrice: string; discountPrice: string; // 追加
-  order: number; details: Detail[] 
-};
+type Item = { id: string; title: string; subTitle: string; order: number; details: Detail[] };
 type Category = { id: string; title: string; order: number; items: Item[] };
 
 // スタイル選択部品
@@ -27,21 +23,29 @@ const StyleSelectors = ({ prefix, data, onChange }: { prefix: "label" | "value",
       value={data[`${prefix}Color`] || "default"} 
       onChange={(e) => onChange(`${prefix}Color`, e.target.value)}
     >
-      <option value="default">黒</option><option value="red">赤</option><option value="blue">青</option>
+      <option value="default">黒</option>
+      <option value="red">赤</option>
+      <option value="blue">青</option>
     </select>
     <select 
       className="p-1 border rounded text-black text-xs w-16" 
       value={data[`${prefix}Size`] || (prefix === "label" ? "sm" : "base")} 
       onChange={(e) => onChange(`${prefix}Size`, e.target.value)}
     >
-      <option value="xs">XS</option><option value="sm">S</option><option value="base">M</option><option value="lg">L</option><option value="xl">XL</option>
+      <option value="xs">XS</option>
+      <option value="sm">S</option>
+      <option value="base">M</option>
+      <option value="lg">L</option>
+      <option value="xl">XL</option>
     </select>
     <select 
       className="p-1 border rounded text-black text-xs w-16" 
       value={data[`${prefix}Align`] || (prefix === "label" ? "left" : "right")} 
       onChange={(e) => onChange(`${prefix}Align`, e.target.value)}
     >
-      <option value="left">左</option><option value="center">中</option><option value="right">右</option>
+      <option value="left">左</option>
+      <option value="center">中</option>
+      <option value="right">右</option>
     </select>
   </div>
 );
@@ -51,7 +55,7 @@ export default function AdminServicesPage() {
   const [loading, setLoading] = useState(false);
   
   const [newCatTitle, setNewCatTitle] = useState("");
-  const [newItem, setNewItem] = useState({ categoryId: "", title: "", subTitle: "", regularPrice: "", discountPrice: "" });
+  const [newItem, setNewItem] = useState({ categoryId: "", title: "", subTitle: "" });
   
   const initialDetail = { 
     itemId: "", label: "", value: "", 
@@ -73,7 +77,6 @@ export default function AdminServicesPage() {
     fetchData();
   }, []);
 
-  // --- 共通処理 ---
   const handleMove = async (index: number, direction: "up" | "down", list: any[], type: "category" | "item" | "detail") => {
     if (direction === "up" && index === 0) return;
     if (direction === "down" && index === list.length - 1) return;
@@ -112,17 +115,9 @@ export default function AdminServicesPage() {
     await fetch("/api/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        type: "item", 
-        categoryId, 
-        title: newItem.title, 
-        subTitle: newItem.subTitle,
-        regularPrice: newItem.regularPrice,
-        discountPrice: newItem.discountPrice,
-        order: currentItems.length 
-      }),
+      body: JSON.stringify({ type: "item", categoryId, title: newItem.title, subTitle: newItem.subTitle, order: currentItems.length }),
     });
-    setNewItem({ categoryId: "", title: "", subTitle: "", regularPrice: "", discountPrice: "" });
+    setNewItem({ categoryId: "", title: "", subTitle: "" });
     await fetchData();
     setLoading(false);
   };
@@ -134,8 +129,18 @@ export default function AdminServicesPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        type: "detail", itemId, 
-        ...newDetail,
+        type: "detail", 
+        itemId, 
+        label: newDetail.label, 
+        value: newDetail.value, 
+        isPrice: newDetail.isPrice, 
+        isNote: newDetail.isNote,
+        labelColor: newDetail.labelColor, 
+        labelSize: newDetail.labelSize, 
+        labelAlign: newDetail.labelAlign,
+        valueColor: newDetail.valueColor, 
+        valueSize: newDetail.valueSize, 
+        valueAlign: newDetail.valueAlign,
         order: currentDetails.length
       }),
     });
@@ -184,17 +189,14 @@ export default function AdminServicesPage() {
 
         {loading && <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center"><div className="bg-white p-4 rounded shadow font-bold">処理中...</div></div>}
 
-        {/* 大分類追加 */}
         <div className="bg-white p-4 rounded-lg shadow mb-8 flex gap-2">
           <input type="text" placeholder="新しい大分類" className="flex-1 p-2 border rounded text-black" value={newCatTitle} onChange={(e) => setNewCatTitle(e.target.value)} />
           <button onClick={addCategory} className="bg-blue-600 text-white px-4 py-2 rounded font-bold">大分類追加</button>
         </div>
 
-        {/* データ表示エリア */}
         <div className="space-y-8">
           {categories.map((cat, catIndex) => (
             <div key={cat.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
-              {/* 大分類ヘッダー */}
               <div className="bg-slate-100 p-4 flex justify-between items-center border-b border-slate-200">
                 {editingId === cat.id ? (
                   <div className="flex gap-2 flex-1">
@@ -218,39 +220,21 @@ export default function AdminServicesPage() {
               </div>
 
               <div className="p-4 space-y-6">
-                {/* 中分類追加 */}
-                <div className="flex flex-col gap-2 mb-4 bg-slate-50 p-3 rounded">
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="中分類タイトル (例: 水回りセット)" className="flex-1 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.title : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, title: e.target.value })} />
-                    <input type="text" placeholder="補足 (例: 人気No.1)" className="w-1/3 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.subTitle : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, subTitle: e.target.value })} />
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <input type="text" placeholder="通常価格 (例: 20,000円)" className="w-1/3 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.regularPrice : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, regularPrice: e.target.value })} />
-                    <span className="text-gray-400">→</span>
-                    <input type="text" placeholder="特別価格 (例: 16,000円)" className="w-1/3 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.discountPrice : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, discountPrice: e.target.value })} />
-                    <button onClick={() => addItem(cat.id, cat.items)} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold ml-auto">追加</button>
-                  </div>
+                <div className="flex gap-2 mb-4 bg-slate-50 p-3 rounded">
+                  <input type="text" placeholder="中分類タイトル" className="flex-1 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.title : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, title: e.target.value })} />
+                  <input type="text" placeholder="補足" className="w-1/3 p-2 border rounded text-black text-sm" value={newItem.categoryId === cat.id ? newItem.subTitle : ""} onChange={(e) => setNewItem({ ...newItem, categoryId: cat.id, subTitle: e.target.value })} />
+                  <button onClick={() => addItem(cat.id, cat.items)} className="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">追加</button>
                 </div>
 
-                {/* 中分類リスト */}
                 {cat.items.map((item, itemIndex) => (
                   <div key={item.id} className="border border-slate-200 rounded-lg p-4">
                     <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
                       {editingId === item.id ? (
-                        <div className="flex flex-col gap-2 flex-1">
-                          <div className="flex gap-2">
-                            <input className="flex-1 p-1 border rounded text-black text-sm" value={editData.title} onChange={(e) => setEditData({...editData, title: e.target.value})} placeholder="タイトル" />
-                            <input className="w-1/3 p-1 border rounded text-black text-sm" value={editData.subTitle || ""} onChange={(e) => setEditData({...editData, subTitle: e.target.value})} placeholder="補足" />
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <input className="w-1/3 p-1 border rounded text-black text-sm" value={editData.regularPrice || ""} onChange={(e) => setEditData({...editData, regularPrice: e.target.value})} placeholder="通常価格" />
-                            <span>→</span>
-                            <input className="w-1/3 p-1 border rounded text-black text-sm" value={editData.discountPrice || ""} onChange={(e) => setEditData({...editData, discountPrice: e.target.value})} placeholder="特別価格" />
-                            <div className="ml-auto flex gap-2">
-                              <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-xs">保存</button>
-                              <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-2 py-1 rounded text-xs">中止</button>
-                            </div>
-                          </div>
+                        <div className="flex gap-2 flex-1 items-center">
+                          <input className="flex-1 p-1 border rounded text-black text-sm" value={editData.title} onChange={(e) => setEditData({...editData, title: e.target.value})} />
+                          <input className="w-1/3 p-1 border rounded text-black text-sm" value={editData.subTitle || ""} onChange={(e) => setEditData({...editData, subTitle: e.target.value})} />
+                          <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-xs">保存</button>
+                          <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-2 py-1 rounded text-xs">中止</button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-3 w-full">
@@ -258,19 +242,7 @@ export default function AdminServicesPage() {
                             <button onClick={() => handleMove(itemIndex, "up", cat.items, "item")} className="text-xs bg-gray-100 hover:bg-gray-200 px-1.5 rounded">↑</button>
                             <button onClick={() => handleMove(itemIndex, "down", cat.items, "item")} className="text-xs bg-gray-100 hover:bg-gray-200 px-1.5 rounded">↓</button>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-slate-700">📄 {item.title}</h3>
-                              {item.subTitle && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">{item.subTitle}</span>}
-                            </div>
-                            {/* 価格表示プレビュー */}
-                            {(item.regularPrice || item.discountPrice) && (
-                              <div className="text-sm mt-1">
-                                {item.regularPrice && <span className="text-gray-500 line-through mr-2">{item.regularPrice}</span>}
-                                {item.discountPrice && <span className="text-red-600 font-bold">{item.discountPrice}</span>}
-                              </div>
-                            )}
-                          </div>
+                          <h3 className="font-bold text-slate-700 flex-1">📄 {item.title} {item.subTitle && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">{item.subTitle}</span>}</h3>
                           <div className="flex gap-2">
                             <button onClick={() => startEdit(item, "item")} className="text-blue-500 text-xs hover:underline">編集</button>
                             <button onClick={() => handleDelete(item.id, "item")} className="text-red-500 text-xs hover:underline">削除</button>
@@ -279,7 +251,6 @@ export default function AdminServicesPage() {
                       )}
                     </div>
 
-                    {/* 詳細リスト (変更なし) */}
                     <table className="w-full text-sm mb-3">
                       <tbody>
                         {item.details.map((detail, detailIndex) => (
@@ -294,11 +265,13 @@ export default function AdminServicesPage() {
                                   <div className="flex gap-4 items-center flex-wrap">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-bold text-gray-500">左:</span>
-                                      <StyleSelectors prefix="label" data={editData} onChange={(k, v) => setEditData(prev => ({...prev, [k]: v}))} />
+                                      {/* ▼ 修正: prevに型注釈を追加 */}
+                                      <StyleSelectors prefix="label" data={editData} onChange={(k, v) => setEditData((prev: any) => ({...prev, [k]: v}))} />
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-bold text-gray-500">右:</span>
-                                      <StyleSelectors prefix="value" data={editData} onChange={(k, v) => setEditData(prev => ({...prev, [k]: v}))} />
+                                      {/* ▼ 修正: prevに型注釈を追加 */}
+                                      <StyleSelectors prefix="value" data={editData} onChange={(k, v) => setEditData((prev: any) => ({...prev, [k]: v}))} />
                                     </div>
                                     <div className="flex-1 flex justify-end gap-2">
                                       <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-xs">保存</button>
@@ -336,7 +309,6 @@ export default function AdminServicesPage() {
                       </tbody>
                     </table>
 
-                    {/* 詳細追加フォーム (変更なし) */}
                     <div className="bg-gray-50 p-2 rounded">
                       <div className="flex gap-2 mb-2">
                         <input type="text" placeholder="ラベル" className="w-1/3 p-1 border rounded text-black text-xs" value={newDetail.itemId === item.id ? newDetail.label : ""} onChange={(e) => setNewDetail({ ...newDetail, itemId: item.id, label: e.target.value })} />
