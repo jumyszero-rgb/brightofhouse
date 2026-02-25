@@ -3,19 +3,20 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import ServiceArea from "@/components/ServiceArea"; // 追加
+// import ServiceArea from "@/components/ServiceArea"; // ← ★削除（これがエラー原因でした）
 
 type Props = {
   settings: any;
   videos: any[];
+  children: React.ReactNode; // ← ★追加: 子要素を受け取る設定
 };
 
-export default function HomeClient({ settings, videos }: Props) {
+export default function HomeClient({ settings, videos, children }: Props) {
   const pcVideos = videos.filter((v) => v.deviceType === "pc");
   const mobileVideos = videos.filter((v) => v.deviceType === "mobile");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
 
-  // 電話番号（設定用）
+  // ▼ 修正: フリーダイヤルに変更
   const phoneNumber = "0120-792-684";
 
   return (
@@ -62,7 +63,6 @@ export default function HomeClient({ settings, videos }: Props) {
             </p>
           </div>
 
-          {/* アクションボタン */}
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href={settings.btn1Link}
@@ -78,7 +78,7 @@ export default function HomeClient({ settings, videos }: Props) {
             </Link>
           </div>
 
-          {/* ▼ 追加: PC用 特大電話番号 (スマホでは非表示 hidden md:block) */}
+          {/* PC用 特大電話番号 */}
           <div className="hidden md:block mt-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-8 py-4">
             <p className="text-sm opacity-90 mb-1">お急ぎの方はお電話で（9:00-18:00）</p>
             <div className="flex items-center justify-center gap-3">
@@ -89,7 +89,6 @@ export default function HomeClient({ settings, videos }: Props) {
 
         </div>
       </div>
-
 
       {/* --- 2. CM・動画ギャラリー --- */}
       <div className="py-16 px-4 bg-white">
@@ -104,7 +103,6 @@ export default function HomeClient({ settings, videos }: Props) {
             </span>
           </div>
 
-          {/* PC用動画リスト */}
           <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-8">
             {pcVideos.length > 0 ? (
               pcVideos.map((video) => (
@@ -140,7 +138,6 @@ export default function HomeClient({ settings, videos }: Props) {
             )}
           </div>
 
-          {/* スマホ用動画リスト */}
           <div className="grid md:hidden grid-cols-2 gap-4">
             {mobileVideos.length > 0 ? (
               mobileVideos.map((video) => (
@@ -186,7 +183,7 @@ export default function HomeClient({ settings, videos }: Props) {
             <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">¥</div>
             <div>
               <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">サービス・料金</h3>
-              <p className="text-slate-500 text-sm mt-1">水回りクリーニング、ハウスクリーニング、ゴミ屋敷清掃</p>
+              <p className="text-slate-500 text-sm mt-1">水回り、エアコン、特殊清掃</p>
             </div>
           </Link>
           <Link href="/before-after" className="group flex items-center gap-4 bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all border border-slate-100 hover:border-blue-200">
@@ -206,8 +203,9 @@ export default function HomeClient({ settings, videos }: Props) {
         </div>
       </div>
 
-      {/* --- 4. 対応エリア (追加) --- */}
-      <ServiceArea />
+      {/* --- 4. その他のコンテンツ (childrenとして受け取る) --- */}
+      {/* ★ここが重要: ServiceAreaなどはここで表示されます */}
+      {children}
 
     </main>
   );

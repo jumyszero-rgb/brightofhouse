@@ -1,34 +1,32 @@
 // @/src/app/page.tsx
 import prisma from "@/lib/prisma";
 import HomeClient from "@/components/HomeClient";
-import AfterImageMarquee from "@/components/AfterImageMarquee"; // 追加
-import TopPriceSection from "@/components/TopPriceSection";     // 追加
+import AfterImageMarquee from "@/components/AfterImageMarquee";
+import TopPriceSection from "@/components/TopPriceSection";
+import ServiceArea from "@/components/ServiceArea"; // 追加
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // 1. ヒーロー設定を取得
   const settings = await prisma.heroSettings.findUnique({
     where: { id: "main" },
   });
 
-  // 2. 動画リストを取得
   const videos = await prisma.promotionVideo.findMany({
     orderBy: { createdAt: "desc" },
   });
 
-  // 3. 実績画像（Afterのみ）を取得してスライダー用に加工
   const beforeAfterItems = await prisma.beforeAfter.findMany({
     orderBy: { createdAt: "desc" },
-    take: 10, // 最新10件
-    select: { afterUrl: true }, // After画像だけ取得
+    take: 10,
+    select: { afterUrl: true },
   });
   const afterImages = beforeAfterItems.map(item => item.afterUrl);
 
-  // デフォルト値
   const defaultSettings = {
     title: "北海道ブライトオブハウス",
-    subtitle: "ハウスクリーニング / エアコン清掃 / 特殊清掃",
+    // ▼ 修正: エアコン削除、ゴミ屋敷追加
+    subtitle: "水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃",
     mobileHeight: "h-[50vh]",
     pcHeight: "md:h-[65vh]",
     btn1Text: "無料お見積り",
@@ -38,20 +36,23 @@ export default async function Home() {
   };
 
   return (
-    <>
-      {/* ヒーロー & 動画エリア */}
-      <HomeClient 
-        settings={settings || defaultSettings} 
-        videos={videos} 
-      />
-
-      {/* ▼ 追加: 実績画像スライダー */}
+    <HomeClient 
+      settings={settings || defaultSettings} 
+      videos={videos}
+    >
+      {/* ▼ ここにサーバーコンポーネントを配置 (childrenとして渡される) */}
+      
+      {/* 実績ギャラリー */}
       {afterImages.length > 0 && (
         <AfterImageMarquee images={afterImages} />
       )}
 
-      {/* ▼ 追加: 料金セクション */}
+      {/* 料金セクション */}
       <TopPriceSection />
-    </>
+
+      {/* 対応エリア */}
+      <ServiceArea />
+
+    </HomeClient>
   );
 }
