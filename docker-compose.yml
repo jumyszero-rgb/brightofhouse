@@ -1,16 +1,38 @@
-# @/docker-compose.yml
 services:
+  # Next.jsアプリ
   web:
-    build: .
-    # ▼ 追加: 開発モードで起動させる
-    command: npm run dev
+    build:
+      context: .
+      # ビルド時に環境変数(GA ID)を渡す設定
+      args:
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
+    container_name: brightofhouse-web
+    restart: always
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
     env_file:
       - .env
     environment:
-      - WATCHPACK_POLLING=true
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+    networks:
+      - app-network
+
+  # Cloudflare Tunnel
+  tunnel:
+    image: cloudflare/cloudflared
+    container_name: brightofhouse-tunnel
+    restart: always
+    command: tunnel run
+    # トークンは .env から読み込む
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - app-network
+    depends_on:
+      - web
+
+# ネットワーク設定
+networks:
+  app-network:
+    driver: bridge
