@@ -82,6 +82,16 @@ export default function AdminDashboard() {
             </p>
           </Link>
 
+          <Link 
+          href="/admin/areas"
+          className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-teal-500"
+          >
+          <h2 className="text-xl font-bold text-gray-800 mb-2">対応エリア管理</h2>
+          <p className="text-gray-600 text-sm">
+          「清掃系」「片付け系」など、カテゴリごとの対応地域を編集します。
+          </p>
+          </Link>
+
           {/* 今後追加予定の機能（プレースホルダー） */}
           <div className="bg-gray-200 p-6 rounded-lg border-l-4 border-gray-400 opacity-60">
             <h2 className="text-xl font-bold text-gray-600 mb-2">AIブログ管理</h2>

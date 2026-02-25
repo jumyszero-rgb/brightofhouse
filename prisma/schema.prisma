@@ -142,3 +142,14 @@ model ServiceDetail {
   itemId      String
   item        ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
+
+// 対応エリア管理
+model ServiceArea {
+  id        String   @id @default(uuid())
+  title     String   // グループ名（例：清掃業務エリア、遺品整理エリア）
+  regions   String   // 地域リスト（改行区切りで保存）
+  note      String?  // 注釈（例：出張費無料、要見積もり）
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
