@@ -6,7 +6,8 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav"; // ▼ 追加
 
-
+// ▼ 追加1: GoogleAnalyticsコンポーネントを読み込み
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -37,6 +38,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+    // ▼ 追加2: 環境変数からIDを取得
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="ja">
       {/* ▼ 修正: pb-16 md:pb-0 を追加して、スマホ時のみ下に余白を作る */}
@@ -73,6 +78,9 @@ export default function RootLayout({
 
         {/* ▼ 追加: スマホ用ボトムナビ */}
         <BottomNav />
+
+        {/* ▼ 追加3: IDがある場合のみタグを出力 */}
+        {gaId && <GoogleAnalytics gaId={gaId} />}
 
       </body>
     </html>
