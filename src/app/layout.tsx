@@ -6,11 +6,30 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav"; // ▼ 追加
 
+
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "北海道ブライトオブハウス | 札幌のハウスクリーニング・特殊清掃",
-  description: "札幌市を中心にハウスクリーニング、エアコン清掃、遺品整理、特殊清掃を行う北海道ブライトオブハウスの公式サイトです。",
+  metadataBase: new URL("https://brightofhouse.jp"), // 本番ドメイン
+  title: {
+    default: "北海道ブライトオブハウス | 札幌のハウスクリーニング・特殊清掃",
+    template: "%s | 北海道ブライトオブハウス",
+  },
+  description: "札幌市を中心にハウスクリーニング、エアコン清掃、遺品整理、特殊清掃を行う北海道ブライトオブハウスの公式サイトです。お見積り無料、迅速対応。",
+  keywords: ["札幌", "ハウスクリーニング", "清掃", "遺品整理", "ゴミ屋敷", "特殊清掃", "ブライトオブハウス"],
+  openGraph: {
+    title: "北海道ブライトオブハウス",
+    description: "プロの技術で、見違えるほどの輝きを。札幌のハウスクリーニング専門店。",
+    url: "https://brightofhouse.jp",
+    siteName: "北海道ブライトオブハウス",
+    locale: "ja_JP",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
