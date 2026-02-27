@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
       if (!res.ok) throw new Error("コードが無効か期限切れです");
 
       // 成功したら管理画面へ移動
-      router.push("/admin/before-after");
+      router.push("/admin");
     } catch (err: any) {
       setError(err.message);
     } finally {

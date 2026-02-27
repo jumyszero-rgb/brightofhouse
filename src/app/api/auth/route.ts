@@ -66,12 +66,12 @@ export async function POST(request: NextRequest) {
       .setExpirationTime("24h")
       .sign(secret);
 
-    // Cookieにセット
+    // verifyアクション内のCookieセット部分を修正
     const response = NextResponse.json({ success: true });
     response.cookies.set("admin_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      path: "/",
+      path: "/",  // ← ★ここが "/" になっているか確認。"/admin" ではなく "/" が最も安全です。
       maxAge: 60 * 60 * 24, // 24時間
     });
 

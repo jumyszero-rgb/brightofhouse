@@ -5,6 +5,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 
+// ▼ 追加: キャッシュを無効化し、常に最新のDB情報を反映させる
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
@@ -22,17 +26,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LPPage({ params }: Props) {
   const { slug } = await params;
   const lp = await prisma.landingPage.findUnique({ where: { slug } });
+
+  // データがない、または下書きの場合は404
   if (!lp || lp.status === "DRAFT") notFound();
 
   const phoneNumber = "0120-792-684";
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20">
+    <main className="min-h-screen bg-slate-50 pb-20 text-black">
       {/* 戻るナビゲーション */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-[100] border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
-            <span>←</span> 北海道ブライトオブハウス 公式サイト
+            <span>←</span> 公式サイト
           </Link>
           <Link href="/contact" className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-red-700 transition-colors">
             無料相談
@@ -72,17 +78,17 @@ export default async function LPPage({ params }: Props) {
             />
           )}
 
-          {/* CTAエリア（80%サイズ） */}
+          {/* CTAエリア */}
           <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-2xl p-6 md:p-10 text-center text-white shadow-2xl relative overflow-hidden">
             <p className="font-black text-xl md:text-2xl mb-6 text-yellow-200">
               ＼ まずはお気軽にご相談ください ／
             </p>
 
             <div className="hidden md:block mb-8 bg-white/10 rounded-xl p-6 backdrop-blur-sm border border-white/20">
-              <p className="text-base font-bold mb-2">お急ぎの方はお電話で（9:00-18:00）</p>
+              <p className="text-base font-bold mb-2 text-white">お急ぎの方はお電話で（9:00-18:00）</p>
               <div className="flex items-center justify-center gap-3 mb-4">
                 <span className="text-3xl">📞</span>
-                <span className="text-5xl font-black tracking-widest font-mono">{phoneNumber}</span>
+                <span className="text-5xl font-black tracking-widest font-mono text-white">{phoneNumber}</span>
               </div>
               <p className="inline-block bg-yellow-400 text-red-800 font-bold px-4 py-1.5 rounded-full text-base">
                 ※ご相談の際は「キャンペーンページを見た」とお伝えください
