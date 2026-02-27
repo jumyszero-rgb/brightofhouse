@@ -153,3 +153,29 @@ model ServiceArea {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+// @/prisma/schema.prisma
+
+// ランディングページ (LP) 管理
+model LandingPage {
+  id          String   @id @default(uuid())
+  slug        String   @unique // URLになる部分 (例: spring-campaign)
+  title       String   // ページタイトル
+  status      String   @default("DRAFT") // DRAFT (下書き) or PUBLISHED (公開)
+
+  // ▼ この行を追加（既存データ保護のためデフォルト値を設定）
+  showOnHome  Boolean  @default(false)
+
+  // 現在の固定フォーマット用フィールド
+  heroImage   String?  // トップ画像URL
+  catchphrase String?  // キャッチコピー
+  subCopy     String?  // サブコピー
+  content     String?  // 本文
+  ctaText     String?  @default("無料お見積りはこちら") // ボタンの文字
+  ctaLink     String?  @default("/contact") // ボタンの飛び先
+
+  // 将来のブロック型(ノーコード)拡張用
+  blocks      Json?    // 将来ここに様々なパーツデータを入れます
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

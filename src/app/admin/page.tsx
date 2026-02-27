@@ -92,6 +92,17 @@ export default function AdminDashboard() {
           </p>
           </Link>
 
+          {/* LP管理 */}
+          <Link 
+            href="/admin/lp"
+            className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-pink-500"
+          >
+            <h2 className="text-xl font-bold text-gray-800 mb-2">LP(広告用ページ)作成</h2>
+            <p className="text-gray-600 text-sm">
+              キャンペーンや広告の受け皿となるページを簡単に作成します。
+            </p>
+          </Link>
+
           {/* 今後追加予定の機能（プレースホルダー） */}
           <div className="bg-gray-200 p-6 rounded-lg border-l-4 border-gray-400 opacity-60">
             <h2 className="text-xl font-bold text-gray-600 mb-2">AIブログ管理</h2>

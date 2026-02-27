@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #ffffff;
@@ -24,3 +25,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.ql-content .ql-size-small { font-size: 0.75em; }
+.ql-content .ql-size-large { font-size: 1.5em; line-height: 1.2; }
+.ql-content .ql-size-huge { font-size: 2.2em; line-height: 1.1; font-weight: bold; }
+.ql-content p { margin-bottom: 1em; }
+.ql-content span { color: inherit; }
+/* エディタで設定した色の反映用 */
+.ql-content .ql-color-red { color: #e11d48; }
+.ql-content .ql-color-blue { color: #2563eb; }
