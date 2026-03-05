@@ -1,13 +1,31 @@
 // @/src/app/robots.ts
 import { MetadataRoute } from "next";
+import prisma from "@/lib/prisma";
 
-export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: "/admin/", // 管理画面はクロールさせない
-    },
-    sitemap: "https://brightofhouse.jp/sitemap.xml",
-  };
+// ビルド時のエラーを回避するため、動的生成を指定
+export const dynamic = "force-dynamic";
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const baseUrl = "https://brightofhouse.jp";
+
+  try {
+    const settings = await prisma.siteSettings.findUnique({
+      where: { id: "main" },
+    });
+
+    return {
+      rules: {
+        userAgent: "*",
+        allow: "/",
+        disallow: "/admin/",
+      },
+      sitemap: `${baseUrl}/sitemap.xml`,
+    };
+  } catch (error) {
+    // テーブルがない場合などのフォールバック
+    return {
+      rules: { userAgent: "*", allow: "/", disallow: "/admin/" },
+      sitemap: `${baseUrl}/sitemap.xml`,
+    };
+  }
 }

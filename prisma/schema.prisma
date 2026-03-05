@@ -153,7 +153,6 @@ model ServiceArea {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-// @/prisma/schema.prisma
 
 // ランディングページ (LP) 管理
 model LandingPage {
@@ -162,8 +161,13 @@ model LandingPage {
   title       String   // ページタイトル
   status      String   @default("DRAFT") // DRAFT (下書き) or PUBLISHED (公開)
 
+  // ▼ 追加：ページの種類を区別 (CAMPAIGN または AREA)
+  category    String   @default("CAMPAIGN")
+
   // ▼ この行を追加（既存データ保護のためデフォルト値を設定）
   showOnHome  Boolean  @default(false)
+    // ▼ 追加：リンク用タイトル（トップページ等で使用）
+  linkTitle   String?  
 
   // 現在の固定フォーマット用フィールド
   heroImage   String?  // トップ画像URL
@@ -178,4 +182,11 @@ model LandingPage {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// サイト全体設定 (robots.txtなど)
+model SiteSettings {
+  id        String   @id @default("main")
+  robotsTxt String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
+  updatedAt DateTime @updatedAt
 }

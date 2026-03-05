@@ -16,9 +16,7 @@ async function checkAuth() {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     await jwtVerify(token, secret);
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 const uploadToR2 = async (file: File) => {
@@ -46,9 +44,7 @@ const deleteFromR2 = async (url: string) => {
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
     }));
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) { console.error(e); }
 };
 
 export async function GET(request: NextRequest) {
@@ -61,9 +57,7 @@ export async function GET(request: NextRequest) {
     }
     const lps = await prisma.landingPage.findMany({ orderBy: { createdAt: "desc" } });
     return NextResponse.json(lps);
-  } catch (error) {
-    return NextResponse.json({ error: "Error" }, { status: 500 });
-  }
+  } catch (error) { return NextResponse.json({ error: "Error" }, { status: 500 }); }
 }
 
 export async function POST(request: NextRequest) {
@@ -71,7 +65,6 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
-    
     const exists = await prisma.landingPage.findUnique({ where: { slug } });
     if (exists) return NextResponse.json({ error: "Used slug" }, { status: 400 });
 
@@ -85,7 +78,9 @@ export async function POST(request: NextRequest) {
       data: {
         slug,
         title: formData.get("title") as string,
+        linkTitle: formData.get("linkTitle") as string, // 追加
         status: formData.get("status") as string,
+        category: (formData.get("category") as string) || "CAMPAIGN",
         showOnHome: formData.get("showOnHome") === "true",
         catchphrase: formData.get("catchphrase") as string,
         subCopy: formData.get("subCopy") as string,
@@ -96,9 +91,7 @@ export async function POST(request: NextRequest) {
       }
     });
     return NextResponse.json(newLp);
-  } catch (error) {
-    return NextResponse.json({ error: "Create failed" }, { status: 500 });
-  }
+  } catch (error) { return NextResponse.json({ error: "Create failed" }, { status: 500 }); }
 }
 
 export async function PUT(request: NextRequest) {
@@ -107,9 +100,11 @@ export async function PUT(request: NextRequest) {
     const formData = await request.formData();
     const id = formData.get("id") as string;
     const slug = formData.get("slug") as string;
-
     const currentLp = await prisma.landingPage.findUnique({ where: { id } });
     if (!currentLp) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const exists = await prisma.landingPage.findUnique({ where: { slug } });
+    if (exists && exists.id !== id) return NextResponse.json({ error: "Used slug" }, { status: 400 });
 
     let heroImageUrl = currentLp.heroImage;
     const imageFile = formData.get("heroImage") as File | null;
@@ -123,7 +118,9 @@ export async function PUT(request: NextRequest) {
       data: {
         slug,
         title: formData.get("title") as string,
+        linkTitle: formData.get("linkTitle") as string, // 追加
         status: formData.get("status") as string,
+        category: (formData.get("category") as string) || "CAMPAIGN",
         showOnHome: formData.get("showOnHome") === "true",
         catchphrase: formData.get("catchphrase") as string,
         subCopy: formData.get("subCopy") as string,
@@ -134,9 +131,7 @@ export async function PUT(request: NextRequest) {
       }
     });
     return NextResponse.json(updatedLp);
-  } catch (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
-  }
+  } catch (error) { return NextResponse.json({ error: "Update failed" }, { status: 500 }); }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -147,7 +142,5 @@ export async function DELETE(request: NextRequest) {
     if (lp?.heroImage) await deleteFromR2(lp.heroImage);
     await prisma.landingPage.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
-  }
+  } catch (error) { return NextResponse.json({ error: "Delete failed" }, { status: 500 }); }
 }

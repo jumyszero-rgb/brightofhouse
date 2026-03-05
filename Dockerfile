@@ -37,9 +37,12 @@ RUN apk add --no-cache openssl ffmpeg
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# ▼ 追加: Prismaの設計図をコピー（これでコンテナ内でのコマンドが可能になります）
+COPY --from=builder /app/prisma ./prisma
 
 # ポート公開
 EXPOSE 3000
 
 # サーバー起動 (standaloneモード)
 CMD ["node", "server.js"]
+

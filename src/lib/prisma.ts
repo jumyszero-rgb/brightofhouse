@@ -2,7 +2,9 @@
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  return new PrismaClient({
+    log: ["error", "warn"], // エラーが発生した際に詳細をログに出す設定
+  });
 };
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;

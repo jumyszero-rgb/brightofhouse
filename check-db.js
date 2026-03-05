@@ -1,48 +1,39 @@
 // @/check-db.js
 const { Client } = require('pg');
-require('dotenv').config();
 
-async function testConnection(label, connectionString) {
-  console.log(`\n--- Testing ${label} ---`);
-  
-  if (!connectionString) {
-    console.log(`❌ ${label} is not set in .env`);
+async function check() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error("❌ ERROR: DATABASE_URL が設定されていません。");
     return;
   }
 
   // パスワードを隠してURLを表示
-  const maskedUrl = connectionString.replace(/:([^:@]+)@/, ':****@');
-  console.log(`URL: ${maskedUrl}`);
+  const masked = url.replace(/:([^:@]+)@/, ':****@');
+  console.log(`📡 接続試行中: ${masked}`);
 
   const client = new Client({
-    connectionString: connectionString,
-    // Supabase接続にはSSL設定が必須
+    connectionString: url,
     ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000, // 5秒でタイムアウト
   });
 
   try {
     await client.connect();
-    const res = await client.query('SELECT NOW() as now, current_user as user, current_database() as db');
-    console.log(`✅ Connection SUCCESS!`);
-    console.log(`   Time: ${res.rows[0].now}`);
-    console.log(`   User: ${res.rows[0].user}`);
-    console.log(`   DB  : ${res.rows[0].db}`);
+    const res = await client.query('SELECT current_database(), now()');
+    console.log("✅ 接続成功!");
+    console.log(`   データベース名: ${res.rows[0].current_database}`);
+    console.log(`   サーバー時刻: ${res.rows[0].now}`);
     await client.end();
   } catch (err) {
-    console.error(`❌ Connection FAILED`);
-    console.error(`   Error: ${err.message}`);
-    if (err.code) console.error(`   Code: ${err.code}`);
-    // 認証エラーの場合のヒント
-    if (err.code === '28P01') {
-      console.error(`   Hint: パスワードが間違っているか、ユーザー名にプロジェクトIDが含まれていない可能性があります。`);
+    console.error("❌ 接続失敗!");
+    console.error(`   原因: ${err.message}`);
+    if (err.code === 'ETIMEDOUT') {
+      console.error("   ヒント: ネットワーク（ファイアウォール）で遮断されているか、URLが間違っています。");
+    } else if (err.code === '28P01') {
+      console.error("   ヒント: パスワードが間違っています。");
     }
   }
 }
 
-(async () => {
-  console.log("Starting DB Connection Check...");
-  await testConnection('DATABASE_URL', process.env.DATABASE_URL);
-  if (process.env.DIRECT_URL) {
-    await testConnection('DIRECT_URL', process.env.DIRECT_URL);
-  }
-})();
+check();
