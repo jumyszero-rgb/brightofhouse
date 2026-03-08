@@ -190,3 +190,39 @@ model SiteSettings {
   robotsTxt String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
   updatedAt DateTime @updatedAt
 }
+
+// ブログ記事管理（SNS連携版）
+model BlogPost {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  title         String
+  content       String   // ブログ本文（リッチテキスト）
+  
+  // ▼ SNS投稿用フィールド
+  instaContent  String?  // Instagram用（絵文字・ハッシュタグ多め）
+  xContent      String?  // X (Twitter)用（140文字意識）
+  googleContent String?  // Googleビジネスプロフィール用（地域・信頼重視）
+
+  thumbnail     String?  // アイキャッチ画像
+  status        String   @default("DRAFT")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// AI執筆用設定（変更なし）
+model BlogSettings {
+  id            String   @id @default("main")
+  fixedKeywords String   @default("")
+  defaultIntro  String   @default("")
+  defaultOutro  String   @default("")
+  updatedAt     DateTime @updatedAt
+}
+
+// IndexNow通知ログ
+model IndexNowLog {
+  id        String   @id @default(uuid())
+  url       String   @unique // 通知したURL
+  status    Int      // HTTPステータスコード
+  response  String?  // APIからの応答
+  createdAt DateTime @default(now())
+}

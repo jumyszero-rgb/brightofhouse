@@ -6,7 +6,7 @@ import { jwtVerify } from "jose";
 
 const prisma = new PrismaClient();
 
-// 認証チェック
+// --- 認証チェック関数 ---
 async function checkAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
@@ -20,11 +20,29 @@ async function checkAuth() {
   }
 }
 
-// GET: 情報取得（公開用なので認証なしでもOKだが、今回はサーバー内部で呼ぶのでAPIはロックしても良い。
-// ただし、クライアント側でfetchするなら認証なしにする必要あり。
-// 今回は公開ページはServer Componentで直接DBを見るので、APIは管理画面用としてロックします）
+// --- IndexNowへの通知ヘルパー関数 ---
+async function notifyIndexNow(urls: string[]) {
+  const baseUrl = process.env.BASE_URL || "https://brightofhouse.jp";
+  const fullUrls = urls.map(url => `${baseUrl}${url}`);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/indexnow`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: fullUrls }),
+    });
+    if (!response.ok) {
+      console.error("Failed to notify IndexNow:", await response.text());
+    } else {
+      console.log("Successfully notified IndexNow for:", fullUrls);
+    }
+  } catch (error) {
+    console.error("Error notifying IndexNow:", error);
+  }
+}
+
+// GET: 情報取得
 export async function GET() {
-  // ※管理画面での表示用
   if (!(await checkAuth())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -48,7 +66,6 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // upsert: データがあれば更新、なければ新規作成
     const profile = await prisma.companyProfile.upsert({
       where: { id: "main" },
       update: {
@@ -71,6 +88,9 @@ export async function PUT(request: NextRequest) {
         mapCode: body.mapCode,
       },
     });
+
+    // ▼ IndexNowに通知
+    await notifyIndexNow([`/company`]); // 会社概要ページを通知
 
     return NextResponse.json(profile);
   } catch (error) {

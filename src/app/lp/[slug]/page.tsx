@@ -95,7 +95,7 @@ export default async function LPPage({ params }: Props) {
           {/* 本文 (リッチテキスト表示) */}
           {lp.content && (
             <div 
-              className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 mb-16"
+              className="ql-content prose prose-slate prose-base md:prose-xl max-w-none text-slate-700 mb-16"
               dangerouslySetInnerHTML={{ __html: lp.content }}
             />
           )}

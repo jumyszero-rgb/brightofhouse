@@ -1,14 +1,14 @@
 // @/src/app/api/before-after/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import prisma from "@/lib/prisma"; // ← 追加
+import { PrismaClient } from "@prisma/client";
 import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-import sharp from "sharp"; // 追加
+import sharp from "sharp";
 
-// const prisma = new PrismaClient(); // ← 削除
+const prisma = new PrismaClient();
 
 // --- 認証チェック関数 ---
 async function checkAuth() {
@@ -26,36 +26,50 @@ async function checkAuth() {
   }
 }
 
-// --- ヘルパー関数 ---
+// --- IndexNowへの通知ヘルパー関数 ---
+async function notifyIndexNow(urls: string[]) {
+  const baseUrl = process.env.BASE_URL || "https://brightofhouse.jp";
+  const fullUrls = urls.map(url => `${baseUrl}${url}`);
 
-// R2へのアップロード (WebP変換・圧縮付き)
+  try {
+    const response = await fetch(`${baseUrl}/api/indexnow`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: fullUrls }),
+    });
+    if (!response.ok) {
+      console.error("Failed to notify IndexNow:", await response.text());
+    } else {
+      console.log("Successfully notified IndexNow for:", fullUrls);
+    }
+  } catch (error) {
+    console.error("Error notifying IndexNow:", error);
+  }
+}
+
+// --- R2へのアップロード (WebP変換・圧縮付き) ---
 const uploadToR2 = async (file: File) => {
   const buffer = Buffer.from(await file.arrayBuffer());
   
-  // SharpでWebP変換 & 圧縮 & リサイズ
   const webpBuffer = await sharp(buffer)
-    .rotate() // Exif情報に基づいて回転を自動補正（スマホ写真対策）
-    .resize(1920, 1920, { // 最大サイズ制限（4Kなどは無駄なのでFHD程度に）
-      fit: "inside",      // 比率維持で枠内に収める
-      withoutEnlargement: true // 元が小さい場合は拡大しない
-    })
-    .webp({ quality: 80 }) // 画質80%でWebP化（十分綺麗で軽い）
+    .rotate()
+    .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
     .toBuffer();
 
-  // ファイル名を生成（拡張子は .webp 固定）
   const fileName = `Beforeandafter/${uuidv4()}.webp`;
   
   await r2Client.send(new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
     Key: fileName,
     Body: webpBuffer,
-    ContentType: "image/webp", // MIMEタイプもWebPに
+    ContentType: "image/webp",
   }));
 
   return `${process.env.R2_PUBLIC_URL}/${fileName}`;
 };
 
-// R2からの削除
+// --- R2からの削除 ---
 const deleteFromR2 = async (url: string) => {
   if (!url) return;
   try {
@@ -73,9 +87,6 @@ const deleteFromR2 = async (url: string) => {
 
 // GET: 一覧取得
 export async function GET() {
-  // ※公開ページ(Server Component)からのアクセスは認証なしで通す必要があるため、
-  // ここでは認証チェックを外すか、もしくは「管理画面用API」と「公開用データ取得」を分けるのがベストですが、
-  // 現状の構成（公開ページは直接Prismaを叩いている）なら、このAPIは管理画面専用としてロックしてOKです。
   if (!(await checkAuth())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -86,6 +97,7 @@ export async function GET() {
     });
     return NextResponse.json(items);
   } catch (error) {
+    console.error("GET Error:", error);
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
   }
 }
@@ -110,7 +122,6 @@ export async function POST(request: NextRequest) {
 
     const createdAt = dateStr ? new Date(dateStr) : new Date();
 
-    // 並列でアップロード（WebP変換含む）
     const [beforeUrl, afterUrl] = await Promise.all([
       uploadToR2(beforeFile),
       uploadToR2(afterFile),
@@ -120,9 +131,12 @@ export async function POST(request: NextRequest) {
       data: { title, description, beforeUrl, afterUrl, createdAt },
     });
 
+    // ▼ IndexNowに通知
+    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
+    
     return NextResponse.json(newItem);
   } catch (error) {
-    console.error("Upload Error:", error);
+    console.error("POST Error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
@@ -168,9 +182,12 @@ export async function PUT(request: NextRequest) {
       },
     });
 
+    // ▼ IndexNowに通知
+    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
+    
     return NextResponse.json(updatedItem);
   } catch (error) {
-    console.error("Update Error:", error);
+    console.error("PUT Error:", error);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
@@ -194,8 +211,12 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.beforeAfter.delete({ where: { id } });
 
+    // ▼ IndexNowに通知
+    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
+    
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("DELETE Error:", error);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 
-// 認証チェック関数
 async function checkAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
@@ -15,6 +14,27 @@ async function checkAuth() {
     return true;
   } catch {
     return false;
+  }
+}
+
+// --- IndexNowへの通知ヘルパー関数 ---
+async function notifyIndexNow(urls: string[]) {
+  const baseUrl = process.env.BASE_URL || "https://brightofhouse.jp";
+  const fullUrls = urls.map(url => `${baseUrl}${url}`);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/indexnow`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: fullUrls }),
+    });
+    if (!response.ok) {
+      console.error("Failed to notify IndexNow:", await response.text());
+    } else {
+      console.log("Successfully notified IndexNow for:", fullUrls);
+    }
+  } catch (error) {
+    console.error("Error notifying IndexNow:", error);
   }
 }
 
@@ -44,7 +64,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // 大分類（カテゴリ）作成
     if (body.type === "category") {
       const res = await prisma.serviceCategory.create({
         data: { 
@@ -52,25 +71,27 @@ export async function POST(request: NextRequest) {
           order: body.order 
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
     
-    // 中分類（アイテム）作成
     if (body.type === "item") {
       const res = await prisma.serviceItem.create({
         data: { 
           title: body.title, 
           subTitle: body.subTitle,
-          regularPrice: body.regularPrice,   // 通常価格
-          discountPrice: body.discountPrice, // 特別価格
+          regularPrice: body.regularPrice,
+          discountPrice: body.discountPrice,
           categoryId: body.categoryId,
           order: body.order 
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
 
-    // 小分類（詳細）作成
     if (body.type === "detail") {
       const res = await prisma.serviceDetail.create({
         data: {
@@ -78,18 +99,18 @@ export async function POST(request: NextRequest) {
           value: body.value,
           isPrice: body.isPrice,
           isNote: body.isNote,
-          // スタイル設定
           labelColor: body.labelColor || "default",
           labelSize: body.labelSize || "sm",
           labelAlign: body.labelAlign || "left",
           valueColor: body.valueColor || "default",
           valueSize: body.valueSize || "base",
           valueAlign: body.valueAlign || "right",
-          
           itemId: body.itemId,
           order: body.order,
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
 
@@ -108,7 +129,6 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { type, id, ...data } = body;
 
-    // 大分類更新
     if (type === "category") {
       const res = await prisma.serviceCategory.update({
         where: { id },
@@ -117,25 +137,27 @@ export async function PUT(request: NextRequest) {
           order: data.order 
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
 
-    // 中分類更新
     if (type === "item") {
       const res = await prisma.serviceItem.update({
         where: { id },
         data: { 
           title: data.title, 
           subTitle: data.subTitle,
-          regularPrice: data.regularPrice,   // 通常価格
-          discountPrice: data.discountPrice, // 特別価格
+          regularPrice: data.regularPrice,
+          discountPrice: data.discountPrice,
           order: data.order 
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
 
-    // 小分類更新
     if (type === "detail") {
       const res = await prisma.serviceDetail.update({
         where: { id },
@@ -144,17 +166,17 @@ export async function PUT(request: NextRequest) {
           value: data.value,
           isPrice: data.isPrice,
           isNote: data.isNote,
-          // スタイル設定
           labelColor: data.labelColor,
           labelSize: data.labelSize,
           labelAlign: data.labelAlign,
           valueColor: data.valueColor,
           valueSize: data.valueSize,
           valueAlign: data.valueAlign,
-          
           order: data.order
         },
       });
+      // ▼ IndexNowに通知
+      await notifyIndexNow(['/service']);
       return NextResponse.json(res);
     }
 
@@ -168,13 +190,19 @@ export async function PUT(request: NextRequest) {
 // DELETE: 削除
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
   try {
     const { id, type } = await request.json();
     
-    if (type === "category") await prisma.serviceCategory.delete({ where: { id } });
-    else if (type === "item") await prisma.serviceItem.delete({ where: { id } });
-    else if (type === "detail") await prisma.serviceDetail.delete({ where: { id } });
+    if (type === "category") {
+      await prisma.serviceCategory.delete({ where: { id } });
+      await notifyIndexNow(['/service']); // ▼ IndexNowに通知
+    } else if (type === "item") {
+      await prisma.serviceItem.delete({ where: { id } });
+      await notifyIndexNow(['/service']); // ▼ IndexNowに通知
+    } else if (type === "detail") {
+      await prisma.serviceDetail.delete({ where: { id } });
+      await notifyIndexNow(['/service']); // ▼ IndexNowに通知
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {
