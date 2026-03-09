@@ -1,22 +1,10 @@
 // @/src/app/blog/page.tsx
 "use client"; // クライアントコンポーネント
 
-// import prisma from "@/lib/prisma"; // クライアント側ではDB直叩きしない
 import Link from "next/link";
-// import type { Metadata } from "next"; // Metadataをimportしない
 import { useState, useEffect } from "react";
 
-// ▼ 修正: クライアントコンポーネントなので metadata の export は削除
-// export const metadata: Metadata = {
-//   title: "ブログ | 北海道ブライトオブハウス",
-//   description: "札幌の清掃プロが教える、お掃除のコツや最新の活動報告をお届けします。",
-// };
-
-// ▼ 修正: dynamic と revalidate は Server Component 専用なので削除
-// export const dynamic = "force-dynamic";
-// export const revalidate = 0;
-
-export default function BlogListPage() { // async を削除
+export default function BlogListPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -24,8 +12,7 @@ export default function BlogListPage() { // async を削除
   const fetchPosts = async (query = "") => {
     setLoading(true);
     try {
-      // API経由で記事を取得
-      const res = await fetch(`/api/blog?query=${encodeURIComponent(query)}`); // クエリをエンコード
+      const res = await fetch(`/api/blog?query=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data.filter((post: any) => post.status === "PUBLISHED")); // 公開中の記事のみ
@@ -62,7 +49,7 @@ export default function BlogListPage() { // async を削除
             placeholder="キーワードで記事を検索（例: キッチン、カビ）"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black"
+            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black"
           />
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"

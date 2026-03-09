@@ -1,52 +1,116 @@
-// @/src/components/Breadcrumbs.tsx
+// @/src/components/Breadcrumbs.tsx (フルコード)
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
-// URLのスラッグを日本語に変換する辞書
-const labelMap: { [key: string]: string } = {
-  "service": "サービス・料金",
-  "before-after": "清掃実績",
-  "company": "会社概要",
-  "contact": "お問い合わせ",
-  "lp": "キャンペーン",
-  "blog": "ブログ",
+const routeMap: { [key: string]: { label: string; api?: string; } } = {
+  "lp": { label: "キャンペーン一覧", api: "/api/lp" },
+  "area": { label: "地域別サービス一覧", api: "/api/lp" }, 
+  "blog": { label: "ブログ一覧", api: "/api/blog" },
+  "service": { label: "サービス・料金" },
+  "before-after": { label: "清掃実績" },
+  "company": { label: "会社概要" },
+  "contact": { label: "お問い合わせ" },
 };
 
 export default function Breadcrumbs() {
   const pathname = usePathname();
-  if (pathname === "/") return null; // トップページでは表示しない
+  const [pathSegments, setPathSegments] = useState<
+    { href: string; label: string; isLast: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
 
-  const paths = pathname.split("/").filter((v) => v);
-  let accumulatedPath = "";
+  useEffect(() => {
+    const generatePathSegments = async () => {
+      setLoading(true);
+      if (pathname === "/") {
+        setPathSegments([]);
+        setLoading(false);
+        return;
+      }
+
+      const segments = pathname.split("/").filter((v) => v);
+      const tempSegments: { href: string; label: string; isLast: boolean }[] = [{ href: "/", label: "ホーム", isLast: false }];
+      let currentAccumulatedPath = "";
+
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        currentAccumulatedPath += `/${segment}`;
+        const isLast = i === segments.length - 1;
+        
+        let label = routeMap[segment]?.label; // 辞書からルートラベルを取得 (例: "lp" -> "キャンペーン一覧")
+        let itemTitle: string | undefined;
+
+        if ((segment === "lp" || segment === "area" || segment === "blog") && segments[i + 1]) {
+          const itemSlug = segments[i + 1];
+          const apiPath = routeMap[segment]?.api;
+
+          if (apiPath) {
+            try {
+              const res = await fetch(`${apiPath}?slug=${itemSlug}`);
+              if (res.ok) {
+                const data = await res.json();
+                itemTitle = (segment === "blog") ? data.title : (data.linkTitle || data.title);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch title for slug: ${itemSlug} from ${apiPath}`, error);
+            }
+          }
+          
+          // ルート（/lp/や/area/、/blog/）のラベルを追加 (例: "キャンペーン一覧")
+          tempSegments.push({ 
+            href: currentAccumulatedPath.replace(`/${itemSlug}`, ''), 
+            label: label || segment, 
+            isLast: false 
+          });
+          // 詳細ページのタイトルを追加
+          tempSegments.push({ 
+            href: currentAccumulatedPath, 
+            label: itemTitle || itemSlug, // 取得できなければスラッグ
+            isLast: isLast 
+          });
+          i++; // 次のセグメント（スラッグ）は処理済みなのでスキップ
+        } else {
+            // その他の静的なページ (例: /service, /company)
+            if (!label && segment.includes('-')) {
+              label = segment.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            }
+            tempSegments.push({
+              href: currentAccumulatedPath,
+              label: label || segment, // ラベルがなければスラッグそのまま
+              isLast,
+            });
+        }
+      }
+      setPathSegments(tempSegments);
+      setLoading(false);
+    };
+
+    generatePathSegments();
+
+  }, [pathname]);
+
+  if (loading || pathSegments.length <= 1) return null; // ロード中または要素が一つなら表示しない
 
   return (
-    <nav aria-label="Breadcrumb" className="bg-slate-50 py-3 px-4 border-b border-slate-200">
-      <ol className="max-w-6xl mx-auto flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        <li>
-          <Link href="/" className="hover:text-blue-600 transition-colors">ホーム</Link>
-        </li>
-        {paths.map((path, index) => {
-          accumulatedPath += `/${path}`;
-          const label = labelMap[path] || path; // 辞書になければスラッグをそのまま表示
-          const isLast = index === paths.length - 1;
-
-          return (
-            <li key={path} className="flex items-center gap-2">
-              <span>/</span>
-              {isLast ? (
-                <span className="font-bold text-slate-800 truncate max-w-[200px]" aria-current="page">
-                  {label}
-                </span>
-              ) : (
-                <Link href={accumulatedPath} className="hover:text-blue-600 transition-colors">
-                  {label}
-                </Link>
-              )}
-            </li>
-          );
-        })}
+    <nav aria-label="Breadcrumb" className="bg-white py-3 px-4 md:px-8 border-b border-slate-200 shadow-sm text-black">
+      <ol className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 text-xs md:text-sm text-slate-500">
+        {pathSegments.map((segment, index) => (
+          <li key={segment.href + index} className="flex items-center">
+            {index > 0 && <span className="mx-1 text-slate-400">/</span>}
+            {segment.isLast ? (
+              <span className="font-bold text-slate-800 truncate max-w-[200px] md:max-w-none" aria-current="page">
+                {segment.label}
+              </span>
+            ) : (
+              <Link href={segment.href} className="hover:text-blue-600 transition-colors">
+                {segment.label}
+              </Link>
+            )}
+          </li>
+        ))}
       </ol>
     </nav>
   );

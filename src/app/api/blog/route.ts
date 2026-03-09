@@ -35,29 +35,26 @@ async function notifyIndexNow(urls: string[]) {
   }
 }
 
-// GET: 記事一覧取得 (検索キーワード対応)
+// GET: 記事一覧取得 (slug検索対応)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  const query = searchParams.get("query"); // ★検索キーワード
+  const slug = searchParams.get("slug"); // ★slugパラメータも受け取る
 
   try {
     if (id) {
       const post = await prisma.blogPost.findUnique({ where: { id } });
       return NextResponse.json(post);
     }
-
-    // 検索条件 (公開中の記事のみ)
-    const where: any = { status: "PUBLISHED" };
-    if (query) {
-      where.OR = [
-        { title: { contains: query, mode: 'insensitive' } },
-        { content: { contains: query, mode: 'insensitive' } },
-      ];
+    // ▼ slug があればそれを使って検索 (公開記事のみ)
+    if (slug) {
+      const post = await prisma.blogPost.findFirst({ where: { slug, status: "PUBLISHED" } });
+      return NextResponse.json(post);
     }
 
+    // IDもslugもない場合は、公開中の全記事を取得
     const posts = await prisma.blogPost.findMany({ 
-      where, // ★検索条件を適用
+      where: { status: "PUBLISHED" }, 
       orderBy: { createdAt: "desc" } 
     });
     return NextResponse.json(posts);
@@ -80,12 +77,12 @@ export async function POST(request: NextRequest) {
         instaContent: body.instaContent,
         xContent: body.xContent,
         googleContent: body.googleContent,
-        status: body.status, // ★ ここで status を正しく保存
+        status: body.status,
       },
     });
 
     if (post.status === "PUBLISHED") {
-      await notifyIndexNow([`/blog/${post.slug}`]); // 公開時のみIndexNow通知
+      await notifyIndexNow([`/blog/${post.slug}`]);
     }
     
     return NextResponse.json(post);
@@ -109,11 +106,10 @@ export async function PUT(request: NextRequest) {
         instaContent: body.instaContent,
         xContent: body.xContent,
         googleContent: body.googleContent,
-        status: body.status, // ★ ここで status を正しく更新
+        status: body.status,
       },
     });
 
-    // 公開中、またはステータスが「公開」に変わった場合のみIndexNow通知
     if (post.status === "PUBLISHED" || body.status === "PUBLISHED") {
       await notifyIndexNow([`/blog/${post.slug}`]);
     }
@@ -125,7 +121,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE: 記事削除
+// DELETE: 削除
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
@@ -135,7 +131,7 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.blogPost.delete({ where: { id } });
 
-    await notifyIndexNow([`/blog/${post.slug}`]); // 削除されたURLを通知
+    await notifyIndexNow([`/blog/${post.slug}`]);
     
     return NextResponse.json({ success: true });
   } catch (error) { 

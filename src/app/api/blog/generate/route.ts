@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+// 画像アップロードに必要
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { r2Client } from "@/lib/s3";
+import { v4 as uuidv4 } from "uuid";
+import sharp from "sharp";
 
 async function checkAuth() {
   const cookieStore = await cookies();
@@ -15,8 +20,22 @@ async function checkAuth() {
   } catch { return false; }
 }
 
+// 画像アップロード処理 (再掲)
 const uploadToR2 = async (file: File) => {
-  // ... (画像アップロード処理は変更なし)
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const webpBuffer = await sharp(buffer)
+    .rotate()
+    .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  const fileName = `blog_thumbnails/${uuidv4()}.webp`; // ブログ専用フォルダ
+  await r2Client.send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME,
+    Key: fileName,
+    Body: webpBuffer,
+    ContentType: "image/webp",
+  }));
+  return `${process.env.R2_PUBLIC_URL}/${fileName}`;
 };
 
 export async function POST(request: NextRequest) {
@@ -53,7 +72,7 @@ ${existingTitles ? existingTitles : "過去記事はありません。自由に�
 1. title: SEOに強く、読者がクリックしたくなる魅力的なタイトル。
 2. slug: タイトルに関連した半角英数字とハイフンのみのURL用文字列。
 3. blog:
-   - **文字数は2000文字以上10000文字以内**で作成してください。
+   - 文字数は2000文字以上10000文字以内。
    - 冒頭に "${intro}"、末尾に "${outro}" を含めた、HTML形式のブログ本文（改行は<br>タグを使用）。
    - 見出し（h2, h3）を適切に使用し、読者が読みやすい構造にしてください。
    - 清掃のプロとしての知恵やメリットを盛り込み、親しみやすく信頼感のある内容にしてください。
@@ -72,14 +91,18 @@ ${existingTitles ? existingTitles : "過去記事はありません。自由に�
   "google": "Google用テキスト"
 }
 `;
+    // .env からモデル名とAPIバージョンを読み込む
+    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
+    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
 
-    const geminiUrl = `${process.env.GEMINI_PROXY_URL}/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const geminiUrl = `${process.env.GEMINI_PROXY_URL}/${geminiApiVersion}/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { response_mime_type: "application/json" }
       })
     });
 

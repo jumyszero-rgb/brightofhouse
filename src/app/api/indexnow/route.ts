@@ -1,13 +1,13 @@
 // @/src/app/api/indexnow/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // 追加
+import prisma from "@/lib/prisma";
 
-// Step 1で作成したKeyファイルの名前と内容
-const INDEXNOW_KEY = "0cf2bc06efdc403e885c5c0957eef7fb"; // ★あなたのKeyに書き換える
-const INDEXNOW_KEY_LOCATION = `https://brightofhouse.jp/${INDEXNOW_KEY}.txt`;
+// ▼ 修正: IndexNow Keyファイル名と内容を更新
+const INDEXNOW_KEY = "0cf2bc06efdc403e885c5c0957eef7fb"; // ファイル名から.txtを除いた部分
+const INDEXNOW_KEY_LOCATION = `https://brightofhouse.jp/${INDEXNOW_KEY}.txt`; // KeyファイルのフルURL
 
 export async function POST(request: NextRequest) {
-  const { urls } = await request.json(); // 更新されたURLの配列を受け取る
+  const { urls } = await request.json();
 
   if (!urls || !Array.isArray(urls) || urls.length === 0) {
     return NextResponse.json({ error: "URLs are required" }, { status: 400 });
@@ -32,21 +32,19 @@ export async function POST(request: NextRequest) {
 
     if (response.status === 200) {
       console.log(`IndexNow success for ${urls.length} URLs`);
-      // ▼ 追加: 成功した通知をDBに記録
       await prisma.indexNowLog.createMany({
         data: urls.map((url: string) => ({
           url,
           status: response.status,
           response: "OK",
         })),
-        skipDuplicates: true, // 同じURLがすでにログにあってもエラーにならない
+        skipDuplicates: true,
       });
       return NextResponse.json({ success: true, message: "IndexNow submitted" }, { status: 200 });
     } else {
       const responseText = await response.text();
       console.error(`IndexNow failed: ${response.status} ${response.statusText}`);
       console.error(`IndexNow response: ${responseText}`);
-      // ▼ 追加: 失敗した通知もDBに記録
       await prisma.indexNowLog.createMany({
         data: urls.map((url: string) => ({
           url,

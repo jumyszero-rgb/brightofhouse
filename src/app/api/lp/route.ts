@@ -50,11 +50,19 @@ const deleteFromR2 = async (url: string) => {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
+  const slug = searchParams.get("slug"); // ★slugパラメータも受け取る
+
   try {
     if (id) {
       const lp = await prisma.landingPage.findUnique({ where: { id } });
       return NextResponse.json(lp);
     }
+    // ▼ slug があればそれを使って検索
+    if (slug) {
+      const lp = await prisma.landingPage.findUnique({ where: { slug } });
+      return NextResponse.json(lp);
+    }
+
     const lps = await prisma.landingPage.findMany({ orderBy: { createdAt: "desc" } });
     return NextResponse.json(lps);
   } catch (error) { return NextResponse.json({ error: "Error" }, { status: 500 }); }
@@ -65,6 +73,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
+    
     const exists = await prisma.landingPage.findUnique({ where: { slug } });
     if (exists) return NextResponse.json({ error: "Used slug" }, { status: 400 });
 
@@ -78,7 +87,7 @@ export async function POST(request: NextRequest) {
       data: {
         slug,
         title: formData.get("title") as string,
-        linkTitle: formData.get("linkTitle") as string, // 追加
+        linkTitle: formData.get("linkTitle") as string,
         status: formData.get("status") as string,
         category: (formData.get("category") as string) || "CAMPAIGN",
         showOnHome: formData.get("showOnHome") === "true",
@@ -100,6 +109,7 @@ export async function PUT(request: NextRequest) {
     const formData = await request.formData();
     const id = formData.get("id") as string;
     const slug = formData.get("slug") as string;
+
     const currentLp = await prisma.landingPage.findUnique({ where: { id } });
     if (!currentLp) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -118,7 +128,7 @@ export async function PUT(request: NextRequest) {
       data: {
         slug,
         title: formData.get("title") as string,
-        linkTitle: formData.get("linkTitle") as string, // 追加
+        linkTitle: formData.get("linkTitle") as string,
         status: formData.get("status") as string,
         category: (formData.get("category") as string) || "CAMPAIGN",
         showOnHome: formData.get("showOnHome") === "true",

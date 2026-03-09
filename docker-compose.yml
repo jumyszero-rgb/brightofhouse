@@ -1,30 +1,34 @@
 services:
-  # Next.jsアプリ
   web:
     build:
       context: .
-      # ビルド時に環境変数(GA ID)を渡す設定
+      # ▼ 修正: ローカル開発用のDockerfile.devを参照する
+      dockerfile: Dockerfile.dev
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
     container_name: brightofhouse-web
+    command: npm run dev # ローカル開発モード
     restart: always
     ports:
       - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - HOSTNAME=0.0.0.0
+      - WATCHPACK_POLLING=true
     networks:
       - app-network
 
-  # Cloudflare Tunnel
   tunnel:
     image: cloudflare/cloudflared
     container_name: brightofhouse-tunnel
     restart: always
     command: tunnel run
-    # トークンは .env から読み込む
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     networks:
@@ -32,7 +36,6 @@ services:
     depends_on:
       - web
 
-# ネットワーク設定
 networks:
   app-network:
     driver: bridge
