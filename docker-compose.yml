@@ -1,26 +1,26 @@
+# @/docker-compose.yml (本番用)
 services:
   web:
     build:
       context: .
-      # ▼ 修正: ローカル開発用のDockerfile.devを参照する
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile # ★本番用のDockerfileを使う
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
-    container_name: brightofhouse-web
-    command: npm run dev # ローカル開発モード
-    restart: always
+    container_name: brightofhouse-web # 本番用コンテナ名
+    # command: npm run dev # ★この行は完全に削除
+    restart: always # 本番は自動再起動
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+    # volumes: # ★本番ではvolumesは不要 (コンテナ内にビルド済み)
+    #   - .:/app
+    #   - /app/node_modules
+    #   - /app/.next
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - HOSTNAME=0.0.0.0
-      - WATCHPACK_POLLING=true
+      # - WATCHPACK_POLLING=true # ★本番では不要
     networks:
       - app-network
 

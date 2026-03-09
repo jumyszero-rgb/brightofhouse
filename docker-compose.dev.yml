@@ -1,0 +1,43 @@
+# @/docker-compose.dev.yml (ローカル開発用)
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev # ★開発用のDockerfileを使う
+      args:
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
+    container_name: brightofhouse-web-dev # 開発用コンテナ名を分ける
+    command: npm run dev # 開発サーバー起動
+    restart: "no" # 開発時は自動再起動しない
+    ports:
+      - "3000:3000"
+    volumes: # ローカルファイルを同期
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - HOSTNAME=0.0.0.0
+      - WATCHPACK_POLLING=true
+    networks:
+      - app-network
+
+  tunnel:
+    # 開発時はtunnelを起動しないか、quick tunnelを使う
+    # 今回は開発時はquick tunnelを推奨するため、一旦コメントアウト
+    # image: cloudflare/cloudflared
+    # container_name: brightofhouse-tunnel-dev
+    # restart: "no"
+    # command: tunnel run
+    # environment:
+    #   - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    # networks:
+    #   - app-network
+    # depends_on:
+    #   - web
+
+networks:
+  app-network:
+    driver: bridge

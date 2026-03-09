@@ -3,18 +3,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 依存関係のインストールに必要なツール
-RUN apk add --no-cache git openssl ffmpeg
-
 # 依存関係のインストール
 COPY package*.json ./
 RUN npm install
 
-# ★ ソースコードはボリュームマウントで同期するため、ここではコピーしない
-# COPY . . 
-
-# ポート公開
-EXPOSE 3000
+# ソースコードをコピー (volumesで同期するので、ビルド時は不要だが一応)
+COPY . .
 
 # 開発サーバー起動
 CMD ["npm", "run", "dev"]
