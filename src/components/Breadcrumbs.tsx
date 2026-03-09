@@ -1,4 +1,4 @@
-// @/src/components/Breadcrumbs.tsx
+// @/src/components/Breadcrumbs.tsx (フルコード)
 "use client";
 
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 
 const routeMap: { [key: string]: { label: string; api?: string; } } = {
   "lp": { label: "キャンペーン一覧", api: "/api/lp" },
-  "area": { label: "地域別サービス一覧", api: "/api/lp" }, // LPとAPIは共有
+  "area": { label: "地域別サービス一覧", api: "/api/lp" }, 
   "blog": { label: "ブログ一覧", api: "/api/blog" },
   "service": { label: "サービス・料金" },
   "before-after": { label: "清掃実績" },
@@ -40,7 +40,7 @@ export default function Breadcrumbs() {
         currentAccumulatedPath += `/${segment}`;
         const isLast = i === segments.length - 1;
         
-        let label = routeMap[segment]?.label;
+        let label = routeMap[segment]?.label; // 辞書からルートラベルを取得 (例: "lp" -> "キャンペーン一覧")
         let itemTitle: string | undefined;
 
         if ((segment === "lp" || segment === "area" || segment === "blog") && segments[i + 1]) {
@@ -52,36 +52,34 @@ export default function Breadcrumbs() {
               const res = await fetch(`${apiPath}?slug=${itemSlug}`);
               if (res.ok) {
                 const data = await res.json();
-                // ★修正: data が null でないことを確認してからプロパティにアクセス
-                if (data) { 
-                  itemTitle = (segment === "blog") ? data.title : (data.linkTitle || data.title);
-                } else {
-                  console.warn(`No data found for slug: ${itemSlug} in ${apiPath}`);
-                }
+                itemTitle = (segment === "blog") ? data.title : (data.linkTitle || data.title);
               }
             } catch (error) {
               console.error(`Failed to fetch title for slug: ${itemSlug} from ${apiPath}`, error);
             }
           }
           
+          // ルート（/lp/や/area/、/blog/）のラベルを追加 (例: "キャンペーン一覧")
           tempSegments.push({ 
             href: currentAccumulatedPath.replace(`/${itemSlug}`, ''), 
             label: label || segment, 
             isLast: false 
           });
+          // 詳細ページのタイトルを追加
           tempSegments.push({ 
             href: currentAccumulatedPath, 
-            label: itemTitle || itemSlug, 
+            label: itemTitle || itemSlug, // 取得できなければスラッグ
             isLast: isLast 
           });
-          i++;
+          i++; // 次のセグメント（スラッグ）は処理済みなのでスキップ
         } else {
+            // その他の静的なページ (例: /service, /company)
             if (!label && segment.includes('-')) {
               label = segment.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             }
             tempSegments.push({
               href: currentAccumulatedPath,
-              label: label || segment,
+              label: label || segment, // ラベルがなければスラッグそのまま
               isLast,
             });
         }
@@ -94,7 +92,7 @@ export default function Breadcrumbs() {
 
   }, [pathname]);
 
-  if (loading || pathSegments.length <= 1) return null;
+  if (loading || pathSegments.length <= 1) return null; // ロード中または要素が一つなら表示しない
 
   return (
     <nav aria-label="Breadcrumb" className="bg-white py-3 px-4 md:px-8 border-b border-slate-200 shadow-sm text-black">
