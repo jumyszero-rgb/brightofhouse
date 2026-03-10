@@ -1,14 +1,14 @@
-# @/Dockerfile.dev (ローカル開発用)
-FROM node:20-alpine
+# @/Dockerfile.dev
+FROM node:20
 
 WORKDIR /app
 
-# 依存関係のインストール
+# 必要なツール(FFmpeg)をインストール
+RUN apt-get update && apt-get install -y ffmpeg
+
 COPY package*.json ./
 RUN npm install
 
-# ソースコードをコピー (volumesで同期するので、ビルド時は不要だが一応)
 COPY . .
 
-# 開発サーバー起動
 CMD ["npm", "run", "dev"]

@@ -1,29 +1,25 @@
-# @/docker-compose.yml (本番用)
+# @/docker-compose.yml
 services:
+  # Next.jsアプリ (本番モード)
   web:
     build:
       context: .
-      dockerfile: Dockerfile # ★本番用のDockerfileを使う
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
-    container_name: brightofhouse-web # 本番用コンテナ名
-    # command: npm run dev # ★この行は完全に削除
-    restart: always # 本番は自動再起動
+    container_name: brightofhouse-web
+    restart: always
     ports:
       - "3000:3000"
-    # volumes: # ★本番ではvolumesは不要 (コンテナ内にビルド済み)
-    #   - .:/app
-    #   - /app/node_modules
-    #   - /app/.next
     env_file:
       - .env
     environment:
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0
-      # - WATCHPACK_POLLING=true # ★本番では不要
     networks:
       - app-network
 
+  # Cloudflare Tunnel
   tunnel:
     image: cloudflare/cloudflared
     container_name: brightofhouse-tunnel

@@ -1,20 +1,17 @@
-# @/docker-compose.dev.yml (ローカル開発用)
+# @/docker-compose.dev.yml
 services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile.dev # ★開発用のDockerfileを使う
-      args:
-        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
-    container_name: brightofhouse-web-dev # 開発用コンテナ名を分ける
-    command: npm run dev # 開発サーバー起動
-    restart: "no" # 開発時は自動再起動しない
+      dockerfile: Dockerfile.dev
+    container_name: brightofhouse-web-dev
+    # ▼ コンテナの中で確実に環境を整えてから起動する絶対安全な命令
+    command: sh -c "npm install && npx prisma generate && npm run dev"
+    restart: "no"
     ports:
       - "3000:3000"
-    volumes: # ローカルファイルを同期
+    volumes:
       - .:/app
-      - /app/node_modules
-      - /app/.next
     env_file:
       - .env
     environment:
@@ -23,20 +20,6 @@ services:
       - WATCHPACK_POLLING=true
     networks:
       - app-network
-
-  tunnel:
-    # 開発時はtunnelを起動しないか、quick tunnelを使う
-    # 今回は開発時はquick tunnelを推奨するため、一旦コメントアウト
-    # image: cloudflare/cloudflared
-    # container_name: brightofhouse-tunnel-dev
-    # restart: "no"
-    # command: tunnel run
-    # environment:
-    #   - TUNNEL_TOKEN=${TUNNEL_TOKEN}
-    # networks:
-    #   - app-network
-    # depends_on:
-    #   - web
 
 networks:
   app-network:

@@ -2,28 +2,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// ▼ 修正: IndexNow Keyファイル名と内容を更新
-const INDEXNOW_KEY = "0cf2bc06efdc403e885c5c0957eef7fb"; // ファイル名から.txtを除いた部分
-const INDEXNOW_KEY_LOCATION = `https://brightofhouse.jp/${INDEXNOW_KEY}.txt`; // KeyファイルのフルURL
+const INDEXNOW_KEY = "0cf2bc06efdc403e885c5c0957eef7fb";
+const SITE_DOMAIN = "brightofhouse.jp";
+const INDEXNOW_KEY_LOCATION = `https://${SITE_DOMAIN}/${INDEXNOW_KEY}.txt`;
 
+// ▼ 追加: ブラウザからのアクセス確認用 (GETリクエスト対応)
+export async function GET() {
+  return NextResponse.json({ 
+    status: "online", 
+    message: "IndexNow API is active. Please use POST method to submit URLs." 
+  });
+}
+
+// 既存のPOST処理
 export async function POST(request: NextRequest) {
-  const { urls } = await request.json();
-
-  if (!urls || !Array.isArray(urls) || urls.length === 0) {
-    return NextResponse.json({ error: "URLs are required" }, { status: 400 });
-  }
-
-  const indexNowApiUrl = "https://www.bing.com/indexnow";
-
   try {
+    const { urls } = await request.json();
+
+    if (!urls || !Array.isArray(urls) || urls.length === 0) {
+      return NextResponse.json({ error: "URLs are required" }, { status: 400 });
+    }
+
+    const indexNowApiUrl = "https://www.bing.com/indexnow";
+
+    // IndexNowサーバーにCloudflare経由のIPを伝える
+    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'UNKNOWN';
+
     const response = await fetch(indexNowApiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "Host": "www.bing.com",
+        "X-Forwarded-For": clientIP,
       },
       body: JSON.stringify({
-        host: "brightofhouse.jp", // ★あなたのドメイン
+        host: SITE_DOMAIN,
         key: INDEXNOW_KEY,
         keyLocation: INDEXNOW_KEY_LOCATION,
         urlList: urls,
