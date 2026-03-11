@@ -1,20 +1,19 @@
 // @/src/app/api/indexnow/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { notifyGoogleIndexing } from "@/lib/google-indexing";
 
 const INDEXNOW_KEY = "0cf2bc06efdc403e885c5c0957eef7fb";
 const SITE_DOMAIN = "brightofhouse.jp";
 const INDEXNOW_KEY_LOCATION = `https://${SITE_DOMAIN}/${INDEXNOW_KEY}.txt`;
 
-// ▼ 追加: ブラウザからのアクセス確認用 (GETリクエスト対応)
 export async function GET() {
   return NextResponse.json({ 
     status: "online", 
-    message: "IndexNow API is active. Please use POST method to submit URLs." 
+    message: "Indexing API is active (Bing & Google)." 
   });
 }
 
-// 既存のPOST処理
 export async function POST(request: NextRequest) {
   try {
     const { urls } = await request.json();
@@ -23,12 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URLs are required" }, { status: 400 });
     }
 
+    // 1. Bing (IndexNow) への送信
     const indexNowApiUrl = "https://www.bing.com/indexnow";
-
-    // IndexNowサーバーにCloudflare経由のIPを伝える
     const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'UNKNOWN';
 
-    const response = await fetch(indexNowApiUrl, {
+    const bingPromise = fetch(indexNowApiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
@@ -43,33 +41,29 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    if (response.status === 200) {
-      console.log(`IndexNow success for ${urls.length} URLs`);
-      await prisma.indexNowLog.createMany({
-        data: urls.map((url: string) => ({
-          url,
-          status: response.status,
-          response: "OK",
-        })),
-        skipDuplicates: true,
-      });
-      return NextResponse.json({ success: true, message: "IndexNow submitted" }, { status: 200 });
-    } else {
-      const responseText = await response.text();
-      console.error(`IndexNow failed: ${response.status} ${response.statusText}`);
-      console.error(`IndexNow response: ${responseText}`);
-      await prisma.indexNowLog.createMany({
-        data: urls.map((url: string) => ({
-          url,
-          status: response.status,
-          response: responseText,
-        })),
-        skipDuplicates: true,
-      });
-      return NextResponse.json({ error: "IndexNow submission failed", status: response.status }, { status: 500 });
-    }
+    // 2. Google (Indexing API) への送信
+    const googlePromises = urls.map(url => notifyGoogleIndexing(url));
+
+    // すべての結果を待機 (どれかが失敗してもログは残す)
+    const results = await Promise.allSettled([bingPromise, ...googlePromises]);
+    
+    const bingResult = results[0];
+    const isBingSuccess = bingResult.status === 'fulfilled' && (bingResult.value as any).status === 200;
+
+    // ログ記録
+    await prisma.indexNowLog.createMany({
+      data: urls.map((url: string) => ({
+        url,
+        status: isBingSuccess ? 200 : 500,
+        response: isBingSuccess ? "OK (Bing & Google)" : "Check Logs for Details",
+      })),
+      skipDuplicates: true,
+    });
+
+    return NextResponse.json({ success: true });
+
   } catch (error: any) {
-    console.error("IndexNow API error:", error.message);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Critical indexing error:", error.message);
+    return NextResponse.json({ error: "Submission process failed" }, { status: 500 });
   }
 }
