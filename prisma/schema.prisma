@@ -89,7 +89,7 @@ model ServiceMenu {
   updatedAt   DateTime @updatedAt
 }
 
-// 8. サービス・料金表 大分類
+// 8. サービス・料金表 大分類 (水回り, ハウスクリーニング等)
 model ServiceCategory {
   id        String   @id @default(uuid())
   title     String
@@ -98,41 +98,52 @@ model ServiceCategory {
   createdAt DateTime @default(now())
 }
 
-// 9. サービス・料金表 中分類
+// 9. サービス・料金表 中分類 (キッチン, トイレ等)
 model ServiceItem {
   id            String   @id @default(uuid())
   title         String
-  subTitle      String?  // 補足バッジ用
-  regularPrice  String?  // 通常価格
-  discountPrice String?  // 特別価格
+  subTitle      String?  
+  
+  // ▼ 予約・計算用の追加項目
+  basePrice        Int     @default(0)  // 計算用基本単価 (例: 14000)
+  estimatedMinutes Int     @default(60) // 作業時間目安 (分)
+  
+  regularPrice  String?  // 表示用テキスト (従来通り)
+  discountPrice String?  // 表示用テキスト (従来通り)
   order         Int      @default(0)
   categoryId    String
   category      ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   details       ServiceDetail[]
+  options       ServiceOption[] // ▼ オプション紐付け
 }
 
-// 10. サービス・料金表 詳細
+// 10. サービス・料金表 詳細 (作業内容の箇条書き等)
 model ServiceDetail {
   id          String   @id @default(uuid())
   label       String?
   value       String
-  isPrice     Boolean  @default(false)
-  isNote      Boolean  @default(false)
-  
-  // スタイル設定
   labelColor  String   @default("default")
   labelSize   String   @default("sm")
   labelAlign  String   @default("left")
   valueColor  String   @default("default")
   valueSize   String   @default("base")
   valueAlign  String   @default("right")
-
   order       Int      @default(0)
   itemId      String
   item        ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
-// 11. 対応エリア (旧方式)
+// 11. 新設: サービスオプション (撥水コート, 消臭等)
+model ServiceOption {
+  id                String      @id @default(uuid())
+  title             String
+  price             Int         @default(0) // オプション価格
+  additionalMinutes Int         @default(0) // 追加作業時間
+  itemId            String
+  item              ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+// 12. 対応エリア (旧方式)
 model ServiceArea {
   id        String   @id @default(uuid())
   title     String
@@ -143,7 +154,7 @@ model ServiceArea {
   updatedAt DateTime @updatedAt
 }
 
-// 12. ランディングページ (LP)
+// 13. ランディングページ (LP)
 model LandingPage {
   id          String   @id @default(uuid())
   slug        String   @unique
@@ -165,7 +176,7 @@ model LandingPage {
   updatedAt   DateTime @updatedAt
 }
 
-// 13. ブログ記事管理
+// 14. ブログ記事管理
 model BlogPost {
   id            String   @id @default(uuid())
   slug          String   @unique
@@ -183,7 +194,7 @@ model BlogPost {
   updatedAt     DateTime @updatedAt
 }
 
-// 14. ブログ全体のAI執筆用設定
+// 15. ブログ全体のAI執筆用設定
 model BlogSettings {
   id            String   @id @default("main")
   fixedKeywords String   @default("") // 毎回含める固定キーワード
@@ -192,7 +203,7 @@ model BlogSettings {
   updatedAt     DateTime @updatedAt
 }
 
-// 15. IndexNow通知ログ
+// 16. IndexNow通知ログ
 model IndexNowLog {
   id        String   @id @default(uuid())
   url       String   @unique // 通知したURL
@@ -201,9 +212,25 @@ model IndexNowLog {
   createdAt DateTime @default(now())
 }
 
-// 16. サイト全体設定 (robots.txtなど)
+// 17. サイト全体設定 (robots.txtなど)
 model SiteSettings {
   id        String   @id @default("main")
   robotsTxt String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
   updatedAt DateTime @updatedAt
+}
+
+// 18. 予約データ
+model Booking {
+  id           String   @id @default(uuid())
+  category     String
+  items        String   // 選択した項目のリスト (カンマ区切り等)
+  customerName String
+  email        String
+  phone        String
+  startTime    DateTime
+  endTime      DateTime
+  totalPrice   Int      // 最終計算価格
+  totalMinutes Int      // 合計作業時間 (これでカレンダー枠をロック)
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
 }

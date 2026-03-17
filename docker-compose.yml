@@ -1,16 +1,16 @@
 # @/docker-compose.yml
 services:
-  # Next.jsアプリ (本番モード)
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile # 本番用のDockerfileを使用
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
     container_name: brightofhouse-web
     restart: always
     ports:
       - "3000:3000"
+    # volumes は本番では絶対に指定しない
     env_file:
       - .env
     environment:
@@ -19,7 +19,6 @@ services:
     networks:
       - app-network
 
-  # Cloudflare Tunnel
   tunnel:
     image: cloudflare/cloudflared
     container_name: brightofhouse-tunnel
