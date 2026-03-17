@@ -1,15 +1,11 @@
-// @/next.config.ts
+import type { NextConfig } from "next";
 
-// ▼ 修正: 型エラーを無視するため `any` に設定します
-const nextConfig: any = {
+const nextConfig: NextConfig = {
   output: "standalone",
   
-  // サーバーのメモリ不足(OOM)対策: ビルド時の重いチェック処理をスキップ
+  // ビルド時の重い型チェックをスキップしてメモリ不足を防ぎます
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 
   images: {
