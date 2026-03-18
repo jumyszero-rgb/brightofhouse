@@ -172,6 +172,9 @@ model LandingPage {
   ctaText     String?  @default("無料お見積りはこちら")
   ctaLink     String?  @default("/contact")
   blocks      Json?    // 将来のブロック型拡張用
+  metaKeywords    String?  // 追加
+  metaDescription String?  // 追加
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -190,8 +193,12 @@ model BlogPost {
 
   thumbnail     String?  // アイキャッチ画像
   status        String   @default("DRAFT") // DRAFT or PUBLISHED
+  metaKeywords    String?  // 追加
+  metaDescription String?  // 追加
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+
 }
 
 // 15. ブログ全体のAI執筆用設定

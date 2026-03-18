@@ -19,6 +19,18 @@ async function checkAuth() {
   } catch { return false; }
 }
 
+async function notifyIndexNow(urls: string[]) {
+  const baseUrl = "https://brightofhouse.jp";
+  const fullUrls = urls.map(url => `${baseUrl}${url}`);
+  try {
+    const response = await fetch(`${baseUrl}/api/indexnow`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: fullUrls }),
+    });
+  } catch (e) { console.error(e); }
+}
+
 const uploadToR2 = async (file: File) => {
   const buffer = Buffer.from(await file.arrayBuffer());
   const webpBuffer = await sharp(buffer)
@@ -50,19 +62,16 @@ const deleteFromR2 = async (url: string) => {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  const slug = searchParams.get("slug"); // ★slugパラメータも受け取る
-
+  const slug = searchParams.get("slug");
   try {
     if (id) {
       const lp = await prisma.landingPage.findUnique({ where: { id } });
       return NextResponse.json(lp);
     }
-    // ▼ slug があればそれを使って検索
     if (slug) {
       const lp = await prisma.landingPage.findUnique({ where: { slug } });
       return NextResponse.json(lp);
     }
-
     const lps = await prisma.landingPage.findMany({ orderBy: { createdAt: "desc" } });
     return NextResponse.json(lps);
   } catch (error) { return NextResponse.json({ error: "Error" }, { status: 500 }); }
@@ -74,9 +83,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
     
-    const exists = await prisma.landingPage.findUnique({ where: { slug } });
-    if (exists) return NextResponse.json({ error: "Used slug" }, { status: 400 });
-
     let heroImageUrl = null;
     const imageFile = formData.get("heroImage") as File | null;
     if (imageFile && imageFile.size > 0) {
@@ -97,8 +103,14 @@ export async function POST(request: NextRequest) {
         ctaText: formData.get("ctaText") as string,
         ctaLink: formData.get("ctaLink") as string,
         heroImage: heroImageUrl,
+        // ▼ 追加
+        metaKeywords: formData.get("metaKeywords") as string,
+        metaDescription: formData.get("metaDescription") as string,
       }
     });
+    if (newLp.status === "PUBLISHED") {
+      await notifyIndexNow([`/${newLp.category === "AREA" ? "area" : "lp"}/${newLp.slug}`]);
+    }
     return NextResponse.json(newLp);
   } catch (error) { return NextResponse.json({ error: "Create failed" }, { status: 500 }); }
 }
@@ -108,13 +120,8 @@ export async function PUT(request: NextRequest) {
   try {
     const formData = await request.formData();
     const id = formData.get("id") as string;
-    const slug = formData.get("slug") as string;
-
     const currentLp = await prisma.landingPage.findUnique({ where: { id } });
     if (!currentLp) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const exists = await prisma.landingPage.findUnique({ where: { slug } });
-    if (exists && exists.id !== id) return NextResponse.json({ error: "Used slug" }, { status: 400 });
 
     let heroImageUrl = currentLp.heroImage;
     const imageFile = formData.get("heroImage") as File | null;
@@ -126,7 +133,7 @@ export async function PUT(request: NextRequest) {
     const updatedLp = await prisma.landingPage.update({
       where: { id },
       data: {
-        slug,
+        slug: formData.get("slug") as string,
         title: formData.get("title") as string,
         linkTitle: formData.get("linkTitle") as string,
         status: formData.get("status") as string,
@@ -138,8 +145,14 @@ export async function PUT(request: NextRequest) {
         ctaText: formData.get("ctaText") as string,
         ctaLink: formData.get("ctaLink") as string,
         heroImage: heroImageUrl,
+        // ▼ 追加
+        metaKeywords: formData.get("metaKeywords") as string,
+        metaDescription: formData.get("metaDescription") as string,
       }
     });
+    if (updatedLp.status === "PUBLISHED") {
+      await notifyIndexNow([`/${updatedLp.category === "AREA" ? "area" : "lp"}/${updatedLp.slug}`]);
+    }
     return NextResponse.json(updatedLp);
   } catch (error) { return NextResponse.json({ error: "Update failed" }, { status: 500 }); }
 }
@@ -149,8 +162,10 @@ export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
     const lp = await prisma.landingPage.findUnique({ where: { id } });
-    if (lp?.heroImage) await deleteFromR2(lp.heroImage);
+    if (!lp) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (lp.heroImage) await deleteFromR2(lp.heroImage);
     await prisma.landingPage.delete({ where: { id } });
+    await notifyIndexNow([`/${lp.category === "AREA" ? "area" : "lp"}/${lp.slug}`]);
     return NextResponse.json({ success: true });
   } catch (error) { return NextResponse.json({ error: "Delete failed" }, { status: 500 }); }
 }

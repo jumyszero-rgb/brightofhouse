@@ -20,7 +20,7 @@ export default async function ServiceArea() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {areas.map((area) => (
-              <div key={area.id} className="text-left md:text-center">
+              <div key={area.id} className="text-left">
                 <h3 className="text-lg font-bold text-blue-600 mb-4 border-b-2 border-blue-100 pb-2 inline-block">
                   {area.title}
                 </h3>

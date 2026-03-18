@@ -39,28 +39,26 @@ async function notifyIndexNow(urls: string[]) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  const slug = searchParams.get("slug"); // ★slugパラメータも受け取る
+  const slug = searchParams.get("slug");
 
   try {
     if (id) {
       const post = await prisma.blogPost.findUnique({ where: { id } });
       return NextResponse.json(post);
     }
-    // ▼ slug があればそれを使って検索 (公開記事のみ)
     if (slug) {
       const post = await prisma.blogPost.findFirst({ where: { slug, status: "PUBLISHED" } });
       return NextResponse.json(post);
     }
 
-    // IDもslugもない場合は、公開中の全記事を取得
-    const posts = await prisma.blogPost.findMany({ 
-      where: { status: "PUBLISHED" }, 
-      orderBy: { createdAt: "desc" } 
+    const posts = await prisma.blogPost.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { createdAt: "desc" }
     });
     return NextResponse.json(posts);
-  } catch (error) { 
+  } catch (error) {
     console.error("Blog GET Error:", error);
-    return NextResponse.json({ error: "Fetch error" }, { status: 500 }); 
+    return NextResponse.json({ error: "Fetch error" }, { status: 500 });
   }
 }
 
@@ -78,17 +76,20 @@ export async function POST(request: NextRequest) {
         xContent: body.xContent,
         googleContent: body.googleContent,
         status: body.status,
+        // ▼ 追加: SEO項目
+        metaKeywords: body.metaKeywords,
+        metaDescription: body.metaDescription,
       },
     });
 
     if (post.status === "PUBLISHED") {
       await notifyIndexNow([`/blog/${post.slug}`]);
     }
-    
+   
     return NextResponse.json(post);
-  } catch (error) { 
+  } catch (error) {
     console.error("Blog POST Error:", error);
-    return NextResponse.json({ error: "Create failed" }, { status: 500 }); 
+    return NextResponse.json({ error: "Create failed" }, { status: 500 });
   }
 }
 
@@ -107,6 +108,9 @@ export async function PUT(request: NextRequest) {
         xContent: body.xContent,
         googleContent: body.googleContent,
         status: body.status,
+        // ▼ 追加: SEO項目
+        metaKeywords: body.metaKeywords,
+        metaDescription: body.metaDescription,
       },
     });
 
@@ -115,9 +119,9 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json(post);
-  } catch (error) { 
+  } catch (error) {
     console.error("Blog PUT Error:", error);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 }); 
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
 
@@ -132,10 +136,10 @@ export async function DELETE(request: NextRequest) {
     await prisma.blogPost.delete({ where: { id } });
 
     await notifyIndexNow([`/blog/${post.slug}`]);
-    
+   
     return NextResponse.json({ success: true });
-  } catch (error) { 
+  } catch (error) {
     console.error("Blog DELETE Error:", error);
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 }); 
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

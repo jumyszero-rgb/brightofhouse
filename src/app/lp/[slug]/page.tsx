@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 
-// キャッシュを無効化し、常に最新のDB情報を反映
+// 常に最新のDB情報を反映し、キャッシュによる表示遅延を防止
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -13,7 +13,7 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-// --- SEOメタデータの動的生成 ---
+// --- SEOメタデータの動的生成 (DBのキーワード・説明文を反映) ---
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const lp = await prisma.landingPage.findUnique({ 
@@ -25,13 +25,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!lp || lp.status === "DRAFT") return { title: "ページが見つかりません" };
 
+  // カンマ区切りのキーワードを配列に変換
+  const keywords = lp.metaKeywords ? lp.metaKeywords.split(",").map(k => k.trim()) :[];
+
   return {
     title: `${lp.title} | 北海道ブライトオブハウス`,
-    description: lp.catchphrase || "キャンペーン情報",
+    description: lp.metaDescription || lp.catchphrase || "北海道ブライトオブハウスのお得なキャンペーン情報です。",
+    keywords: keywords, // 管理画面で設定したキーワードを適用
+    alternates: {
+      canonical: `/lp/${lp.slug}`, // 正規URLの指定
+    },
     openGraph: {
       title: lp.title,
-      description: lp.catchphrase || "",
-      images: lp.heroImage ? [lp.heroImage] : [],
+      description: lp.metaDescription || lp.catchphrase || "",
+      images: lp.heroImage ? [lp.heroImage] :[],
+      url: `https://brightofhouse.jp/lp/${lp.slug}`,
     },
   };
 }
@@ -52,14 +60,14 @@ export default async function LPPage({ params }: Props) {
   if (!lp || lp.status === "DRAFT") notFound();
 
   const phoneNumber = "0120-792-684";
-  const lineUrl = "https://line.me/R/ti/p/@your_id"; // 実際の公式LINEのURLに書き換えてください
+  const lineUrl = "https://line.me/R/ti/p/@your_id"; // ★LINE公式アカウントのURLに変更してください
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
       {/* 戻るナビゲーション */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-[100] border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+          <Link href="/" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
             <span>←</span> 公式サイト
           </Link>
           <Link href="/contact" className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-red-700 transition-colors">
@@ -73,7 +81,7 @@ export default async function LPPage({ params }: Props) {
         {lp.heroImage && (
           <Image src={lp.heroImage} alt={lp.title} fill className="object-cover opacity-40 mix-blend-overlay" priority />
         )}
-        <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto w-full">
+        <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto w-full pb-4">
           {lp.subCopy && (
             <p className="inline-block bg-yellow-400 text-red-700 text-xs md:text-xl font-black px-5 py-2 rounded-full mb-6 shadow-lg border-2 border-white transform -rotate-1">
               {lp.subCopy}
@@ -92,10 +100,10 @@ export default async function LPPage({ params }: Props) {
             {lp.title}
           </h2>
 
-          {/* 本文 (リッチテキスト表示) */}
+          {/* 本文 (リッチテキスト表示・globals.cssのスタイル適用) */}
           {lp.content && (
             <div 
-              className="ql-content prose prose-slate prose-base md:prose-xl max-w-none text-slate-700 mb-16"
+              className="ql-content prose prose-slate prose-base md:prose-xl max-w-none text-slate-700 mb-16 leading-loose"
               dangerouslySetInnerHTML={{ __html: lp.content }}
             />
           )}
