@@ -5,34 +5,26 @@ import { jwtVerify } from "jose";
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
-  const host = request.headers.get("host");
+  const host = request.headers.get("host") || "";
 
-  // --- 1. wwwありを「なし」にリダイレクト (SEO評価の統一) ---
-  if (host?.startsWith("www.")) {
+  // 1. wwwありを「なし」にリダイレクト (httpsへ統一)
+  if (host.startsWith("www.")) {
     const noWwwHost = host.replace("www.", "");
-    // パスとクエリを維持して転送
     return NextResponse.redirect(`https://${noWwwHost}${url.pathname}${url.search}`, 301);
   }
 
-  // --- 2. 管理画面のアクセス制限 (既存ロジックの継承) ---
+  // 2. 管理画面のアクセス制限
   if (url.pathname.startsWith("/admin")) {
-    
-    if (url.pathname === "/admin/login") {
-      return NextResponse.next();
-    }
+    if (url.pathname === "/admin/login") return NextResponse.next();
 
     const token = request.cookies.get("admin_token")?.value;
-
-    if (!token) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
-    }
+    if (!token) return NextResponse.redirect(new URL("/admin/login", request.url));
 
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
       await jwtVerify(token, secret);
       return NextResponse.next();
-    } catch (err) {
-      // トークンが無効ならログイン画面へ
+    } catch {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }
@@ -41,10 +33,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * システムファイル以外、すべてのページで www チェックを走らせるための設定
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico|images|video|icon.png|apple-icon.png).*)",
-  ],
+  matcher: "/((?!api|_next/static|_next/image|favicon.ico|images|video|icon.png|apple-icon.png).*)",
 };
