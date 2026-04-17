@@ -51,7 +51,7 @@ export default function AdminBeforeAfterList() {
               メニューへ戻る
             </Link>
             <Link
-              href="/admin"
+              href="/admin/before-after/edit"
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold"
             >
               ＋ 新規登録

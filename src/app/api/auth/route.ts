@@ -1,10 +1,10 @@
 // @/src/app/api/auth/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { SignJWT } from "jose";
 import { sendAuthCode } from "@/lib/mail";
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient(); // 共通インスタンスを使用します
 
 export async function POST(request: NextRequest) {
   const body = await request.json();

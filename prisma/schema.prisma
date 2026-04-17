@@ -98,23 +98,24 @@ model ServiceCategory {
   createdAt DateTime @default(now())
 }
 
-// 9. サービス・料金表 中分類 (キッチン, トイレ等)
+// 9. サービス・料金表 中分類
 model ServiceItem {
   id            String   @id @default(uuid())
   title         String
   subTitle      String?  
+  regularPrice  String?  
+  discountPrice String?  
+  basePrice        Int     @default(0) 
+  estimatedMinutes Int     @default(60)
   
-  // ▼ 予約・計算用の追加項目
-  basePrice        Int     @default(0)  // 計算用基本単価 (例: 14000)
-  estimatedMinutes Int     @default(60) // 作業時間目安 (分)
-  
-  regularPrice  String?  // 表示用テキスト (従来通り)
-  discountPrice String?  // 表示用テキスト (従来通り)
+  // ▼ 追加: 注意事項欄
+  notes         String?  @db.Text
+
   order         Int      @default(0)
   categoryId    String
   category      ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   details       ServiceDetail[]
-  options       ServiceOption[] // ▼ オプション紐付け
+  options       ServiceOption[]
 }
 
 // 10. サービス・料金表 詳細 (作業内容の箇条書き等)
@@ -133,12 +134,21 @@ model ServiceDetail {
   item        ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
-// 11. 新設: サービスオプション (撥水コート, 消臭等)
+// 11. サービスオプション
 model ServiceOption {
   id                String      @id @default(uuid())
-  title             String
-  price             Int         @default(0) // オプション価格
-  additionalMinutes Int         @default(0) // 追加作業時間
+  title             String      // 手打ち用
+  subTitle          String?     
+  regularPrice      String?     
+  price             Int         @default(0) 
+  additionalMinutes Int         @default(0) 
+  
+  discountType      String      @default("NONE") 
+  discountValue     Int         @default(0)      
+
+  // ▼ 追加: すでに登録されている中分類(Item)をオプションとして引っ張るためのID
+  linkedItemId      String?     
+
   itemId            String
   item              ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
@@ -240,4 +250,82 @@ model Booking {
   totalMinutes Int      // 合計作業時間 (これでカレンダー枠をロック)
   status       String   @default("PENDING")
   createdAt    DateTime @default(now())
+}
+
+model ServicePage {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String   
+  linkTitle   String?  
+  
+  // ▼ 追加: どのサービス項目(中分類)と連動するか
+  serviceItemId String?
+
+  heroImage   String?  
+  catchphrase String?  
+  content     String?  
+  status      String   @default("DRAFT")
+  metaKeywords    String?
+  metaDescription String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// 新設：予約システム専用マスターデータ (4階層)
+// ==========================================
+
+// 1. 大分類 (例：水回りクリーニング) ※詳細ページとの紐付け用
+model BookingCategory {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int      @default(0)
+  menus     BookingMenu[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 2. 中分類 (例：キッチンクリーニング)
+model BookingMenu {
+  id          String   @id @default(uuid())
+  title       String   
+  basePrice   Int      @default(0)  // 基本料金
+
+  priceNote   String?  // 価格の注釈 (例: ゴミ屋敷レベルは+3300円〜)
+  basicItems  String?  @db.Text     // 基本作業内容
+  notes       String?  @db.Text     // 注意事項
+
+  durationMin Int      @default(0)  // 作業時間(分)
+  order       Int      @default(0)
+  
+  categoryId  String
+  category    BookingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  subMenus    BookingSubMenu[]
+}
+
+// 3. 小分類 (例：追加 浴室クリーニング / キッチンオプション等)
+model BookingSubMenu {
+  id          String   @id @default(uuid())
+  title       String   
+  price       Int      @default(0)  // 追加料金
+  durationMin Int      @default(0)  // 追加時間(分)
+  order       Int      @default(0)
+
+  menuId      String
+  menu        BookingMenu @relation(fields: [menuId], references:[id], onDelete: Cascade)
+  
+  options     BookingOption[]
+}
+
+// 4. 極小分類 (例：浴室防カビコート / 鏡ウロコ取り等)
+model BookingOption {
+  id          String   @id @default(uuid())
+  title       String   
+  price       Int      @default(0)  // オプション料金
+  durationMin Int      @default(0)  // 追加時間(分)
+  order       Int      @default(0)
+
+  subMenuId   String
+  subMenu     BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
 }

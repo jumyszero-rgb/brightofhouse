@@ -102,6 +102,26 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">robots.txt などの全体設定を編集します。</p>
           </Link>
 
+          <Link 
+          href="/admin/service-pages"
+          className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-blue-800"
+          >
+          <h2 className="text-xl font-bold text-gray-800 mb-2">サービス詳細ページ管理</h2>
+          <p className="text-gray-600 text-sm">
+          各サービスの深掘り解説ページを作成・編集します。
+          </p>
+          
+          </Link>
+                    <Link 
+            href="/admin/booking-master"
+            className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-indigo-500"
+          >
+            <h2 className="text-xl font-bold text-gray-800 mb-2">予約専用マスター管理</h2>
+            <p className="text-gray-600 text-sm">
+              予約システムで使用する4階層（大・中・小・極小）のメニューと価格・時間を管理します。
+            </p>
+          </Link>
+
         </div>
       </div>
     </div>

@@ -1,14 +1,12 @@
 // @/src/app/api/before-after/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import sharp from "sharp";
-
-const prisma = new PrismaClient();
 
 // --- 認証チェック関数 ---
 async function checkAuth() {

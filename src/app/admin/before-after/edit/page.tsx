@@ -12,6 +12,8 @@ function EditForm() {
   const editId = searchParams.get("id"); // URLから ?id=xxx を取得
 
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiInput, setAiInput] = useState({ before: "", after: "" });
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<{ before: string; after: string }>({ before: "", after: "" });
 
@@ -45,6 +47,28 @@ function EditForm() {
     };
     fetchData();
   }, [editId]);
+
+  const handleAIGenerate = async () => {
+    if (!formData.title || !aiInput.before || !aiInput.after) {
+      alert("タイトル、ビフォーの状態、アフターの状態を入力してください。");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/before-after/generate", {
+        method: "POST",
+        body: JSON.stringify({ title: formData.title, beforeText: aiInput.before, afterText: aiInput.after }),
+      });
+      const data = await res.json();
+      if (data.description) {
+        setFormData({ ...formData, description: data.description });
+      }
+    } catch (e) {
+      alert("AI生成に失敗しました");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -100,6 +124,36 @@ function EditForm() {
               className="w-full p-2 border rounded text-black"
             />
           </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4 mb-2">
+          <h2 className="text-sm font-bold text-blue-800 flex items-center gap-2">
+            ✨ AI説明文アシスタント
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="ビフォー（例：カビで真っ黒）"
+              value={aiInput.before}
+              onChange={(e) => setAiInput({ ...aiInput, before: e.target.value })}
+              className="p-2 border rounded text-sm text-black"
+            />
+            <input
+              type="text"
+              placeholder="アフター（例：新品同様に）"
+              value={aiInput.after}
+              onChange={(e) => setAiInput({ ...aiInput, after: e.target.value })}
+              className="p-2 border rounded text-sm text-black"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleAIGenerate}
+            disabled={aiLoading}
+            className="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+          >
+            {aiLoading ? "AIが考えています..." : "AIで説明文を自動生成"}
+          </button>
         </div>
 
         <div>

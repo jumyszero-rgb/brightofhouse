@@ -29,8 +29,8 @@ function EditForm() {
     content: "",
     ctaText: "無料お見積りはこちら",
     ctaLink: "/contact",
-    metaKeywords: "",    // 追加
-    metaDescription: "", // 追加
+    metaKeywords: "",    
+    metaDescription: "", 
   });
 
   useEffect(() => {
@@ -91,7 +91,7 @@ function EditForm() {
 
     const form = new FormData(e.currentTarget);
     if (editId) form.append("id", editId);
-    
+   
     // 手動セットが必要な項目
     form.set("content", formData.content);
     form.set("showOnHome", String(formData.showOnHome));
@@ -127,23 +127,23 @@ function EditForm() {
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md text-black">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">{editId ? "LP編集" : "新規作成"}</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">{editId ? "ページ編集" : "新規作成"}</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
-        
+       
         {/* 基本設定 */}
         <div className="bg-slate-50 p-4 rounded-lg space-y-4 border border-slate-200">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">ページタイトル（H1）</label>
-              <input name="title" required value={formData.title} onChange={handleChange} className="w-full p-2 border rounded" />
+              <label className="block text-sm font-bold text-gray-700 mb-1">ページタイトル（H1 / 予約カテゴリ名と一致させてください）</label>
+              <input name="title" required value={formData.title} onChange={handleChange} className="w-full p-2 border rounded" placeholder="例: 水回りクリーニング" />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">リンク用タイトル（任意）</label>
-              <input name="linkTitle" value={formData.linkTitle} onChange={handleChange} className="w-full p-2 border rounded bg-blue-50" />
+              <input name="linkTitle" value={formData.linkTitle} onChange={handleChange} className="w-full p-2 border rounded bg-blue-50" placeholder="例: 水回り" />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">URL (slug)</label>
-              <input name="slug" required value={formData.slug} onChange={handleChange} className="w-full p-2 border rounded font-mono" />
+              <input name="slug" required value={formData.slug} onChange={handleChange} className="w-full p-2 border rounded font-mono" placeholder="water-cleaning" />
             </div>
           </div>
 
@@ -153,6 +153,8 @@ function EditForm() {
               <select name="category" value={formData.category} onChange={handleChange} className="p-2 border rounded font-bold bg-white text-black">
                 <option value="CAMPAIGN">🔥 キャンペーン</option>
                 <option value="AREA">📍 地域別ページ</option>
+                {/* ▼ 追加：サービス詳細ページ */}
+                <option value="SERVICE_DETAIL">🛠 サービス詳細ページ</option>
               </select>
             </div>
             <div>
@@ -183,17 +185,22 @@ function EditForm() {
           <input name="catchphrase" value={formData.catchphrase} onChange={handleChange} className="w-full p-2 border rounded text-lg font-bold" />
         </div>
 
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">サブコピー</label>
+          <input name="subCopy" value={formData.subCopy} onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
         <div className="pb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">本文</label>
           <RichTextEditor value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
         </div>
 
-        {/* SEO設定エリア (NEW!) */}
+        {/* SEO設定エリア */}
         <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100 space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold text-indigo-900 flex items-center gap-2">🔍 SEO設定</h2>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleSeoSuggest}
               disabled={loadingSeo}
               className="bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 disabled:bg-slate-400 transition-all flex items-center gap-2"
@@ -201,12 +208,12 @@ function EditForm() {
               {loadingSeo ? "考え中..." : "✨ AIにSEO案を作成させる"}
             </button>
           </div>
-          
+         
           <div>
             <label className="block text-xs font-bold text-indigo-700 mb-1">重要キーワード（3〜5個・カンマ区切り）</label>
-            <input 
-              name="metaKeywords" 
-              value={formData.metaKeywords} 
+            <input
+              name="metaKeywords"
+              value={formData.metaKeywords}
               onChange={handleChange}
               placeholder="例: 札幌, キッチン清掃, 料金"
               className="w-full p-2 border border-indigo-200 rounded text-black"
@@ -214,9 +221,9 @@ function EditForm() {
           </div>
           <div>
             <label className="block text-xs font-bold text-indigo-700 mb-1">検索結果用の説明文（meta description）</label>
-            <textarea 
-              name="metaDescription" 
-              value={formData.metaDescription} 
+            <textarea
+              name="metaDescription"
+              value={formData.metaDescription}
               onChange={handleChange}
               rows={3}
               placeholder="検索結果に表示される魅力的な紹介文を入力してください"

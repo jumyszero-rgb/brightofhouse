@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 
-// --- 認証チェック関数 ---
 async function checkAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
@@ -13,12 +12,11 @@ async function checkAuth() {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     await jwtVerify(token, secret);
     return true;
-  } catch { 
-    return false; 
+  } catch {
+    return false;
   }
 }
 
-// --- IndexNowへの通知ヘルパー関数 ---
 async function notifyIndexNow(urls: string[]) {
   const baseUrl = process.env.BASE_URL || "https://brightofhouse.jp";
   const fullUrls = urls.map(url => `${baseUrl}${url}`);
@@ -39,7 +37,6 @@ async function notifyIndexNow(urls: string[]) {
   }
 }
 
-// GET: 全データ取得（オプションと詳細を含む）
 export async function GET() {
   try {
     const data = await prisma.serviceCategory.findMany({
@@ -47,7 +44,7 @@ export async function GET() {
         items: {
           include: { 
             details: { orderBy: { order: "asc" } },
-            options: true // オプションも取得
+            options: { orderBy: { price: "desc" } } // オプションも取得
           },
           orderBy: { order: "asc" },
         },
@@ -61,23 +58,20 @@ export async function GET() {
   }
 }
 
-// POST: 新規作成
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   
   try {
     const body = await request.json();
     
-    // 大分類
     if (body.type === "category") {
       const res = await prisma.serviceCategory.create({
         data: { title: body.title, order: body.order },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
     
-    // 中分類
     if (body.type === "item") {
       const res = await prisma.serviceItem.create({
         data: { 
@@ -87,15 +81,15 @@ export async function POST(request: NextRequest) {
           discountPrice: body.discountPrice,
           basePrice: Number(body.basePrice) || 0,
           estimatedMinutes: Number(body.estimatedMinutes) || 60,
+          notes: body.notes,
           categoryId: body.categoryId,
           order: body.order 
         },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
 
-    // 小分類（詳細）
     if (body.type === "detail") {
       const res = await prisma.serviceDetail.create({
         data: {
@@ -113,21 +107,26 @@ export async function POST(request: NextRequest) {
           order: body.order,
         },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2']);
       return NextResponse.json(res);
     }
 
-    // オプション
     if (body.type === "option") {
       const res = await prisma.serviceOption.create({
         data: {
           title: body.title,
+          subTitle: body.subTitle, 
+          regularPrice: body.regularPrice, 
           price: Number(body.price) || 0,
           additionalMinutes: Number(body.additionalMinutes) || 0,
+          // ▼ 追加: 欠落していた割引・リンク情報の保存処理
+          discountType: body.discountType || "NONE",
+          discountValue: Number(body.discountValue) || 0,
+          linkedItemId: body.linkedItemId || null,
           itemId: body.itemId
         }
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
 
@@ -138,7 +137,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT: 更新
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   
@@ -151,7 +149,7 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: { title: data.title, order: data.order },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
 
@@ -165,10 +163,11 @@ export async function PUT(request: NextRequest) {
           discountPrice: data.discountPrice,
           basePrice: Number(data.basePrice) || 0,
           estimatedMinutes: Number(data.estimatedMinutes) || 60,
+          notes: data.notes,
           order: data.order 
         },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
 
@@ -189,7 +188,7 @@ export async function PUT(request: NextRequest) {
           order: data.order
         },
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2']);
       return NextResponse.json(res);
     }
 
@@ -198,11 +197,17 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           title: data.title,
+          subTitle: data.subTitle,
+          regularPrice: data.regularPrice,
           price: Number(data.price) || 0,
-          additionalMinutes: Number(data.additionalMinutes) || 0
+          additionalMinutes: Number(data.additionalMinutes) || 0,
+          // ▼ 追加: 欠落していた割引・リンク情報の更新処理
+          discountType: data.discountType || "NONE",
+          discountValue: Number(data.discountValue) || 0,
+          linkedItemId: data.linkedItemId || null,
         }
       });
-      await notifyIndexNow(['/service']);
+      await notifyIndexNow(['/service', '/service2', '/booking']);
       return NextResponse.json(res);
     }
 
@@ -213,7 +218,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE: 削除
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   
@@ -230,8 +234,7 @@ export async function DELETE(request: NextRequest) {
       await prisma.serviceOption.delete({ where: { id } });
     }
     
-    await notifyIndexNow(['/service']);
-    
+    await notifyIndexNow(['/service', '/service2', '/booking']);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE Error:", error);

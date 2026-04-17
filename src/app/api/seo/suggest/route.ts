@@ -21,25 +21,24 @@ export async function POST(request: NextRequest) {
     const { title, content } = await request.json();
 
     const prompt = `
-あなたはSEO専門家です。以下のコンテンツ（タイトルと本文）を分析し、Google検索で上位表示されるためのSEOメタデータを生成してください。
+あなたはSEO専門家です。以下のタイトルと本文を分析し、最適なSEOメタデータを生成してください。
 
 タイトル: ${title}
-本文: ${content.substring(0, 2000)} // 長すぎる場合はカット
+本文: ${content.substring(0, 1500)}
 
 【指示】
-1. metaKeywords: このページで狙うべき重要キーワードを3〜5個、カンマ区切りで抽出してください（例: 札幌, キッチン清掃, 料金）。詰め込みすぎず、本当に重要なものだけに絞ってください。
-2. metaDescription: 検索結果でクリックしたくなる、120文字程度の魅力的な説明文を作成してください。
+1. metaKeywords: 狙うべき重要キーワードを3〜5個、カンマ区切りで。
+2. metaDescription: 120文字程度の魅力的な説明文。
 
-【出力形式】
-必ず以下の純粋なJSON形式のみで出力してください。
+JSON形式で出力してください:
 {
-  "metaKeywords": "キーワード1, キーワード2, キーワード3",
-  "metaDescription": "説明文テキスト"
+  "metaKeywords": "キーワード1, キーワード2...",
+  "metaDescription": "説明文..."
 }
 `;
 
-    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-1.5-flash";
-    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1beta";
+    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
+    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
     const geminiUrl = `${process.env.GEMINI_PROXY_URL}/${geminiApiVersion}/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
@@ -58,6 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(JSON.parse(aiText));
 
   } catch (error: any) {
-    return NextResponse.json({ error: "SEO提案に失敗しました" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
