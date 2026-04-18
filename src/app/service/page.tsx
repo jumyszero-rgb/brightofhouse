@@ -33,6 +33,7 @@ export default async function ServicePage() {
 
   // 各ServiceItemに関連するServicePageのslugを取得するためのMapを作成
   const servicePages = await prisma.servicePage.findMany({
+    where: { status: "PUBLISHED" },
     select: { serviceItemId: true, slug: true }
   });
   const slugMap = new Map(servicePages.map(p => [p.serviceItemId, p.slug]));
