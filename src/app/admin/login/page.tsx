@@ -54,9 +54,8 @@ export default function AdminLoginPage() {
 
       if (!res.ok) throw new Error("コードが無効か期限切れです");
 
-      // 成功したら管理画面へ移動し、強制リフレッシュでCookieを認識させる
-      router.push("/admin");
-      router.refresh(); 
+      // 成功したら管理画面へ強制的に遷移（Cookieを確実に反映させるためブラウザレベルでリダイレクト）
+      window.location.href = "/admin";
 
     } catch (err: any) {
       setError(err.message);

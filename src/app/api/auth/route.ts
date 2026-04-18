@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
     response.cookies.set("admin_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      path: "/",  // ← ★ここが "/" になっているか確認。"/admin" ではなく "/" が最も安全です。
+      path: "/",
+      sameSite: "lax", // 追加
       maxAge: 60 * 60 * 24, // 24時間
     });
 
