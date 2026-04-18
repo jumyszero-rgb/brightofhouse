@@ -1,6 +1,7 @@
 // @/src/app/api/booking/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { sendBookingNotification, sendBookingConfirmationToUser } from "@/lib/mail";
 
 // 空き枠取得 (指定カテゴリの予約済み時間を取得)
 export async function GET(request: NextRequest) {
@@ -27,16 +28,24 @@ export async function POST(request: NextRequest) {
         category: body.category,
         customerName: body.name,
         email: body.email,
-        phone: body.tel || body.phone, // フロントエンドの送信名に合わせる
+        phone: body.tel || body.phone,
+        address: body.address,
+        notes: body.notes,
         startTime: new Date(body.startTime),
         endTime: new Date(body.endTime),
         status: "PENDING",
-        // ▼ 追加: 必須になった計算用データ（送られてこない場合は初期値を入れる）
         items: body.items || "未選択",
         totalPrice: Number(body.totalPrice) || 0,
         totalMinutes: Number(body.totalMinutes) || 60,
       }
     });
+
+    // 管理者へメール通知
+    sendBookingNotification(booking).catch(err => console.error("Admin Email notification error:", err));
+    
+    // お客様へ自動返信メール
+    sendBookingConfirmationToUser(booking).catch(err => console.error("User Email notification error:", err));
+
     return NextResponse.json(booking);
   } catch (error: any) {
     console.error("Booking POST Error:", error.message);

@@ -74,8 +74,8 @@ export default async function Home() {
     subtitle: "水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃",
     mobileHeight: "h-[50vh]",
     pcHeight: "md:h-[65vh]",
-    btn1Text: "無料お見積り",
-    btn1Link: "/contact",
+    btn1Text: "仮予約・お見積り・ご相談",
+    btn1Link: "/service",
     btn2Text: "料金を見る",
     btn2Link: "/service",
   };

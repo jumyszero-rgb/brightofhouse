@@ -22,22 +22,27 @@ export async function POST(request: NextRequest) {
 
     const prompt = `
 あなたはプロの清掃業者「北海道ブライトオブハウス」のスタッフです。
-お客様に喜んでいただけるよう、施工実績（ビフォーアフター）の魅力的な説明文を書いてください。
+施工実績の「ビフォーの状態」と「アフターの状態」を、それぞれ魅力的に説明してください。
 
 【作業タイトル】
 ${title}
-
-【ビフォーの状態（お客様の悩み）】
+【ビフォーの状態（入力）】
 ${beforeText}
-
-【アフターの状態（作業後の変化）】
+【アフターの状態（入力）】
 ${afterText}
 
 【指示】
-・清掃のプロとしてのこだわりや技術をアピールしてください。
-・親しみやすく、かつ信頼感のあるトーンで書いてください。
-・文字数は200文字〜400文字程度で、適宜改行を入れて読みやすくしてください。
-・HTMLタグは含めず、純粋なテキストのみを出力してください。
+・プロとしてのこだわりをアピール。
+・beforeContent: 作業前の不便さや汚れの悩み。
+・afterContent: 作業後の快適さや具体的な変化。
+・各100〜200文字程度。
+
+【出力形式】
+必ず以下のJSON形式のみで出力してください。
+{
+  "beforeContent": "ビフォーの説明文",
+  "afterContent": "アフターの説明文"
+}
 `;
 
     const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
@@ -49,6 +54,7 @@ ${afterText}
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { response_mime_type: "application/json" }
       })
     });
 
@@ -57,8 +63,14 @@ ${afterText}
       throw new Error("AIからの応答が不正です");
     }
 
-    const aiText = result.candidates[0].content.parts[0].text.trim();
-    return NextResponse.json({ description: aiText });
+    let aiText = result.candidates[0].content.parts[0].text;
+    aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    const data = JSON.parse(aiText);
+    return NextResponse.json({ 
+      beforeContent: data.beforeContent,
+      afterContent: data.afterContent 
+    });
 
   } catch (error: any) {
     console.error("AI Generate Error:", error.message);

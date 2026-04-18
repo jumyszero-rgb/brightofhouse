@@ -122,6 +122,28 @@ export default function AdminDashboard() {
             </p>
           </Link>
 
+          {/* NEW: 予約一覧管理 */}
+          <Link 
+            href="/admin/bookings"
+            className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-emerald-500"
+          >
+            <h2 className="text-xl font-bold text-gray-800 mb-2">予約一覧・対応管理</h2>
+            <p className="text-gray-600 text-sm">
+              届いた予約申し込みの確認、ステータス変更、削除を行います。
+            </p>
+          </Link>
+
+          {/* NEW: カレンダー手動設定 */}
+          <Link 
+            href="/admin/calendar"
+            className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-orange-500"
+          >
+            <h2 className="text-xl font-bold text-gray-800 mb-2">カレンダー空き枠調整</h2>
+            <p className="text-gray-600 text-sm">
+              特定の日時を「×（休み）」や「▲（要相談）」に手動で切り替えます。
+            </p>
+          </Link>
+
         </div>
       </div>
     </div>

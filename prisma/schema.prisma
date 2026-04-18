@@ -1,7 +1,5 @@
-// @/prisma/schema.prisma
-
 generator client {
-  provider      = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -10,322 +8,282 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// 1. 管理画面2段階認証用コード
 model AdminCode {
   id        String   @id @default(uuid())
-  code      String   // 6桁の数字
-  expiresAt DateTime // 有効期限
+  code      String
+  expiresAt DateTime
   createdAt DateTime @default(now())
 }
 
-// 2. 清掃実績 (Before/After)
 model BeforeAfter {
   id          String   @id @default(uuid())
-  title       String   // 作業タイトル
-  description String?  // 説明文
-  beforeUrl   String   // Before画像URL
-  afterUrl    String   // After画像URL
+  title       String
+  description String?
+  beforeUrl   String
+  afterUrl    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-// 3. 会社概要
 model CompanyProfile {
   id              String   @id @default("main")
   name            String   @default("合同会社むすびえむ")
-  representative  String?  // 代表者名
-  address         String?  // 所在地
-  tel             String?  // 電話番号
-  businessContent String?  // 事業内容
-  businessHours   String?  // 営業時間
-  mapCode         String?  // Googleマップ埋め込みコード
+  representative  String?
+  address         String?
+  tel             String?
+  businessContent String?
+  businessHours   String?
+  mapCode         String?
   updatedAt       DateTime @updatedAt
 }
 
-// 4. ヒーローエリア設定 (トップページ上部)
 model HeroSettings {
   id           String   @id @default("main")
   title        String   @default("北海道ブライトオブハウス")
   subtitle     String   @default("水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃")
-  mobileHeight String   @default("h-[50vh]")
-  pcHeight     String   @default("md:h-[65vh]")
   btn1Text     String   @default("無料お見積り")
   btn1Link     String   @default("/contact")
   btn2Text     String   @default("料金を見る")
   btn2Link     String   @default("/service")
   updatedAt    DateTime @updatedAt
+  mobileHeight String   @default("h-[50vh]")
+  pcHeight     String   @default("md:h-[65vh]")
 }
 
-// 5. プロモーション動画
 model PromotionVideo {
   id         String   @id @default(uuid())
   title      String
-  videoUrl   String   // R2のURL
-  deviceType String   // "pc" または "mobile"
+  videoUrl   String
+  deviceType String
   createdAt  DateTime @default(now())
 }
 
-// 6. 実績ギャラリー (スライダー用単体画像)
 model GalleryImage {
   id        String   @id @default(uuid())
-  imageUrl  String   // R2のURL
+  imageUrl  String
   title     String?
   createdAt DateTime @default(now())
 }
 
-// 7. 人気メニュー (トップページ用)
 model ServiceMenu {
   id          String   @id @default(uuid())
   title       String
   price       String
-  priceNote   String?  // 価格の補足 (例: 2点, 壁掛け)
   unit        String   @default("円〜")
   description String?
-  features    String?  // 改行区切り
+  features    String?
   isPopular   Boolean  @default(false)
   order       Int      @default(0)
   link        String   @default("/service")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  priceNote   String?
 }
 
-// 8. サービス・料金表 大分類 (水回り, ハウスクリーニング等)
 model ServiceCategory {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   title     String
-  order     Int      @default(0)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
   items     ServiceItem[]
-  createdAt DateTime @default(now())
 }
 
-// 9. サービス・料金表 中分類
 model ServiceItem {
-  id            String   @id @default(uuid())
-  title         String
-  subTitle      String?  
-  regularPrice  String?  
-  discountPrice String?  
-  basePrice        Int     @default(0) 
-  estimatedMinutes Int     @default(60)
-  
-  // ▼ 追加: 注意事項欄
-  notes         String?  @db.Text
-
-  order         Int      @default(0)
-  categoryId    String
-  category      ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  details       ServiceDetail[]
-  options       ServiceOption[]
+  id               String          @id @default(uuid())
+  title            String
+  subTitle         String?
+  order            Int             @default(0)
+  categoryId       String
+  discountPrice    String?
+  regularPrice     String?
+  basePrice        Int             @default(0)
+  estimatedMinutes Int             @default(60)
+  notes            String?
+  details          ServiceDetail[]
+  category         ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  options          ServiceOption[]
 }
 
-// 10. サービス・料金表 詳細 (作業内容の箇条書き等)
 model ServiceDetail {
-  id          String   @id @default(uuid())
-  label       String?
-  value       String
-  labelColor  String   @default("default")
-  labelSize   String   @default("sm")
-  labelAlign  String   @default("left")
-  valueColor  String   @default("default")
-  valueSize   String   @default("base")
-  valueAlign  String   @default("right")
-  order       Int      @default(0)
-  itemId      String
-  item        ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  id         String      @id @default(uuid())
+  label      String?
+  value      String
+  order      Int         @default(0)
+  itemId     String
+  labelAlign String      @default("left")
+  labelColor String      @default("default")
+  labelSize  String      @default("sm")
+  valueAlign String      @default("right")
+  valueColor String      @default("default")
+  valueSize  String      @default("base")
+  item       ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
-// 11. サービスオプション
 model ServiceOption {
   id                String      @id @default(uuid())
-  title             String      // 手打ち用
-  subTitle          String?     
-  regularPrice      String?     
-  price             Int         @default(0) 
-  additionalMinutes Int         @default(0) 
-  
-  discountType      String      @default("NONE") 
-  discountValue     Int         @default(0)      
-
-  // ▼ 追加: すでに登録されている中分類(Item)をオプションとして引っ張るためのID
-  linkedItemId      String?     
-
+  title             String
+  price             Int         @default(0)
+  additionalMinutes Int         @default(0)
   itemId            String
+  regularPrice      String?
+  subTitle          String?
+  discountType      String      @default("NONE")
+  discountValue     Int         @default(0)
+  linkedItemId      String?
   item              ServiceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
-// 12. 対応エリア (旧方式)
 model ServiceArea {
   id        String   @id @default(uuid())
   title     String
-  regions   String   // 改行区切り地域
+  regions   String
   note      String?
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// 13. ランディングページ (LP)
 model LandingPage {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  title       String   // ページ内H1タイトル (SEO用)
-  linkTitle   String?  // トップや一覧で使う短いタイトル (任意)
-
-  category    String   @default("CAMPAIGN") // CAMPAIGN (キャンペーン) or AREA (地域別)
-  status      String   @default("DRAFT")    // DRAFT or PUBLISHED
-  showOnHome  Boolean  @default(false)      // トップページに表示するか
-
-  heroImage   String?
-  catchphrase String?
-  subCopy     String?
-  content     String?
-  ctaText     String?  @default("無料お見積りはこちら")
-  ctaLink     String?  @default("/contact")
-  blocks      Json?    // 将来のブロック型拡張用
-  metaKeywords    String?  // 追加
-  metaDescription String?  // 追加
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  title           String
+  status          String   @default("DRAFT")
+  heroImage       String?
+  catchphrase     String?
+  subCopy         String?
+  content         String?
+  ctaText         String?  @default("無料お見積りはこちら")
+  ctaLink         String?  @default("/contact")
+  blocks          Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  showOnHome      Boolean  @default(false)
+  category        String   @default("CAMPAIGN")
+  linkTitle       String?
+  metaDescription String?
+  metaKeywords    String?
 }
 
-// 14. ブログ記事管理
 model BlogPost {
-  id            String   @id @default(uuid())
-  slug          String   @unique
-  title         String
-  content       String   // リッチテキスト（HTML）
-  
-  // SNS投稿用フィールド
-  instaContent  String?  // Instagram用
-  xContent      String?  // X (Twitter)用
-  googleContent String?  // Googleビジネスプロフィール用
-
-  thumbnail     String?  // アイキャッチ画像
-  status        String   @default("DRAFT") // DRAFT or PUBLISHED
-  metaKeywords    String?  // 追加
-  metaDescription String?  // 追加
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  title           String
+  content         String
+  instaContent    String?
+  xContent        String?
+  googleContent   String?
+  thumbnail       String?
+  status          String   @default("DRAFT")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  metaDescription String?
+  metaKeywords    String?
 }
 
-// 15. ブログ全体のAI執筆用設定
 model BlogSettings {
   id            String   @id @default("main")
-  fixedKeywords String   @default("") // 毎回含める固定キーワード
-  defaultIntro  String   @default("") // 毎回最初に記載する定型文
-  defaultOutro  String   @default("") // 毎回最後に記載する定型文
+  fixedKeywords String   @default("")
+  defaultIntro  String   @default("")
+  defaultOutro  String   @default("")
   updatedAt     DateTime @updatedAt
 }
 
-// 16. IndexNow通知ログ
 model IndexNowLog {
   id        String   @id @default(uuid())
-  url       String   @unique // 通知したURL
-  status    Int      // HTTPステータスコード
-  response  String?  // APIからの応答
+  url       String   @unique
+  status    Int
+  response  String?
   createdAt DateTime @default(now())
 }
 
-// 17. サイト全体設定 (robots.txtなど)
 model SiteSettings {
   id        String   @id @default("main")
   robotsTxt String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
   updatedAt DateTime @updatedAt
 }
 
-// 18. 予約データ
 model Booking {
   id           String   @id @default(uuid())
   category     String
-  items        String   // 選択した項目のリスト (カンマ区切り等)
   customerName String
   email        String
   phone        String
   startTime    DateTime
   endTime      DateTime
-  totalPrice   Int      // 最終計算価格
-  totalMinutes Int      // 合計作業時間 (これでカレンダー枠をロック)
   status       String   @default("PENDING")
   createdAt    DateTime @default(now())
+  items        String
+  totalMinutes Int
+  totalPrice   Int
+  address      String?
+  notes        String?
 }
 
-model ServicePage {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  title       String   
-  linkTitle   String?  
-  
-  // ▼ 追加: どのサービス項目(中分類)と連動するか
-  serviceItemId String?
-
-  heroImage   String?  
-  catchphrase String?  
-  content     String?  
-  status      String   @default("DRAFT")
-  metaKeywords    String?
-  metaDescription String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ==========================================
-// 新設：予約システム専用マスターデータ (4階層)
-// ==========================================
-
-// 1. 大分類 (例：水回りクリーニング) ※詳細ページとの紐付け用
-model BookingCategory {
+model CalendarOverride {
   id        String   @id @default(uuid())
-  title     String
-  order     Int      @default(0)
-  menus     BookingMenu[]
-  createdAt DateTime @default(now())
+  slotTime  DateTime @unique
+  status    String
+  note      String?
   updatedAt DateTime @updatedAt
 }
 
-// 2. 中分類 (例：キッチンクリーニング)
+model ServicePage {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  title           String
+  linkTitle       String?
+  heroImage       String?
+  catchphrase     String?
+  content         String?
+  status          String   @default("DRAFT")
+  metaKeywords    String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  serviceItemId   String?
+  bookingData     Json?
+}
+
+model BookingCategory {
+  id        String        @id @default(uuid())
+  title     String
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  menus     BookingMenu[]
+}
+
 model BookingMenu {
-  id          String   @id @default(uuid())
-  title       String   
-  basePrice   Int      @default(0)  // 基本料金
-
-  priceNote   String?  // 価格の注釈 (例: ゴミ屋敷レベルは+3300円〜)
-  basicItems  String?  @db.Text     // 基本作業内容
-  notes       String?  @db.Text     // 注意事項
-
-  durationMin Int      @default(0)  // 作業時間(分)
-  order       Int      @default(0)
-  
+  id          String           @id @default(uuid())
+  title       String
+  basePrice   Int              @default(0)
+  durationMin Int              @default(0)
+  order       Int              @default(0)
   categoryId  String
-  category    BookingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
+  basicItems  String?
+  notes       String?
+  priceNote   String?
+  category    BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subMenus    BookingSubMenu[]
 }
 
-// 3. 小分類 (例：追加 浴室クリーニング / キッチンオプション等)
 model BookingSubMenu {
-  id          String   @id @default(uuid())
-  title       String   
-  price       Int      @default(0)  // 追加料金
-  durationMin Int      @default(0)  // 追加時間(分)
-  order       Int      @default(0)
-
+  id          String          @id @default(uuid())
+  title       String
+  price       Int             @default(0)
+  durationMin Int             @default(0)
+  order       Int             @default(0)
   menuId      String
-  menu        BookingMenu @relation(fields: [menuId], references:[id], onDelete: Cascade)
-  
   options     BookingOption[]
+  menu        BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
-// 4. 極小分類 (例：浴室防カビコート / 鏡ウロコ取り等)
 model BookingOption {
-  id          String   @id @default(uuid())
-  title       String   
-  price       Int      @default(0)  // オプション料金
-  durationMin Int      @default(0)  // 追加時間(分)
-  order       Int      @default(0)
-
+  id          String         @id @default(uuid())
+  title       String
+  price       Int            @default(0)
+  durationMin Int            @default(0)
+  order       Int            @default(0)
   subMenuId   String
   subMenu     BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
 }

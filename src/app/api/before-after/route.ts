@@ -6,105 +6,89 @@ import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-import sharp from "sharp";
 
 // --- 認証チェック関数 ---
 async function checkAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
-
   if (!token) return false;
-
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     await jwtVerify(token, secret);
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
-// --- IndexNowへの通知ヘルパー関数 ---
-async function notifyIndexNow(urls: string[]) {
-  const baseUrl = process.env.BASE_URL || "https://brightofhouse.jp";
-  const fullUrls = urls.map(url => `${baseUrl}${url}`);
+// --- R2へのアップロード (Sharpエラー耐性強化) ---
+const uploadToR2 = async (file: File) => {
+  console.log(`Starting upload for: ${file.name} (${file.size} bytes)`);
+  
+  // デバッグ用: 環境変数の読み込み状況を確認 (機密情報は伏せる)
+  const accountId = process.env.R2_ACCOUNT_ID?.trim();
+  const bucketName = process.env.R2_BUCKET_NAME?.trim();
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+
+  console.log("R2 Debug Info:", {
+    accountId: accountId ? `${accountId.slice(0, 4)}...` : "MISSING",
+    bucketName: bucketName || "MISSING",
+    accessKey: accessKeyId ? `${accessKeyId.slice(0, 4)}...` : "MISSING",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`
+  });
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  let uploadBuffer = buffer;
+  let contentType = file.type;
+  let fileName = `Beforeandafter/${uuidv4()}`;
 
   try {
-    const response = await fetch(`${baseUrl}/api/indexnow`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urls: fullUrls }),
-    });
-    if (!response.ok) {
-      console.error("Failed to notify IndexNow:", await response.text());
-    } else {
-      console.log("Successfully notified IndexNow for:", fullUrls);
-    }
-  } catch (error) {
-    console.error("Error notifying IndexNow:", error);
+    const sharp = (await import("sharp")).default;
+    const webpBuffer = await sharp(buffer)
+      .rotate()
+      .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    
+    uploadBuffer = webpBuffer;
+    contentType = "image/webp";
+    fileName += ".webp";
+    console.log("Sharp conversion successful");
+  } catch (sharpError) {
+    console.error("Sharp failed, using original file:", sharpError);
+    const ext = file.name.split('.').pop() || "jpg";
+    fileName += `.${ext}`;
   }
-}
-
-// --- R2へのアップロード (WebP変換・圧縮付き) ---
-const uploadToR2 = async (file: File) => {
-  const buffer = Buffer.from(await file.arrayBuffer());
   
-  const webpBuffer = await sharp(buffer)
-    .rotate()
-    .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer();
+  if (!bucketName) {
+    throw new Error("環境変数 R2_BUCKET_NAME が設定されていません");
+  }
 
-  const fileName = `Beforeandafter/${uuidv4()}.webp`;
-  
   await r2Client.send(new PutObjectCommand({
-    Bucket: process.env.R2_BUCKET_NAME,
+    Bucket: bucketName,
     Key: fileName,
-    Body: webpBuffer,
-    ContentType: "image/webp",
+    Body: uploadBuffer,
+    ContentType: contentType,
   }));
 
-  return `${process.env.R2_PUBLIC_URL}/${fileName}`;
-};
+  const publicUrl = process.env.R2_PUBLIC_URL;
+  if (!publicUrl) throw new Error("環境変数 R2_PUBLIC_URL が設定されていません");
 
-// --- R2からの削除 ---
-const deleteFromR2 = async (url: string) => {
-  if (!url) return;
-  try {
-    const key = url.replace(`${process.env.R2_PUBLIC_URL}/`, "");
-    await r2Client.send(new DeleteObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-    }));
-  } catch (e) {
-    console.error("R2 delete error:", e);
-  }
+  return `${publicUrl}/${fileName}`;
 };
-
-// --- APIハンドラ ---
 
 // GET: 一覧取得
 export async function GET() {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const items = await prisma.beforeAfter.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const items = await prisma.beforeAfter.findMany({ orderBy: { createdAt: "desc" } });
     return NextResponse.json(items);
-  } catch (error) {
-    console.error("GET Error:", error);
-    return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: "DB Fetch Error: " + error.message }, { status: 500 });
   }
 }
 
 // POST: 新規登録
 export async function POST(request: NextRequest) {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const formData = await request.formData();
@@ -114,11 +98,9 @@ export async function POST(request: NextRequest) {
     const beforeFile = formData.get("beforeImage") as File;
     const afterFile = formData.get("afterImage") as File;
 
-    if (!beforeFile || !afterFile) {
-      return NextResponse.json({ error: "画像が必要です" }, { status: 400 });
+    if (!beforeFile || !afterFile || beforeFile.size === 0 || afterFile.size === 0) {
+      return NextResponse.json({ error: "画像（Before/After両方）をアップロードしてください" }, { status: 400 });
     }
-
-    const createdAt = dateStr ? new Date(dateStr) : new Date();
 
     const [beforeUrl, afterUrl] = await Promise.all([
       uploadToR2(beforeFile),
@@ -126,24 +108,25 @@ export async function POST(request: NextRequest) {
     ]);
 
     const newItem = await prisma.beforeAfter.create({
-      data: { title, description, beforeUrl, afterUrl, createdAt },
+      data: {
+        title,
+        description,
+        beforeUrl,
+        afterUrl,
+        createdAt: dateStr ? new Date(dateStr) : new Date(),
+      },
     });
 
-    // ▼ IndexNowに通知
-    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
-    
     return NextResponse.json(newItem);
-  } catch (error) {
-    console.error("POST Error:", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("POST Detailed Error:", error);
+    return NextResponse.json({ error: error.message || "予期せぬエラーが発生しました" }, { status: 500 });
   }
 }
 
 // PUT: 更新
 export async function PUT(request: NextRequest) {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const formData = await request.formData();
@@ -154,67 +137,41 @@ export async function PUT(request: NextRequest) {
     const beforeFile = formData.get("beforeImage") as File | null;
     const afterFile = formData.get("afterImage") as File | null;
 
-    const currentItem = await prisma.beforeAfter.findUnique({ where: { id } });
-    if (!currentItem) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const current = await prisma.beforeAfter.findUnique({ where: { id } });
+    if (!current) return NextResponse.json({ error: "実績が見つかりません" }, { status: 404 });
 
-    let beforeUrl = currentItem.beforeUrl;
-    let afterUrl = currentItem.afterUrl;
+    let beforeUrl = current.beforeUrl;
+    let afterUrl = current.afterUrl;
 
-    if (beforeFile && beforeFile.size > 0) {
-      await deleteFromR2(currentItem.beforeUrl);
-      beforeUrl = await uploadToR2(beforeFile);
-    }
-    if (afterFile && afterFile.size > 0) {
-      await deleteFromR2(currentItem.afterUrl);
-      afterUrl = await uploadToR2(afterFile);
-    }
+    if (beforeFile && beforeFile.size > 0) beforeUrl = await uploadToR2(beforeFile);
+    if (afterFile && afterFile.size > 0) afterUrl = await uploadToR2(afterFile);
 
-    const updatedItem = await prisma.beforeAfter.update({
+    const updated = await prisma.beforeAfter.update({
       where: { id },
       data: {
         title,
         description,
-        createdAt: dateStr ? new Date(dateStr) : currentItem.createdAt,
         beforeUrl,
         afterUrl,
+        createdAt: dateStr ? new Date(dateStr) : current.createdAt,
       },
     });
 
-    // ▼ IndexNowに通知
-    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
-    
-    return NextResponse.json(updatedItem);
-  } catch (error) {
-    console.error("PUT Error:", error);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    console.error("PUT Detailed Error:", error);
+    return NextResponse.json({ error: error.message || "更新に失敗しました" }, { status: 500 });
   }
 }
 
 // DELETE: 削除
 export async function DELETE(request: NextRequest) {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id } = await request.json();
-    
-    const item = await prisma.beforeAfter.findUnique({ where: { id } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    await Promise.all([
-      deleteFromR2(item.beforeUrl),
-      deleteFromR2(item.afterUrl),
-    ]);
-
     await prisma.beforeAfter.delete({ where: { id } });
-
-    // ▼ IndexNowに通知
-    await notifyIndexNow([`/before-after`]); // 一覧ページを通知
-    
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("DELETE Error:", error);
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

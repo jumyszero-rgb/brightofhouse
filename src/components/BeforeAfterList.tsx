@@ -70,9 +70,28 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
               
               {/* 説明文 */}
               {item.description && (
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                  {item.description}
-                </p>
+                <div className="space-y-4">
+                  {item.description.includes("【アフター】") ? (
+                    <>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400 block mb-1">BEFORE</span>
+                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                          {item.description.split("【アフター】")[0].replace("【ビフォー】", "").trim()}
+                        </p>
+                      </div>
+                      <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                        <span className="text-[10px] font-bold text-blue-400 block mb-1">AFTER</span>
+                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                          {item.description.split("【アフター】")[1].trim()}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
               )}
             </section>
           ))}

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import ServicePageBooking from "@/components/booking/ServicePageBooking";
 
 // 常に最新のDB情報を反映
 export const dynamic = "force-dynamic";
@@ -75,10 +76,26 @@ export default async function ServiceDetailPage({ params }: Props) {
             {page.title}
           </h1>
           {page.catchphrase && (
-            <p className="text-lg md:text-xl opacity-90 drop-shadow-sm font-medium">
+            <p className="text-lg md:text-xl opacity-90 drop-shadow-sm font-medium mb-8">
               {page.catchphrase}
             </p>
           )}
+
+          {/* ▼ 追加: アクションボタン */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link 
+              href="#booking" 
+              className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-700 transition-all w-64"
+            >
+              仮予約・お見積り
+            </Link>
+            <Link 
+              href="#booking" 
+              className="bg-white/20 backdrop-blur-sm text-white border border-white/50 font-bold py-3 px-8 rounded-full hover:bg-white/30 transition-all w-64"
+            >
+              通常のお問い合わせはこちら
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -92,37 +109,39 @@ export default async function ServiceDetailPage({ params }: Props) {
           />
         )}
 
-        {/* 4. 予約連動セクション (CTA) */}
-        <div className="bg-blue-50 rounded-3xl p-8 md:p-16 text-center border-2 border-blue-100 shadow-xl relative overflow-hidden">
-          {/* 背景装飾 */}
-          <div className="absolute -top-10 -right-10 text-blue-100 text-9xl font-black opacity-50">RESERVE</div>
-
-          <p className="relative z-10 font-bold text-blue-600 mb-2 uppercase tracking-widest text-sm">Online Booking</p>
-          <h3 className="relative z-10 text-2xl md:text-4xl font-black text-slate-800 mb-6">
-            ネットで即時 見積・予約
-          </h3>
-          <p className="relative z-10 text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-            メニューを選ぶだけでその場で概算見積もりがわかります。<br />
-            そのまま24時間いつでも、空き状況の確認と仮予約が可能です。
-          </p>
-
-          <div className="relative z-10 flex flex-col items-center gap-6">
-            {/* 予約ページへカテゴリ名を引継いでリンク */}
-            <Link
-              href={`/booking?category=${encodeURIComponent(page.title)}`}
-              className="inline-block bg-blue-600 text-white text-xl font-bold py-5 px-12 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 transition-all w-full md:w-auto"
-            >
-              {page.title}の予約へ進む ➝
-            </Link>
-
-            {/* 電話番号案内 */}
-            <div className="pt-6 border-t border-blue-200 w-full max-w-md">
-              <p className="text-xs text-slate-400 mb-1">お電話でのご相談はこちら</p>
-              <a href={`tel:${phoneNumber.replace(/-/g, "")}`} className="text-2xl font-black text-slate-700 hover:text-blue-600 transition-colors tracking-widest font-mono">
-                {phoneNumber}
-              </a>
+        {/* 4. 統合予約セクション (設定がある場合のみ表示) */}
+        <div id="booking" className="mt-20 scroll-mt-20">
+          {page.bookingData ? (
+            <ServicePageBooking 
+              pageTitle={page.title} 
+              bookingData={page.bookingData as any} 
+            />
+          ) : (
+            <div className="bg-blue-50 rounded-3xl p-8 md:p-16 text-center border-2 border-blue-100 shadow-xl relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 text-blue-100 text-9xl font-black opacity-50">CONTACT</div>
+              <h3 className="relative z-10 text-2xl md:text-4xl font-black text-slate-800 mb-6">
+                お見積り・ご相談
+              </h3>
+              <p className="relative z-10 text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+                お客様のご要望に合わせて柔軟に対応いたします。<br />
+                まずはお気軽にお問い合わせください。
+              </p>
+              <div className="relative z-10 flex flex-col items-center gap-6">
+                <Link
+                  href="/contact"
+                  className="inline-block bg-blue-600 text-white text-xl font-bold py-5 px-12 rounded-full shadow-lg hover:bg-blue-700 transition-all w-full md:w-auto"
+                >
+                  お問い合わせはこちら ➝
+                </Link>
+                <div className="pt-6 border-t border-blue-200 w-full max-w-md">
+                  <p className="text-xs text-slate-400 mb-1">お電話でのご相談はこちら</p>
+                  <a href={`tel:${phoneNumber.replace(/-/g, "")}`} className="text-2xl font-black text-slate-700 hover:text-blue-600 transition-colors tracking-widest font-mono">
+                    {phoneNumber}
+                  </a>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </main>

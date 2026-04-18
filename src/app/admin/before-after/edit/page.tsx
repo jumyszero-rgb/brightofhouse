@@ -5,11 +5,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
-// 検索パラメータを使うコンポーネント
 function EditForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams.get("id"); // URLから ?id=xxx を取得
+  const editId = searchParams.get("id");
 
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -17,14 +16,13 @@ function EditForm() {
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<{ before: string; after: string }>({ before: "", after: "" });
 
-  // 初期値
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
+    beforeDescription: "",
+    afterDescription: "",
     date: new Date().toISOString().split('T')[0],
   });
 
-  // 編集モードの場合、データを取得してセット
   useEffect(() => {
     if (!editId) return;
 
@@ -34,9 +32,21 @@ function EditForm() {
       const target = items.find((i: any) => i.id === editId);
       
       if (target) {
+        // descriptionを「【ビフォー】」等で分割して復元を試みる（既存データ対応）
+        let bDesc = "";
+        let aDesc = "";
+        if (target.description?.includes("【アフター】")) {
+          const parts = target.description.split("【アフター】");
+          bDesc = parts[0].replace("【ビフォー】", "").trim();
+          aDesc = parts[1].trim();
+        } else {
+          bDesc = target.description || "";
+        }
+
         setFormData({
           title: target.title,
-          description: target.description || "",
+          beforeDescription: bDesc,
+          afterDescription: aDesc,
           date: new Date(target.createdAt).toISOString().split('T')[0],
         });
         setPreview({
@@ -60,8 +70,12 @@ function EditForm() {
         body: JSON.stringify({ title: formData.title, beforeText: aiInput.before, afterText: aiInput.after }),
       });
       const data = await res.json();
-      if (data.description) {
-        setFormData({ ...formData, description: data.description });
+      if (data.beforeContent && data.afterContent) {
+        setFormData({ 
+          ...formData, 
+          beforeDescription: data.beforeContent,
+          afterDescription: data.afterContent 
+        });
       }
     } catch (e) {
       alert("AI生成に失敗しました");
@@ -78,25 +92,32 @@ function EditForm() {
     const form = new FormData(e.currentTarget);
     if (editId) form.append("id", editId);
 
+    // ビフォーとアフターの説明を結合して送信（DBスキーマ維持のため）
+    const combinedDescription = `【ビフォー】\n${formData.beforeDescription}\n\n【アフター】\n${formData.afterDescription}`;
+    form.set("description", combinedDescription);
+
     try {
       const method = editId ? "PUT" : "POST";
       const res = await fetch("/api/before-after", { method, body: form });
 
-      if (!res.ok) throw new Error("エラーが発生しました");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "エラーが発生しました");
+      }
 
       alert(editId ? "更新しました" : "登録しました");
-      router.push("/admin/before-after"); // 一覧に戻る
+      router.push("/admin/before-after");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setMessage("❌ 処理に失敗しました");
+      setMessage(`❌ ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md text-black">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">
         {editId ? "実績を編集" : "新規登録"}
       </h1>
@@ -126,115 +147,119 @@ function EditForm() {
           </div>
         </div>
 
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4 mb-2">
-          <h2 className="text-sm font-bold text-blue-800 flex items-center gap-2">
-            ✨ AI説明文アシスタント
+        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4 shadow-inner">
+          <h2 className="font-bold text-blue-800 flex items-center gap-2">
+            ✨ AIビフォーアフター説明執筆
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="ビフォー（例：カビで真っ黒）"
-              value={aiInput.before}
-              onChange={(e) => setAiInput({ ...aiInput, before: e.target.value })}
-              className="p-2 border rounded text-sm text-black"
-            />
-            <input
-              type="text"
-              placeholder="アフター（例：新品同様に）"
-              value={aiInput.after}
-              onChange={(e) => setAiInput({ ...aiInput, after: e.target.value })}
-              className="p-2 border rounded text-sm text-black"
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-blue-600">ビフォーの状態</label>
+              <input
+                type="text"
+                placeholder="例：カビで真っ黒、水が流れない"
+                value={aiInput.before}
+                onChange={(e) => setAiInput({ ...aiInput, before: e.target.value })}
+                className="w-full p-2 border rounded text-sm text-black"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-blue-600">アフターの状態</label>
+              <input
+                type="text"
+                placeholder="例：新品同様にピカピカ、除菌済み"
+                value={aiInput.after}
+                onChange={(e) => setAiInput({ ...aiInput, after: e.target.value })}
+                className="w-full p-2 border rounded text-sm text-black"
+              />
+            </div>
           </div>
           <button
             type="button"
             onClick={handleAIGenerate}
             disabled={aiLoading}
-            className="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-black hover:bg-blue-700 disabled:bg-blue-300 transition-all shadow-md"
           >
-            {aiLoading ? "AIが考えています..." : "AIで説明文を自動生成"}
+            {aiLoading ? "AIが執筆しています..." : "AIで「ビフォ文」「アフター文」を一括生成"}
           </button>
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">説明文</label>
-          <textarea
-            name="description"
-            rows={4}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full p-2 border rounded text-black"
-          />
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Before画像 */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">
-              Before画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}
-            </label>
-            {preview.before && editId && (
-              <div className="mb-2 relative h-32 w-full bg-gray-100 rounded overflow-hidden">
-                <Image src={preview.before} alt="current" fill className="object-cover" />
-              </div>
-            )}
-            <input
-              name="beforeImage"
-              type="file"
-              accept="image/*"
-              required={!editId}
-              className="w-full text-sm text-gray-500"
-            />
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <label className="block text-sm font-black text-slate-700 mb-2">【ビフォ文】</label>
+              <textarea
+                value={formData.beforeDescription}
+                onChange={(e) => setFormData({ ...formData, beforeDescription: e.target.value })}
+                rows={6}
+                className="w-full p-3 border rounded-lg text-sm leading-relaxed"
+                placeholder="作業前の悩みや状態..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Before画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}
+              </label>
+              {preview.before && (
+                <div className="mb-2 relative h-40 w-full bg-gray-100 rounded-lg overflow-hidden border">
+                  <Image src={preview.before} alt="before" fill className="object-cover" />
+                </div>
+              )}
+              <input name="beforeImage" type="file" accept="image/*" required={!editId} className="w-full text-xs" />
+            </div>
           </div>
 
-          {/* After画像 */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">
-              After画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}
-            </label>
-            {preview.after && editId && (
-              <div className="mb-2 relative h-32 w-full bg-gray-100 rounded overflow-hidden">
-                <Image src={preview.after} alt="current" fill className="object-cover" />
-              </div>
-            )}
-            <input
-              name="afterImage"
-              type="file"
-              accept="image/*"
-              required={!editId}
-              className="w-full text-sm text-gray-500"
-            />
+          <div className="space-y-4">
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+              <label className="block text-sm font-black text-blue-900 mb-2">【アフター文】</label>
+              <textarea
+                value={formData.afterDescription}
+                onChange={(e) => setFormData({ ...formData, afterDescription: e.target.value })}
+                rows={6}
+                className="w-full p-3 border rounded-lg text-sm leading-relaxed"
+                placeholder="作業後の変化やプロのこだわり..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                After画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}
+              </label>
+              {preview.after && (
+                <div className="mb-2 relative h-40 w-full bg-gray-100 rounded-lg overflow-hidden border">
+                  <Image src={preview.after} alt="after" fill className="object-cover" />
+                </div>
+              )}
+              <input name="afterImage" type="file" accept="image/*" required={!editId} className="w-full text-xs" />
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-4 pt-6 border-t">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 bg-gray-500 text-white py-3 rounded hover:bg-gray-600"
+            className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-bold hover:bg-gray-300 transition-all"
           >
             戻る
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold"
+            className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-black text-lg hover:bg-blue-700 shadow-lg disabled:bg-blue-300 transition-all"
           >
-            {loading ? "送信中..." : (editId ? "更新して保存" : "登録する")}
+            {loading ? "保存中..." : (editId ? "更新して保存" : "この実績を公開する")}
           </button>
         </div>
         
-        {message && <p className="text-center text-red-600 font-bold">{message}</p>}
+        {message && <p className="text-center text-red-600 font-bold animate-bounce">{message}</p>}
       </form>
     </div>
   );
 }
 
-// Suspenseでラップ（useSearchParamsを使うため必須）
 export default function EditPage() {
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <Suspense fallback={<div>Loading...</div>}>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <Suspense fallback={<div>読み込み中...</div>}>
         <EditForm />
       </Suspense>
     </div>

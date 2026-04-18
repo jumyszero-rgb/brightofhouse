@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(await prisma.servicePage.findUnique({ where: { slug } }));
     }
     return NextResponse.json(await prisma.servicePage.findMany({ orderBy: { updatedAt: "desc" } }));
-  } catch (error) {
-    return NextResponse.json({ error: "Fetch error" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Fetch error: " + error.message }, { status: 500 });
   }
 }
 
@@ -97,18 +97,21 @@ export async function POST(request: NextRequest) {
       heroImageUrl = await uploadToR2(imageFile);
     }
 
-     const newPage = await prisma.servicePage.create({
+    const bookingDataRaw = formData.get("bookingData") as string;
+
+    const newPage = await prisma.servicePage.create({
       data: {
         slug: formData.get("slug") as string,
         title: formData.get("title") as string,
         linkTitle: formData.get("linkTitle") as string,
-        serviceItemId: formData.get("serviceItemId") as string, // 追加
+        serviceItemId: formData.get("serviceItemId") as string,
         status: formData.get("status") as string,
         catchphrase: formData.get("catchphrase") as string,
         content: formData.get("content") as string,
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
+        bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
       }
     });
 
@@ -116,8 +119,9 @@ export async function POST(request: NextRequest) {
       await notifyIndexNow([`/service/${newPage.slug}`]);
     }
     return NextResponse.json(newPage);
-  } catch (error) {
-    return NextResponse.json({ error: "Create failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("ServicePage POST Error:", error);
+    return NextResponse.json({ error: "Create failed: " + error.message }, { status: 500 });
   }
 }
 
@@ -136,19 +140,22 @@ export async function PUT(request: NextRequest) {
       heroImageUrl = await uploadToR2(imageFile);
     }
 
+    const bookingDataRaw = formData.get("bookingData") as string;
+
     const updated = await prisma.servicePage.update({
       where: { id },
       data: {
         slug: formData.get("slug") as string,
         title: formData.get("title") as string,
         linkTitle: formData.get("linkTitle") as string,
-        serviceItemId: formData.get("serviceItemId") as string, // 追加
+        serviceItemId: formData.get("serviceItemId") as string,
         status: formData.get("status") as string,
         catchphrase: formData.get("catchphrase") as string,
         content: formData.get("content") as string,
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
+        bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
       }
     });
 
@@ -156,8 +163,9 @@ export async function PUT(request: NextRequest) {
       await notifyIndexNow([`/service/${updated.slug}`]);
     }
     return NextResponse.json(updated);
-  } catch (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("ServicePage PUT Error:", error);
+    return NextResponse.json({ error: "Update failed: " + error.message }, { status: 500 });
   }
 }
 
@@ -169,7 +177,7 @@ export async function DELETE(request: NextRequest) {
     if (target?.heroImage) await deleteFromR2(target.heroImage);
     await prisma.servicePage.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Delete failed: " + error.message }, { status: 500 });
   }
 }
