@@ -114,6 +114,7 @@ export default function Breadcrumbs() {
 
   return (
     <>
+      {/* Build: 20260419-0820 */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
