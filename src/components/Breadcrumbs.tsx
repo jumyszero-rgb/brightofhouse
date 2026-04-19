@@ -120,7 +120,6 @@ export default function Breadcrumbs() {
       />
       <nav aria-label="Breadcrumb" className="bg-white py-3 px-4 md:px-8 border-b border-slate-200 shadow-sm text-black">
         <ol className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 text-xs md:text-sm text-slate-500">
-          <li className="text-red-600 font-bold mr-2">[最新版]</li>
           {pathSegments.map((segment, index) => (
             <li key={segment.href + index} className="flex items-center">
               {index > 0 && <span className="mx-1 text-slate-400">/</span>}
