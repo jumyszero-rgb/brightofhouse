@@ -17,7 +17,7 @@ type Props = {
 // --- SEOメタデータの生成 (ServicePageテーブルから取得) ---
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const page = await prisma.servicePage.findUnique({
+  const page = await prisma.servicePage.findFirst({
     where: { slug }
   });
 
@@ -39,8 +39,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ServiceDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  // 新設した ServicePage テーブルからデータを取得
-  const page = await prisma.servicePage.findUnique({
+  // status を含める場合は findFirst を使用する
+  const page = await prisma.servicePage.findFirst({
     where: { slug, status: "PUBLISHED" }
   });
 
