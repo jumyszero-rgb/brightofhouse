@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-// 画像アップロードに必要
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
@@ -20,7 +19,6 @@ async function checkAuth() {
   } catch { return false; }
 }
 
-// 画像アップロード処理 (再掲)
 const uploadToR2 = async (file: File) => {
   const buffer = Buffer.from(await file.arrayBuffer());
   const webpBuffer = await sharp(buffer)
@@ -28,7 +26,7 @@ const uploadToR2 = async (file: File) => {
     .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
     .webp({ quality: 80 })
     .toBuffer();
-  const fileName = `blog_thumbnails/${uuidv4()}.webp`; // ブログ専用フォルダ
+  const fileName = `blog_thumbnails/${uuidv4()}.webp`;
   await r2Client.send(new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
     Key: fileName,
@@ -38,12 +36,49 @@ const uploadToR2 = async (file: File) => {
   return `${process.env.R2_PUBLIC_URL}/${fileName}`;
 };
 
+function robustJsonParse(text: string) {
+  try { return JSON.parse(text); } catch {}
+
+  let cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  try { return JSON.parse(cleaned); } catch {}
+
+  // 最終手段: 各フィールドを正規表現で抽出
+  const fields: Record<string, string> = {};
+  const keys = ["title", "slug", "blog", "insta", "x", "google"];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const nextKey = keys[i + 1];
+    let pattern: RegExp;
+    if (nextKey) {
+      pattern = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*,\\s*"${nextKey}"`, "m");
+    } else {
+      pattern = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*}`, "m");
+    }
+    const m = text.match(pattern);
+    if (m) {
+      fields[key] = m[1].replace(/\n/g, "\\n").replace(/"/g, "");
+    }
+  }
+  if (Object.keys(fields).length >= 4) {
+    return fields;
+  }
+
+  throw new Error("JSONパースに失敗しました。AIの出力形式が不正です。");
+}
+
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const { keywords } = await request.json();
-    
+
     const settings = await prisma.blogSettings.findUnique({ where: { id: "main" } });
     const fixedKeywords = settings?.fixedKeywords || "";
     const intro = settings?.defaultIntro || "";
@@ -73,25 +108,25 @@ ${existingTitles ? existingTitles : "過去記事はありません。自由に�
 2. slug: タイトルに関連した半角英数字とハイフンのみのURL用文字列。
 3. blog:
    - 文字数は2000文字以上10000文字以内。
-   - 冒頭に "${intro}"、末尾に "${outro}" を含めた、HTML形式のブログ本文（改行は<br>タグを使用）。
+   - 冒頭に "${intro}"、末尾に "${outro}" を含めた、HTML形式のブログ本文。
+   - HTMLの改行は<br>タグを使用してください。JSON文字列内に生の改行を入れないでください。
    - 見出し（h2, h3）を適切に使用し、読者が読みやすい構造にしてください。
    - 清掃のプロとしての知恵やメリットを盛り込み、親しみやすく信頼感のある内容にしてください。
 4. insta: Instagram用（絵文字とハッシュタグ10個程度を含めてください）。
 5. x: X (Twitter)用（140文字以内の興味を引く短文にしてください）。
 6. google: Googleビジネスプロフィール用（地域名（札幌など）を含めた信頼感のあるフォーマルなトーンにしてください）。
 
-【出力形式】
-必ず以下の純粋なJSON形式のみで出力してください。
+【重要】出力は純粋なJSONのみ。コードブロックや説明文は不要です。全てのHTMLは1行の文字列にしてください（改行は<br>で表現）。
 {
   "title": "タイトル文字列",
   "slug": "url-slug-string",
-  "blog": "本文HTML",
+  "blog": "本文HTML（1行、改行は<br>で）",
   "insta": "インスタ用テキスト",
   "x": "X用テキスト",
   "google": "Google用テキスト"
 }
 `;
-    // .env からモデル名とAPIバージョンを読み込む
+
     const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
     const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
 
@@ -102,20 +137,34 @@ ${existingTitles ? existingTitles : "過去記事はありません。自由に�
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: "application/json" }
+        generationConfig: {
+          response_mime_type: "application/json",
+          response_schema: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              slug: { type: "STRING" },
+              blog: { type: "STRING" },
+              insta: { type: "STRING" },
+              x: { type: "STRING" },
+              google: { type: "STRING" }
+            },
+            required: ["title", "slug", "blog", "insta", "x", "google"]
+          }
+        }
       })
     });
 
     const result = await response.json();
 
     if (!result.candidates || !result.candidates[0]) {
-      throw new Error("AIからの応答が不正です: " + JSON.stringify(result));
+      throw new Error("AIからの応答が不正です: " + JSON.stringify(result).substring(0, 500));
     }
 
     let aiText = result.candidates[0].content.parts[0].text;
-    aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    const data = JSON.parse(aiText);
+    console.log("AI raw response length:", aiText.length);
+
+    const data = robustJsonParse(aiText);
     return NextResponse.json(data);
 
   } catch (error: any) {
