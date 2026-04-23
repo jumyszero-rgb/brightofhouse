@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     const all = searchParams.get("all");
-    if (all === "true" && (await checkAuth())) {
+    if (all === "true") {
       const posts = await prisma.blogPost.findMany({
         orderBy: { createdAt: "desc" }
       });
