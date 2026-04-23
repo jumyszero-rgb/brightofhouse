@@ -8,7 +8,7 @@ export default function AdminBlogList() {
   const [posts, setPosts] = useState<any[]>([]);
 
   const fetchPosts = async () => {
-    const res = await fetch("/api/blog");
+    const res = await fetch("/api/blog?all=true");
     if (res.ok) setPosts(await res.json());
   };
 

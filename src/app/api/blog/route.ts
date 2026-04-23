@@ -51,6 +51,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(post);
     }
 
+    const all = searchParams.get("all");
+    if (all === "true" && (await checkAuth())) {
+      const posts = await prisma.blogPost.findMany({
+        orderBy: { createdAt: "desc" }
+      });
+      return NextResponse.json(posts);
+    }
+
     const posts = await prisma.blogPost.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { createdAt: "desc" }
