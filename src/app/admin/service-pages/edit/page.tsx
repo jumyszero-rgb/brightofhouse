@@ -238,6 +238,18 @@ function EditForm() {
                 ))}
               </select>
             </div>
+                        <div>
+              <label className="block text-sm font-bold mb-1">料金表のボタンテキスト</label>
+              <input
+                name="linkTitle"
+                value={formData.linkTitle}
+                onChange={(e) => setFormData(prev => ({ ...prev, linkTitle: e.target.value }))}
+                placeholder="例: 詳細・お見積りはこちら"
+                className="w-full p-2 border rounded"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">空欄の場合「このサービスを詳しく見る」と表示されます</p>
+            </div>
+
           </div>
           <div className="grid grid-cols-2 gap-4 pt-2 border-t">
             <div>

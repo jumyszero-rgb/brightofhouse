@@ -31,18 +31,25 @@ export default async function ServicePage() {
     },
   });
 
-  // 各ServiceItemに関連するServicePageのslugを取得するためのMapを作成
+  // 複数の詳細ページに対応（1つのserviceItemIdに複数のページが紐付く）
   const servicePages = await prisma.servicePage.findMany({
     where: { status: "PUBLISHED" },
-    select: { serviceItemId: true, slug: true }
+    select: { serviceItemId: true, slug: true, linkTitle: true }
   });
-  const slugMap = new Map(servicePages.map(p => [p.serviceItemId, p.slug]));
+
+  const pagesMap = new Map<string, { slug: string; linkTitle: string | null }[]>();
+  for (const p of servicePages) {
+    if (!p.serviceItemId) continue;
+    const existing = pagesMap.get(p.serviceItemId) || [];
+    existing.push({ slug: p.slug, linkTitle: p.linkTitle });
+    pagesMap.set(p.serviceItemId, existing);
+  }
 
   const enrichedCategories = categories.map(cat => ({
     ...cat,
     items: cat.items.map(item => ({
       ...item,
-      pageSlug: slugMap.get(item.id) || null
+      linkedPages: pagesMap.get(item.id) || []
     }))
   }));
 
@@ -59,12 +66,11 @@ export default async function ServicePage() {
           </p>
         </header>
 
-        {/* ページ内目次 (大分類) */}
         <nav className="mb-12 bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-xs font-bold text-slate-400 mb-3 text-center uppercase tracking-widest">Category Menu</p>
           <div className="flex flex-wrap justify-center gap-2 md:gap-3">
             {enrichedCategories.map((category) => (
-              <a 
+              <a
                 key={`nav-${category.id}`}
                 href={`#cat-${category.id}`}
                 className="bg-white border border-slate-200 text-slate-700 text-xs md:text-sm font-bold py-2 px-4 rounded-full hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm"
@@ -81,37 +87,37 @@ export default async function ServicePage() {
               <h2 className="text-xl font-black text-slate-800 border-l-8 border-blue-600 pl-4 mb-8">
                 {category.title}
               </h2>
-              
+
               <div className="space-y-4">
                 {category.items.map((item) => (
                   <details key={item.id} className="group bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 open:ring-2 open:ring-blue-100 open:border-blue-400">
                     <summary className="flex items-center justify-between p-5 cursor-pointer list-none">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                          <h3 className="font-bold text-slate-800 text-base md:text-lg group-open:text-blue-600 transition-colors">
-                            {item.title}
-                          </h3>
-                          {(item.regularPrice || item.discountPrice) && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 sm:mt-0">
-                              {item.regularPrice && (
-                                <span className={`${item.discountPrice ? 'text-slate-400 text-[10px] md:text-xs line-through' : 'text-blue-600 font-bold text-sm md:text-base'} inline-block whitespace-nowrap`}>
-                                  {item.regularPrice}
-                                </span>
-                              )}
-                              {item.regularPrice && item.discountPrice && (
-                                <span className="text-slate-400 text-[10px] md:text-xs hidden sm:inline">→</span>
-                              )}
-                              {item.discountPrice && (
-                                <span className="text-lg md:text-xl font-bold text-red-600 inline-block whitespace-nowrap">
-                                  {item.discountPrice}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                        <h3 className="font-bold text-slate-800 text-base md:text-lg group-open:text-blue-600 transition-colors">
+                          {item.title}
+                        </h3>
+                        {(item.regularPrice || item.discountPrice) && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 sm:mt-0">
+                            {item.regularPrice && (
+                              <span className={`${item.discountPrice ? 'text-slate-400 text-[10px] md:text-xs line-through' : 'text-blue-600 font-bold text-sm md:text-base'} inline-block whitespace-nowrap`}>
+                                {item.regularPrice}
+                              </span>
+                            )}
+                            {item.regularPrice && item.discountPrice && (
+                              <span className="text-slate-400 text-[10px] md:text-xs hidden sm:inline">→</span>
+                            )}
+                            {item.discountPrice && (
+                              <span className="text-lg md:text-xl font-bold text-red-600 inline-block whitespace-nowrap">
+                                {item.discountPrice}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {item.subTitle && (
                           <p className="text-[10px] md:text-xs text-blue-600 font-medium mt-0.5">{item.subTitle}</p>
                         )}
-                        </div>
-                        <div className="flex items-center ml-2 flex-shrink-0">
+                      </div>
+                      <div className="flex items-center ml-2 flex-shrink-0">
                         <span className="text-slate-400 group-open:hidden text-xs md:text-sm whitespace-nowrap">+ 詳細</span>
                         <span className="text-slate-400 hidden group-open:inline text-xs md:text-sm whitespace-nowrap">- 閉じる</span>
                       </div>
@@ -130,19 +136,19 @@ export default async function ServicePage() {
                           </div>
                         ))}
                       </dl>
-                      
+
                       <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
-                        {/* ▼ 詳細ページへのリンクボタンを追加 */}
-                        {item.pageSlug && (
-                          <Link 
-                            href={`/service/${item.pageSlug}`} 
+                        {item.linkedPages.map((lp, idx) => (
+                          <Link
+                            key={idx}
+                            href={`/service/${lp.slug}`}
                             className="inline-block bg-slate-800 text-white text-base font-bold py-3 px-8 rounded-full hover:bg-slate-700 transition-colors text-center shadow-sm"
                           >
-                            このサービスを詳しく見る
+                            {lp.linkTitle || "このサービスを詳しく見る"}
                           </Link>
-                        )}
-                        <Link 
-                          href="/contact" 
+                        ))}
+                        <Link
+                          href="/contact"
                           className="inline-block bg-blue-600 text-white text-base font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors text-center shadow-sm"
                         >
                           お問い合わせはこちら
@@ -156,7 +162,6 @@ export default async function ServicePage() {
           ))}
         </div>
 
-        {/* 下部の共通案内セクション */}
         <section className="mt-20 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center">
           <h2 className="text-2xl font-black text-slate-800 mb-4">お見積り・ご相談は無料です</h2>
           <p className="text-slate-500 mb-8 max-w-lg mx-auto">
@@ -164,8 +169,8 @@ export default async function ServicePage() {
             しつこい営業などは一切ございませんので、お気軽にご連絡ください。
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-            <Link 
-              href="/contact" 
+            <Link
+              href="/contact"
               className="w-full md:w-auto bg-blue-600 text-white font-bold py-4 px-12 rounded-full shadow-lg hover:bg-blue-700 transition-all text-lg"
             >
               無料お見積りはこちら
