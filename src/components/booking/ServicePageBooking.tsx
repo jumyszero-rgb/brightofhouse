@@ -5,9 +5,13 @@ import { useState, useEffect } from "react";
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
+type MainService = { id?: string; title: string; price: number; durationMin: number; durationMax: number };
+type OptionService = { id: string; title: string; price: number; durationMin: number; durationMax: number };
+
 type BookingData = {
-  main: { title: string; price: number; duration: number };
-  options: { id: string; title: string; price: number; duration: number }[];
+  mains?: MainService[];
+  main?: { title: string; price: number; duration: number };
+  options: OptionService[];
 };
 
 type Props = {
@@ -16,7 +20,6 @@ type Props = {
 };
 
 export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
-  // --- 1. 状態管理 ---
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
@@ -28,14 +31,41 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethod: "お電話"
   });
 
-  // --- 2. 計算ロジック ---
-  const totalPrice = (bookingData?.main?.price || 0) + 
-    (bookingData?.options || []).filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.price, 0);
-  
-  const totalMinutes = (bookingData?.main?.duration || 0) + 
-    (bookingData?.options || []).filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.duration, 0);
+  // 旧形式（main単体）と新形式（mains配列）の両対応
+  const mains: MainService[] = bookingData?.mains
+    ? bookingData.mains
+    : bookingData?.main
+      ? [{
+          title: bookingData.main.title,
+          price: bookingData.main.price,
+          durationMin: bookingData.main.duration,
+          durationMax: bookingData.main.duration
+        }]
+      : [];
 
-  // --- 3. 予約・設定状況の取得 ---
+  const options = (bookingData?.options || []).map(o => ({
+    ...o,
+    durationMin: o.durationMin || (o as any).duration || 0,
+    durationMax: o.durationMax || (o as any).duration || 0
+  }));
+
+  // 合計計算
+  const totalPrice =
+    mains.reduce((sum, m) => sum + (m.price || 0), 0) +
+    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.price, 0);
+
+  const totalMinutesMin =
+    mains.reduce((sum, m) => sum + (m.durationMin || 0), 0) +
+    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMin, 0);
+
+  const totalMinutesMax =
+    mains.reduce((sum, m) => sum + (m.durationMax || 0), 0) +
+    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMax, 0);
+
+  const durationDisplay = totalMinutesMin === totalMinutesMax
+    ? `${totalMinutesMin}分`
+    : `${totalMinutesMin}〜${totalMinutesMax}分`;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -50,7 +80,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     fetchData();
   }, []);
 
-  // --- 4. 住所自動入力 ---
   const handleZipSearch = async (zip: string) => {
     setCustomer({ ...customer, zip });
     if (zip.length === 7) {
@@ -65,15 +94,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
   };
 
-  // --- 5. 送信処理 ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate) return alert("日時を選択してください");
     setLoading(true);
-    
+
     const itemsText = [
-      bookingData.main.title,
-      ...bookingData.options.filter(o => selectedOptions.includes(o.id)).map(o => o.title)
+      ...mains.map(m => m.title),
+      ...options.filter(o => selectedOptions.includes(o.id)).map(o => o.title)
     ].join(", ");
 
     try {
@@ -87,10 +115,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           address: customer.address,
           notes: `【希望連絡方法: ${customer.contactMethod}】\n${customer.notes}`,
           startTime: selectedDate,
-          endTime: new Date(selectedDate.getTime() + totalMinutes * 60000),
+          endTime: new Date(selectedDate.getTime() + totalMinutesMax * 60000),
           items: itemsText,
           totalPrice,
-          totalMinutes,
+          totalMinutes: totalMinutesMax,
         }),
       });
 
@@ -107,7 +135,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
   };
 
-  // --- カレンダー描画用 ---
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfDay(new Date()));
   const days = [...Array(7)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
@@ -134,7 +161,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       </div>
 
       <div className="p-6 md:p-10 space-y-10">
-        
+
         {/* 1. メニュー選択 */}
         <section>
           <h4 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800">
@@ -142,16 +169,23 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             作業メニューの選択
           </h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <span className="font-bold">{bookingData.main.title}</span>
-              <span className="font-bold text-blue-600">¥{bookingData.main.price.toLocaleString()}</span>
-            </div>
+            {mains.map((main, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div>
+                  <span className="font-bold">{main.title}</span>
+                  <span className="text-xs text-slate-500 ml-2">
+                    ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
+                  </span>
+                </div>
+                <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+              </div>
+            ))}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {bookingData.options.map(opt => (
+              {options.map(opt => (
                 <label key={opt.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedOptions.includes(opt.id) ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 text-indigo-600"
                       checked={selectedOptions.includes(opt.id)}
                       onChange={(e) => {
@@ -159,7 +193,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                         else setSelectedOptions(selectedOptions.filter(id => id !== opt.id));
                       }}
                     />
-                    <span className="text-sm font-medium">{opt.title}</span>
+                    <div>
+                      <span className="text-sm font-medium">{opt.title}</span>
+                      <span className="text-[10px] text-slate-400 ml-1">
+                        (+{opt.durationMin === opt.durationMax ? `${opt.durationMin}分` : `${opt.durationMin}〜${opt.durationMax}分`})
+                      </span>
+                    </div>
                   </div>
                   <span className="text-sm font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
                 </label>
@@ -167,7 +206,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           </div>
           <div className="mt-4 text-right">
-            <p className="text-xs text-slate-500">合計作業時間(目安): {totalMinutes}分</p>
+            <p className="text-xs text-slate-500">合計作業時間(目安): {durationDisplay}</p>
             <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
           </div>
         </section>
@@ -209,7 +248,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                         return current >= start && current < end;
                       });
                       const override = overrides.find(o => new Date(o.slotTime).getTime() === current.getTime());
-                      const manualStatus = override?.status; 
+                      const manualStatus = override?.status;
                       const isSelected = selectedDate?.getTime() === current.getTime();
                       const isPast = current < new Date();
 
@@ -223,7 +262,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                           {isDisabled ? (
                             <span className="text-slate-300 font-bold text-lg md:text-2xl inline-block leading-none">×</span>
                           ) : (
-                            <button 
+                            <button
                               type="button"
                               onClick={() => setSelectedDate(current)}
                               className={`w-full h-10 md:h-12 flex items-center justify-center rounded font-bold text-lg md:text-2xl transition-colors ${isSelected ? 'text-blue-700' : (displayStatus === '▲' ? 'text-orange-400' : 'text-blue-500 hover:bg-blue-50')}`}
@@ -263,10 +302,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <div className="flex flex-wrap gap-4">
                 {["お電話", "メール", "SMS"].map(method => (
                   <label key={method} className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="contactMethod" 
-                      value={method} 
+                    <input
+                      type="radio"
+                      name="contactMethod"
+                      value={method}
                       checked={customer.contactMethod === method}
                       onChange={e => setCustomer({...customer, contactMethod: e.target.value})}
                       className="w-4 h-4 text-blue-600"
@@ -286,7 +325,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <input placeholder="住所" className="md:col-span-2 p-3 border rounded-lg bg-slate-50 text-black" value={customer.address} readOnly />
             </div>
             <textarea placeholder="ご要望・詳細など" rows={3} value={customer.notes} onChange={e => setCustomer({...customer, notes: e.target.value})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
-            
+
             <div className="text-center">
               <button type="submit" disabled={loading || !selectedDate} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
                 {loading ? "送信中..." : "この内容で仮予約・相談を申し込む"}
