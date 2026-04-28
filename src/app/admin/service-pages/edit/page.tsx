@@ -365,10 +365,16 @@ function EditForm() {
 
         <div className="flex gap-4 pt-4 border-t">
           <Link href="/admin/service-pages" className="flex-1 bg-gray-500 text-white py-3 rounded font-bold text-center">キャンセル</Link>
+          {editId && formData.slug && (
+            <a href={`/service/${formData.slug}?preview=true`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-yellow-500 text-white py-3 rounded font-bold text-center hover:bg-yellow-600">
+              プレビュー
+            </a>
+          )}
           <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700">
             {loading ? "保存中..." : "詳細ページを保存"}
           </button>
         </div>
+
         {message && <p className="text-center font-bold text-red-600">{message}</p>}
       </form>
     </div>
