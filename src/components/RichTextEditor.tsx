@@ -61,8 +61,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
         ["bold", "italic", "underline", "strike"],
         [{ color: [] }, { background: [] }],
         [{ list: "ordered" }, { list: "bullet" }],
-        ["image", "clean"], // 「image」ボタンを追加
+        ["link", "image", "clean"],
       ],
+
       handlers: {
         image: imageHandler, // 画像ボタンにカスタム処理を紐付け
       },
