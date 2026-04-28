@@ -24,7 +24,6 @@ type Props = {
 export default function RichTextEditor({ value, onChange }: Props) {
   const quillRef = useRef<any>(null);
 
-  // 画像アップロードのカスタムハンドラー
   const imageHandler = () => {
     const input = document.createElement("input");
     input.setAttribute("type", "file");
@@ -38,7 +37,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
       const formData = new FormData();
       formData.append("image", file);
 
-      // サーバーにアップロード
       const res = await fetch("/api/lp/upload", {
         method: "POST",
         body: formData,
@@ -48,7 +46,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
         const { url } = await res.json();
         const quill = quillRef.current.getEditor();
         const range = quill.getSelection();
-        // エディタ内の現在の位置に画像を挿入
         quill.insertEmbed(range.index, "image", url);
       }
     };
@@ -63,12 +60,16 @@ export default function RichTextEditor({ value, onChange }: Props) {
         [{ list: "ordered" }, { list: "bullet" }],
         ["link", "image", "clean"],
       ],
-
       handlers: {
-        image: imageHandler, // 画像ボタンにカスタム処理を紐付け
+        image: imageHandler,
       },
     },
   }), []);
+
+  const formats = [
+    "size", "bold", "italic", "underline", "strike",
+    "color", "background", "list", "link", "image"
+  ];
 
   return (
     <div className="bg-white rounded-md border border-slate-300 overflow-hidden min-h-[350px]">
@@ -78,6 +79,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
         value={value || ""}
         onChange={onChange}
         modules={modules}
+        formats={formats}
       />
       <style jsx global>{`
         .ql-editor { min-height: 250px; font-size: 16px; color: #000 !important; }
