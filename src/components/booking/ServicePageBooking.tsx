@@ -21,6 +21,7 @@ type Props = {
 
 export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [selectedMains, setSelectedMains] = useState<number[]>([0]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
@@ -51,16 +52,17 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   // 合計計算
   const totalPrice =
-    mains.reduce((sum, m) => sum + (m.price || 0), 0) +
+    mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0) +
     options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.price, 0);
 
   const totalMinutesMin =
-    mains.reduce((sum, m) => sum + (m.durationMin || 0), 0) +
+    mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0), 0) +
     options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMin, 0);
 
   const totalMinutesMax =
-    mains.reduce((sum, m) => sum + (m.durationMax || 0), 0) +
+    mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMax || 0), 0) +
     options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMax, 0);
+
 
   const durationDisplay = totalMinutesMin === totalMinutesMax
     ? `${totalMinutesMin}分`
@@ -100,9 +102,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     setLoading(true);
 
     const itemsText = [
-      ...mains.map(m => m.title),
+      ...mains.filter((_, idx) => selectedMains.includes(idx)).map(m => m.title),
       ...options.filter(o => selectedOptions.includes(o.id)).map(o => o.title)
     ].join(", ");
+
 
     try {
       const res = await fetch("/api/booking", {
@@ -170,16 +173,28 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </h4>
           <div className="space-y-3">
             {mains.map((main, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <div>
-                  <span className="font-bold">{main.title}</span>
-                  <span className="text-xs text-slate-500 ml-2">
-                    ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-                  </span>
+              <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600"
+                    checked={selectedMains.includes(idx)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedMains([...selectedMains, idx]);
+                      else setSelectedMains(selectedMains.filter(i => i !== idx));
+                    }}
+                  />
+                  <div>
+                    <span className="font-bold">{main.title}</span>
+                    <span className="text-xs text-slate-500 ml-2">
+                      ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
+                    </span>
+                  </div>
                 </div>
                 <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
-              </div>
+              </label>
             ))}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {options.map(opt => (
                 <label key={opt.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedOptions.includes(opt.id) ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
