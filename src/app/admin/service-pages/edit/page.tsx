@@ -18,6 +18,8 @@ function EditForm() {
   const [aiKeywords, setAiKeywords] = useState("");
   const [message, setMessage] = useState("");
   const [previewImage, setPreviewImage] = useState("");
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copyPages, setCopyPages] = useState<any[]>([]);
 
   const [serviceItems, setServiceItems] = useState<any[]>([]);
 
@@ -29,7 +31,7 @@ function EditForm() {
 
   const [bookingData, setBookingData] = useState({
     mains: [{ id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60 }],
-    options: [] as { id: string; title: string; price: number; durationMin: number; durationMax: number }[]
+    options: [] as { id: string; title: string; price: number; durationMin: number; durationMax: number; maxQty: number }[]
   });
 
   useEffect(() => {
@@ -59,7 +61,6 @@ function EditForm() {
 
         if (data.bookingData) {
           const bd = data.bookingData;
-          // 旧形式（main単体）からの移行対応
           if (bd.main && !bd.mains) {
             setBookingData({
               mains: [{
@@ -74,15 +75,43 @@ function EditForm() {
                 title: o.title || "",
                 price: o.price || 0,
                 durationMin: o.duration || o.durationMin || 0,
-                durationMax: o.duration || o.durationMax || 0
+                durationMax: o.duration || o.durationMax || 0,
+                maxQty: o.maxQty || 1
               }))
             });
-         } else if (bd.mains) {
-            setBookingData(bd);
+          } else if (bd.mains) {
+            setBookingData({
+              ...bd,
+              options: (bd.options || []).map((o: any) => ({
+                ...o,
+                maxQty: o.maxQty || 1
+              }))
+            });
           }
         }
       });
   }, [editId]);
+
+  // 並び替え
+  const moveMain = (idx: number, dir: -1 | 1) => {
+    setBookingData(prev => {
+      const arr = [...prev.mains];
+      const target = idx + dir;
+      if (target < 0 || target >= arr.length) return prev;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { ...prev, mains: arr };
+    });
+  };
+
+  const moveOption = (idx: number, dir: -1 | 1) => {
+    setBookingData(prev => {
+      const arr = [...prev.options];
+      const target = idx + dir;
+      if (target < 0 || target >= arr.length) return prev;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { ...prev, options: arr };
+    });
+  };
 
   // メインサービス操作
   const addMain = () => setBookingData(prev => ({
@@ -101,7 +130,7 @@ function EditForm() {
   // オプション操作
   const addOption = () => setBookingData(prev => ({
     ...prev,
-    options: [...prev.options, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0 }]
+    options: [...prev.options, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1 }]
   }));
   const removeOption = (id: string) => setBookingData(prev => ({
     ...prev,
@@ -111,6 +140,34 @@ function EditForm() {
     ...prev,
     options: prev.options.map(o => o.id === id ? { ...o, [field]: value } : o)
   }));
+
+  // 他ページからコピー
+  const openCopyModal = async () => {
+    try {
+      const res = await fetch("/api/service-pages?all=true");
+      if (res.ok) {
+        const pages = await res.json();
+        setCopyPages(pages.filter((p: any) => p.id !== editId));
+        setShowCopyModal(true);
+      }
+    } catch (e) {
+      alert("ページ一覧の取得に失敗しました");
+    }
+  };
+
+  const copyFromPage = (page: any) => {
+    if (!page.bookingData) return alert("この記事には予約メニューがありません");
+    const bd = page.bookingData;
+    const newMains = (bd.mains || []).map((m: any) => ({ ...m, id: crypto.randomUUID() }));
+    const newOptions = (bd.options || []).map((o: any) => ({ ...o, id: crypto.randomUUID(), maxQty: o.maxQty || 1 }));
+
+    setBookingData(prev => ({
+      mains: [...prev.mains, ...newMains],
+      options: [...prev.options, ...newOptions]
+    }));
+    setShowCopyModal(false);
+    alert(`「${page.title}」からメイン${newMains.length}件・オプション${newOptions.length}件をコピーしました`);
+  };
 
   const handleAIGenerate = async () => {
     if (!aiKeywords) return alert("キーワードを入力してください（例: エアコンクリーニング 札幌 おすすめ 安い）");
@@ -238,20 +295,19 @@ function EditForm() {
                 ))}
               </select>
             </div>
-            </div>
-                        <div>
-              <label className="block text-sm font-bold mb-1">料金表のボタンテキスト</label>
-              <input
-                name="linkTitle"
-                value={formData.linkTitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, linkTitle: e.target.value }))}
-                placeholder="例: 詳細・お見積りはこちら"
-                className="w-full p-2 border rounded"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">空欄の場合「このサービスを詳しく見る」と表示されます</p>
-            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">料金表のボタンテキスト</label>
+            <input
+              name="linkTitle"
+              value={formData.linkTitle}
+              onChange={(e) => setFormData(prev => ({ ...prev, linkTitle: e.target.value }))}
+              placeholder="例: 詳細・お見積りはこちら"
+              className="w-full p-2 border rounded"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">空欄の場合「このサービスを詳しく見る」と表示されます</p>
+          </div>
 
-        
           <div className="grid grid-cols-2 gap-4 pt-2 border-t">
             <div>
               <label className="block text-sm font-bold mb-1">URL (slug)</label>
@@ -269,7 +325,10 @@ function EditForm() {
 
         {/* 予約メニュー設定 */}
         <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-100 space-y-4">
-          <h2 className="text-lg font-bold text-emerald-900 flex items-center gap-2">📅 このページの予約メニュー設定</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-emerald-900 flex items-center gap-2">📅 このページの予約メニュー設定</h2>
+            <button type="button" onClick={openCopyModal} className="text-xs bg-purple-600 text-white px-3 py-1 rounded-full font-bold hover:bg-purple-700 transition-colors">📋 他ページからコピー</button>
+          </div>
 
           {/* メインサービス（複数） */}
           <div className="space-y-3">
@@ -280,7 +339,11 @@ function EditForm() {
             {bookingData.mains.map((main, idx) => (
               <div key={main.id} className="bg-white p-4 rounded-lg border border-emerald-200 shadow-sm space-y-3">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs font-bold text-emerald-600">メインサービス {idx + 1}</p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => moveMain(idx, -1)} disabled={idx === 0} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onClick={() => moveMain(idx, 1)} disabled={idx === bookingData.mains.length - 1} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▼</button>
+                    <p className="text-xs font-bold text-emerald-600">メインサービス {idx + 1}</p>
+                  </div>
                   {bookingData.mains.length > 1 && (
                     <button type="button" onClick={() => removeMain(main.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
                   )}
@@ -322,26 +385,37 @@ function EditForm() {
               <p className="text-sm font-bold text-emerald-700">追加オプション</p>
               <button type="button" onClick={addOption} className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-emerald-700 transition-colors">＋ オプションを追加</button>
             </div>
-            {bookingData.options.map((opt) => (
-              <div key={opt.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-3 rounded-lg border border-emerald-100 shadow-sm items-end">
-                <div className="md:col-span-3">
-                  <label className="block text-[10px] font-bold text-gray-300 mb-1">オプション名</label>
-                  <input placeholder="例: 鏡のウロコ取り" value={opt.title} onChange={(e) => updateOption(opt.id, "title", e.target.value)} className="w-full p-2 border rounded text-xs" />
+            {bookingData.options.map((opt, idx) => (
+              <div key={opt.id} className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => moveOption(idx, -1)} disabled={idx === 0} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onClick={() => moveOption(idx, 1)} disabled={idx === bookingData.options.length - 1} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▼</button>
+                    <span className="text-[10px] text-emerald-600 font-bold">オプション {idx + 1}</span>
+                  </div>
+                  <button type="button" onClick={() => removeOption(opt.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-300 mb-1">追加料金 (円)</label>
-                  <input type="number" value={opt.price || ""} onChange={(e) => updateOption(opt.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-[10px] font-bold text-gray-300 mb-1">追加時間（最短・分）</label>
-                  <input type="number" value={opt.durationMin || ""} onChange={(e) => updateOption(opt.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-[10px] font-bold text-gray-300 mb-1">追加時間（最長・分）</label>
-                  <input type="number" value={opt.durationMax || ""} onChange={(e) => updateOption(opt.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                </div>
-                <div className="md:col-span-1 text-right">
-                  <button type="button" onClick={() => removeOption(opt.id)} className="text-red-500 text-xs font-bold hover:underline mb-2">削除</button>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-3">
+                    <label className="block text-[10px] font-bold text-gray-300 mb-1">オプション名</label>
+                    <input placeholder="例: 鏡のウロコ取り" value={opt.title} onChange={(e) => updateOption(opt.id, "title", e.target.value)} className="w-full p-2 border rounded text-xs" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-300 mb-1">追加料金 (円)</label>
+                    <input type="number" value={opt.price || ""} onChange={(e) => updateOption(opt.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-300 mb-1">最短（分）</label>
+                    <input type="number" value={opt.durationMin || ""} onChange={(e) => updateOption(opt.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-300 mb-1">最長（分）</label>
+                    <input type="number" value={opt.durationMax || ""} onChange={(e) => updateOption(opt.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-300 mb-1">最大個数</label>
+                    <input type="number" min={1} value={opt.maxQty || 1} onChange={(e) => updateOption(opt.id, "maxQty", Math.max(1, Number(e.target.value)))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -390,6 +464,29 @@ function EditForm() {
 
         {message && <p className="text-center font-bold text-red-600">{message}</p>}
       </form>
+
+      {/* コピーモーダル */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCopyModal(false)}>
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">📋 他ページからメニューをコピー</h3>
+            <p className="text-xs text-gray-500 mb-4">選択したページのメイン・オプションが現在のメニューに追加されます。</p>
+            {copyPages.length === 0 ? (
+              <p className="text-center text-gray-400 py-4">他のページがありません</p>
+            ) : (
+              <div className="space-y-2">
+                {copyPages.map(page => (
+                  <button key={page.id} type="button" onClick={() => copyFromPage(page)} className="w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition-colors">
+                    <p className="font-bold text-sm">{page.title}</p>
+                    <p className="text-[10px] text-gray-400">/service/{page.slug}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button type="button" onClick={() => setShowCopyModal(false)} className="mt-4 w-full bg-gray-200 py-2 rounded font-bold text-sm">閉じる</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

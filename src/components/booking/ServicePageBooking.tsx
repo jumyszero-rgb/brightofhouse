@@ -6,7 +6,7 @@ import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } f
 import { ja } from "date-fns/locale";
 
 type MainService = { id?: string; title: string; price: number; durationMin: number; durationMax: number };
-type OptionService = { id: string; title: string; price: number; durationMin: number; durationMax: number };
+type OptionService = { id: string; title: string; price: number; durationMin: number; durationMax: number; maxQty?: number };
 
 type BookingData = {
   mains?: MainService[];
@@ -20,7 +20,7 @@ type Props = {
 };
 
 export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [optionQuantities, setOptionQuantities] = useState<Record<string, number>>({});
   const [selectedMains, setSelectedMains] = useState<number[]>([0]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
@@ -32,7 +32,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethod: "お電話"
   });
 
-  // 旧形式（main単体）と新形式（mains配列）の両対応
   const mains: MainService[] = bookingData?.mains
     ? bookingData.mains
     : bookingData?.main
@@ -47,22 +46,26 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const options = (bookingData?.options || []).map(o => ({
     ...o,
     durationMin: o.durationMin || (o as any).duration || 0,
-    durationMax: o.durationMax || (o as any).duration || 0
+    durationMax: o.durationMax || (o as any).duration || 0,
+    maxQty: o.maxQty || 1
   }));
 
-  // 合計計算
+  const getQty = (id: string) => optionQuantities[id] || 0;
+  const setQty = (id: string, qty: number) => {
+    setOptionQuantities(prev => ({ ...prev, [id]: qty }));
+  };
+
   const totalPrice =
     mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0) +
-    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.price, 0);
+    options.reduce((sum, o) => sum + o.price * getQty(o.id), 0);
 
   const totalMinutesMin =
     mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0), 0) +
-    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMin, 0);
+    options.reduce((sum, o) => sum + o.durationMin * getQty(o.id), 0);
 
   const totalMinutesMax =
     mains.filter((_, idx) => selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMax || 0), 0) +
-    options.filter(o => selectedOptions.includes(o.id)).reduce((sum, o) => sum + o.durationMax, 0);
-
+    options.reduce((sum, o) => sum + o.durationMax * getQty(o.id), 0);
 
   const durationDisplay = totalMinutesMin === totalMinutesMax
     ? `${totalMinutesMin}分`
@@ -103,9 +106,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
     const itemsText = [
       ...mains.filter((_, idx) => selectedMains.includes(idx)).map(m => m.title),
-      ...options.filter(o => selectedOptions.includes(o.id)).map(o => o.title)
+      ...options.filter(o => getQty(o.id) > 0).map(o => `${o.title} ×${getQty(o.id)}`)
     ].join(", ");
-
 
     try {
       const res = await fetch("/api/booking", {
@@ -197,26 +199,36 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {options.map(opt => (
-                <label key={opt.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedOptions.includes(opt.id) ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-indigo-600"
-                      checked={selectedOptions.includes(opt.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedOptions([...selectedOptions, opt.id]);
-                        else setSelectedOptions(selectedOptions.filter(id => id !== opt.id));
-                      }}
-                    />
+                <div key={opt.id} className={`p-3 rounded-xl border transition-all ${getQty(opt.id) > 0 ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                  <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="text-sm font-medium">{opt.title}</span>
                       <span className="text-[10px] text-slate-400 ml-1">
                         (+{opt.durationMin === opt.durationMax ? `${opt.durationMin}分` : `${opt.durationMin}〜${opt.durationMax}分`})
                       </span>
                     </div>
+                    <span className="text-sm font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
-                </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQty(opt.id, Math.max(0, getQty(opt.id) - 1))}
+                      className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center hover:bg-slate-300 transition-colors"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center font-bold text-lg">{getQty(opt.id)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQty(opt.id, Math.min(opt.maxQty, getQty(opt.id) + 1))}
+                      disabled={getQty(opt.id) >= opt.maxQty}
+                      className="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-lg flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
+                    >
+                      +
+                    </button>
+                    {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}個</span>}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
