@@ -51,6 +51,18 @@ export default function RichTextEditor({ value, onChange }: Props) {
     };
   };
 
+  const detailsHandler = () => {
+    const title = prompt("折り畳みのタイトルを入力してください", "クリックで開閉");
+    if (!title) return;
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+    const idx = range ? range.index : quill.getLength() - 1;
+
+    const detailsHtml = `<details><summary>${title}</summary><p>ここに内容を入力</p></details>`;
+
+    quill.clipboard.dangerouslyPasteHTML(idx, detailsHtml);
+  };
+
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -58,10 +70,11 @@ export default function RichTextEditor({ value, onChange }: Props) {
         ["bold", "italic", "underline", "strike"],
         [{ color: [] }, { background: [] }],
         [{ list: "ordered" }, { list: "bullet" }],
-        ["link", "image", "clean"],
+        ["link", "image", "details", "clean"],
       ],
       handlers: {
         image: imageHandler,
+        details: detailsHandler,
       },
     },
   }), []);
@@ -87,6 +100,10 @@ export default function RichTextEditor({ value, onChange }: Props) {
         .ql-editor .ql-size-small { font-size: 0.75em; }
         .ql-editor .ql-size-large { font-size: 1.5em; }
         .ql-editor .ql-size-huge { font-size: 2.5em; }
+        .ql-editor details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 10px 0; }
+        .ql-editor details summary { font-weight: bold; cursor: pointer; color: #1e40af; }
+        .ql-snow .ql-toolbar button.ql-details { width: auto !important; padding: 0 8px !important; font-size: 12px; font-weight: bold; }
+        .ql-snow .ql-toolbar button.ql-details::after { content: "▼折畳"; }
       `}</style>
     </div>
   );
