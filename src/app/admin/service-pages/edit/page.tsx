@@ -77,7 +77,7 @@ function EditForm() {
                 durationMax: o.duration || o.durationMax || 0
               }))
             });
-          } else {
+         } else if (bd.mains) {
             setBookingData(bd);
           }
         }
