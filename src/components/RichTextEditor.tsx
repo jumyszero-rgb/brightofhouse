@@ -23,9 +23,10 @@ const DetailsNode = Node.create({
   parseHTML() {
     return [{ tag: "details" }];
   },
-  renderHTML({ HTMLAttributes }) {
-    return ["details", mergeAttributes(HTMLAttributes), 0];
-  },
+renderHTML({ HTMLAttributes }) {
+    return ["details", mergeAttributes(HTMLAttributes, { open: true }), 0];
+},
+
 });
 
 const DetailsSummary = Node.create({
