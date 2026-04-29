@@ -54,3 +54,24 @@ body {
 .ql-content span { color: inherit; }
 .ql-content .ql-color-red { color: #e11d48; }
 .ql-content .ql-color-blue { color: #2563eb; }
+
+
+/* 折り畳み（details/summary） */
+.ql-content details {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.ql-content details summary {
+  font-weight: bold;
+  cursor: pointer;
+  color: #1e40af;
+  font-size: 1.1em;
+}
+.ql-content details[open] summary {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
