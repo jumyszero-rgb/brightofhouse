@@ -1,228 +1,179 @@
 // @/src/components/booking/ServicePageBooking.tsx
 "use client";
 
-import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
-type FoldItem = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  comment: string;
-};
+type FoldItem = { id: string; title: string; price: number; durationMin: number; durationMax: number; comment?: string };
+type MainService = { id?: string; title: string; price: number; durationMin: number; durationMax: number; foldTitle?: string; foldItems?: FoldItem[] };
+type OptionService = { id: string; title: string; price: number; durationMin: number; durationMax: number; maxQty?: number; foldTitle?: string; foldItems?: FoldItem[] };
 
-type MainService = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  foldTitle: string;
-  foldItems: FoldItem[];
-};
-
-type OptionService = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  maxQty: number;
-  foldTitle: string;
-  foldItems: FoldItem[];
+type BookingData = {
+  mains?: MainService[];
+  main?: { title: string; price: number; duration: number };
+  options: OptionService[];
 };
 
 type Props = {
-  bookingData: {
-    mains: MainService[];
-    options: OptionService[];
-    main?: { title: string; price: number; duration?: number; durationMin?: number; durationMax?: number };
-  };
   pageTitle: string;
+  bookingData: BookingData;
 };
 
-// 選択可能なアイテム（通常メイン、折り畳み内プラン、通常オプション、折り畳み内オプションプラン）を統一IDで管理
-type SelectableItem = {
-  uid: string; // ユニークID
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  type: "main" | "option";
-  maxQty: number;
-  comment?: string;
-};
-
-export default function ServicePageBooking({ bookingData, pageTitle }: Props) {
-  // 旧形式の移行
-  const mains: MainService[] = useMemo(() => {
-    if (bookingData.mains) return bookingData.mains;
-    if (bookingData.main) return [{
-      id: "legacy-main",
-      title: bookingData.main.title,
-      price: bookingData.main.price,
-      durationMin: bookingData.main.duration || bookingData.main.durationMin || 60,
-      durationMax: bookingData.main.duration || bookingData.main.durationMax || 60,
-      foldTitle: "",
-      foldItems: []
-    }];
-    return [];
-  }, [bookingData]);
-
-  const options: OptionService[] = useMemo(() => {
-    return (bookingData.options || []).map(o => ({
-      ...o,
-      maxQty: o.maxQty || 1,
-      foldTitle: o.foldTitle || "",
-      foldItems: o.foldItems || []
-    }));
-  }, [bookingData]);
-
-  // 全選択可能アイテムをフラット化
-  const allSelectables: SelectableItem[] = useMemo(() => {
-    const items: SelectableItem[] = [];
-    mains.forEach(m => {
-      if (m.foldTitle && m.foldItems.length > 0) {
-        m.foldItems.forEach(fi => items.push({
-          uid: fi.id, title: fi.title, price: fi.price,
-          durationMin: fi.durationMin, durationMax: fi.durationMax,
-          type: "main", maxQty: 1, comment: fi.comment
-        }));
-      } else if (!m.foldTitle) {
-        items.push({
-          uid: m.id, title: m.title, price: m.price,
-          durationMin: m.durationMin, durationMax: m.durationMax,
-          type: "main", maxQty: 1
-        });
-      }
-    });
-    options.forEach(o => {
-      if (o.foldTitle && o.foldItems.length > 0) {
-        o.foldItems.forEach(fi => items.push({
-          uid: fi.id, title: fi.title, price: fi.price,
-          durationMin: fi.durationMin, durationMax: fi.durationMax,
-          type: "option", maxQty: o.maxQty, comment: fi.comment
-        }));
-      } else if (!o.foldTitle) {
-        items.push({
-          uid: o.id, title: o.title, price: o.price,
-          durationMin: o.durationMin, durationMax: o.durationMax,
-          type: "option", maxQty: o.maxQty
-        });
-      }
-    });
-    return items;
-  }, [mains, options]);
-
-  // 選択状態: メインはチェック(boolean)、オプションは個数(number)
-  const [selectedMainIds, setSelectedMainIds] = useState<string[]>([]);
-  const [optionQtys, setOptionQtys] = useState<Record<string, number>>({});
+export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
+  const [optionQuantities, setOptionQuantities] = useState<Record<string, number>>({});
+  const [selectedMains, setSelectedMains] = useState<number[]>([0]);
+  const [selectedFoldItemIds, setSelectedFoldItemIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [customer, setCustomer] = useState({ name: "", phone: "", email: "", zip: "", address: "", notes: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [bookedSlots, setBookedSlots] = useState<any[]>([]);
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
 
-  const toggleMain = (uid: string) => {
-    setSelectedMainIds(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]);
+  const [customer, setCustomer] = useState({
+    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethod: "お電話"
+  });
+
+  const mains: MainService[] = bookingData?.mains
+    ? bookingData.mains
+    : bookingData?.main
+      ? [{
+          title: bookingData.main.title,
+          price: bookingData.main.price,
+          durationMin: bookingData.main.duration,
+          durationMax: bookingData.main.duration
+        }]
+      : [];
+
+  const options = (bookingData?.options || []).map(o => ({
+    ...o,
+    durationMin: o.durationMin || (o as any).duration || 0,
+    durationMax: o.durationMax || (o as any).duration || 0,
+    maxQty: o.maxQty || 1,
+    foldTitle: o.foldTitle || "",
+    foldItems: o.foldItems || []
+  }));
+
+  const getQty = (id: string) => optionQuantities[id] || 0;
+  const setQty = (id: string, qty: number) => {
+    setOptionQuantities(prev => ({ ...prev, [id]: qty }));
   };
 
-  const getQty = (uid: string) => optionQtys[uid] || 0;
-  const setQty = (uid: string, qty: number) => setOptionQtys(prev => ({ ...prev, [uid]: qty }));
+  const toggleFoldItem = (id: string) => {
+    setSelectedFoldItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
-  // 合計計算
-  const totals = useMemo(() => {
-    let price = 0, durMin = 0, durMax = 0;
-    const summaryItems: string[] = [];
+  // 合計計算（通常メイン + 折り畳みメイン + 通常オプション + 折り畳みオプション）
+  const totalPrice =
+    mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0) +
+    mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.price || 0), 0) +
+    options.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.price * getQty(o.id), 0) +
+    options.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.price * getQty(fi.id), 0);
 
-    selectedMainIds.forEach(uid => {
-      const item = allSelectables.find(s => s.uid === uid && s.type === "main");
-      if (item) { price += item.price; durMin += item.durationMin; durMax += item.durationMax; summaryItems.push(item.title); }
-    });
+  const totalMinutesMin =
+    mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0), 0) +
+    mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.durationMin || 0), 0) +
+    options.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.durationMin * getQty(o.id), 0) +
+    options.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.durationMin * getQty(fi.id), 0);
 
-    Object.entries(optionQtys).forEach(([uid, qty]) => {
-      if (qty <= 0) return;
-      const item = allSelectables.find(s => s.uid === uid && s.type === "option");
-      if (item) { price += item.price * qty; durMin += item.durationMin * qty; durMax += item.durationMax * qty; summaryItems.push(`${item.title}×${qty}`); }
-    });
+  const totalMinutesMax =
+    mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMax || 0), 0) +
+    mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.durationMax || 0), 0) +
+    options.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.durationMax * getQty(o.id), 0) +
+    options.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.durationMax * getQty(fi.id), 0);
 
-    return { price, durMin, durMax, summaryItems };
-  }, [selectedMainIds, optionQtys, allSelectables]);
+  const durationDisplay = totalMinutesMin === totalMinutesMax
+    ? `${totalMinutesMin}分`
+    : `${totalMinutesMin}〜${totalMinutesMax}分`;
 
-  const durationDisplay = totals.durMin === totals.durMax ? `${totals.durMin}分` : `${totals.durMin}〜${totals.durMax}分`;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [resB, resO] = await Promise.all([
+          fetch("/api/booking"),
+          fetch("/api/admin/calendar")
+        ]);
+        if (resB.ok) setBookedSlots(await resB.json());
+        if (resO.ok) setOverrides(await resO.json());
+      } catch (e) { console.error("Fetch error", e); }
+    };
+    fetchData();
+  }, []);
 
-  // 郵便番号検索
   const handleZipSearch = async (zip: string) => {
-    setCustomer(prev => ({ ...prev, zip }));
+    setCustomer({ ...customer, zip });
     if (zip.length === 7) {
       try {
         const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
         const data = await res.json();
-        if (data.results?.[0]) {
-          const r = data.results[0];
-          setCustomer(prev => ({ ...prev, address: `${r.address1}${r.address2}${r.address3}` }));
+        if (data.results) {
+          const { address1, address2, address3 } = data.results[0];
+          setCustomer(prev => ({ ...prev, address: `${address1}${address2}${address3}` }));
         }
-      } catch {}
+      } catch (e) { console.error("Zip search error", e); }
     }
   };
 
-  // カレンダー
-  const generateCalendarDays = () => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const days: (Date | null)[] = [];
-    for (let i = 0; i < firstDay; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-    return { days, today };
-  };
-
-  const timeSlots = [9, 10, 11, 12, 13, 14, 15, 16, 17];
-
-  // 送信
-  const handleSubmit = async () => {
-    if (totals.summaryItems.length === 0) return alert("サービスを選択してください");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedDate) return alert("日時を選択してください");
-    if (!customer.name || !customer.phone || !customer.email) return alert("お名前・電話番号・メールアドレスは必須です");
-    setSubmitting(true);
+    setLoading(true);
+
+    const itemsText = [
+      ...mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).map(m => m.title),
+      ...mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).map(fi => fi.title)),
+      ...options.filter(o => !o.foldTitle && getQty(o.id) > 0).map(o => `${o.title} ×${getQty(o.id)}`),
+      ...options.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0).map(fi => `${fi.title} ×${getQty(fi.id)}`))
+    ].join(", ");
+
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await fetch("/api/booking", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pageTitle,
-          services: totals.summaryItems,
-          totalPrice: totals.price,
-          totalDuration: `${durationDisplay}`,
-          date: selectedDate.toISOString(),
-          customer,
+          category: pageTitle,
+          name: customer.name,
+          email: customer.email,
+          tel: customer.phone,
+          address: customer.address,
+          notes: `【希望連絡方法: ${customer.contactMethod}】\n${customer.notes}`,
+          startTime: selectedDate,
+          endTime: new Date(selectedDate.getTime() + totalMinutesMax * 60000),
+          items: itemsText,
+          totalPrice,
+          totalMinutes: totalMinutesMax,
         }),
       });
-      if (!res.ok) throw new Error("送信失敗");
-      setDone(true);
-    } catch (e: any) { alert(e.message); } finally { setSubmitting(false); }
+
+      if (res.ok) {
+        setMessage({ type: "success", text: "仮予約、お問い合わせを受け付けました。担当者より確認のご連絡が行きますので少々おまちください。" });
+        setSelectedDate(null);
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      setMessage({ type: "error", text: "送信に失敗しました。お電話でご連絡ください。" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (done) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
-        <div className="text-5xl mb-4">✅</div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">仮予約を受け付けました</h3>
-        <p className="text-sm text-slate-600">24時間以内に担当者よりご連絡いたします。</p>
-      </div>
-    );
-  }
+  const [currentWeekStart, setCurrentWeekStart] = useState(startOfDay(new Date()));
+  const days = [...Array(7)].map((_, i) => addDays(currentWeekStart, i));
+  const timeSlots = eachHourOfInterval({
+    start: setHours(startOfDay(new Date()), 9),
+    end: setHours(startOfDay(new Date()), 18),
+  });
 
-  const { days, today } = generateCalendarDays();
+  const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
+  const prevWeek = () => {
+    const nextStart = addDays(currentWeekStart, -7);
+    if (nextStart >= startOfDay(new Date())) setCurrentWeekStart(nextStart);
+  };
+
+  if (!bookingData) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div id="booking-section" className="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden text-black scroll-mt-20">
       <div className="bg-blue-600 p-6 text-white text-center">
         <h3 className="text-xl font-bold">ネットで即時見積・仮予約・このサービスについてのお問い合わせ</h3>
         <p className="text-blue-100 text-xs mt-2 whitespace-pre-wrap leading-relaxed">
@@ -248,74 +199,116 @@ export default function ServicePageBooking({ bookingData, pageTitle }: Props) {
             <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
             作業メニューの選択
           </h4>
-
-          {/* メインサービス */}
-          <div className="space-y-3 mb-6">
-            {mains.map(main => {
-              // 折り畳みなし → チェックボックス1つ
-              if (!main.foldTitle) {
-                const checked = selectedMainIds.includes(main.id);
+          <div className="space-y-3">
+            {mains.map((main, idx) => {
+              // 折り畳みあり
+              if (main.foldTitle && main.foldItems && main.foldItems.length > 0) {
                 return (
-                  <label key={main.id} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <input type="checkbox" checked={checked} onChange={() => toggleMain(main.id)} className="w-5 h-5 accent-blue-600" />
-                      <div>
-                        <span className="font-bold">{main.title}</span>
-                        <span className="text-xs text-slate-500 ml-2">
-                          ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-                        </span>
-                      </div>
+                  <details key={main.id || idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700">
+                      <span>▼ {main.foldTitle}</span>
+                      {main.foldItems.some(fi => selectedFoldItemIds.includes(fi.id)) && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">選択中</span>
+                      )}
+                    </summary>
+                    <div className="p-4 pt-0 space-y-2">
+                      {main.foldItems.map(fi => {
+                        const checked = selectedFoldItemIds.includes(fi.id);
+                        return (
+                          <div key={fi.id}>
+                            <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                              <div className="flex items-center gap-3">
+                                <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-4 h-4 accent-blue-600" />
+                                <div>
+                                  <span className="font-bold text-sm">{fi.title}</span>
+                                  <span className="text-xs text-slate-500 ml-2">
+                                    ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="font-bold text-blue-600 text-sm">¥{fi.price.toLocaleString()}</span>
+                            </label>
+                            {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
-                  </label>
+                  </details>
                 );
               }
 
-              // 折り畳みあり → detailsで開閉、中に複数チェックボックス
+              // 折り畳みなし（元のまま）
               return (
-                <details key={main.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700">
-                    <span>▼ {main.foldTitle}</span>
-                    {main.foldItems.some(fi => selectedMainIds.includes(fi.id)) && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">選択中</span>
-                    )}
-                  </summary>
-                  <div className="p-4 pt-0 space-y-2">
-                    {main.foldItems.map(fi => {
-                      const checked = selectedMainIds.includes(fi.id);
-                      return (
-                        <div key={fi.id}>
-                          <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
-                            <div className="flex items-center gap-3">
-                              <input type="checkbox" checked={checked} onChange={() => toggleMain(fi.id)} className="w-4 h-4 accent-blue-600" />
-                              <div>
-                                <span className="font-bold text-sm">{fi.title}</span>
-                                <span className="text-xs text-slate-500 ml-2">
-                                  ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                                </span>
-                              </div>
-                            </div>
-                            <span className="font-bold text-blue-600 text-sm">¥{fi.price.toLocaleString()}</span>
-                          </label>
-                          {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
-                        </div>
-                      );
-                    })}
+                <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600"
+                      checked={selectedMains.includes(idx)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedMains([...selectedMains, idx]);
+                        else setSelectedMains(selectedMains.filter(i => i !== idx));
+                      }}
+                    />
+                    <div>
+                      <span className="font-bold">{main.title}</span>
+                      <span className="text-xs text-slate-500 ml-2">
+                        ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
+                      </span>
+                    </div>
                   </div>
-                </details>
+                  <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+                </label>
               );
             })}
-          </div>
 
-          {/* オプション */}
-          <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-600 mb-2">追加オプション</p>
-            {options.map(opt => {
-              // 折り畳みなし
-              if (!opt.foldTitle) {
-                const qty = getQty(opt.id);
+            {/* オプション */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {options.map(opt => {
+                // 折り畳みあり
+                if (opt.foldTitle && opt.foldItems && opt.foldItems.length > 0) {
+                  return (
+                    <details key={opt.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden col-span-full">
+                      <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700">
+                        <span>▼ {opt.foldTitle}</span>
+                        {opt.foldItems.some(fi => getQty(fi.id) > 0) && (
+                          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">選択中</span>
+                        )}
+                      </summary>
+                      <div className="p-4 pt-0 space-y-2">
+                        {opt.foldItems.map(fi => {
+                          const qty = getQty(fi.id);
+                          return (
+                            <div key={fi.id}>
+                              <div className={`p-3 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <span className="text-sm font-medium">{fi.title}</span>
+                                    <span className="text-[10px] text-slate-400 ml-1">
+                                      (+{fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
+                                    </span>
+                                  </div>
+                                  <span className="text-sm font-bold text-slate-600">+¥{fi.price.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button type="button" onClick={() => setQty(fi.id, Math.max(0, qty - 1))} className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center hover:bg-slate-300">−</button>
+                                  <span className="w-6 text-center font-bold">{qty}</span>
+                                  <button type="button" onClick={() => setQty(fi.id, Math.min(opt.maxQty, qty + 1))} disabled={qty >= opt.maxQty} className="w-7 h-7 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
+                                  {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
+                                </div>
+                              </div>
+                              {fi.comment && <p className="text-xs text-slate-500 ml-4 mt-1">💬 {fi.comment}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  );
+                }
+
+                // 折り畳みなし（元のまま）
                 return (
-                  <div key={opt.id} className={`p-3 rounded-xl border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                  <div key={opt.id} className={`p-3 rounded-xl border transition-all ${getQty(opt.id) > 0 ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <span className="text-sm font-medium">{opt.title}</span>
@@ -326,165 +319,151 @@ export default function ServicePageBooking({ bookingData, pageTitle }: Props) {
                       <span className="text-sm font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setQty(opt.id, Math.max(0, qty - 1))} className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center hover:bg-slate-300">−</button>
-                      <span className="w-8 text-center font-bold text-lg">{qty}</span>
-                      <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty, qty + 1))} disabled={qty >= opt.maxQty} className="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-lg flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
+                      <button type="button" onClick={() => setQty(opt.id, Math.max(0, getQty(opt.id) - 1))} className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center hover:bg-slate-300 transition-colors">−</button>
+                      <span className="w-8 text-center font-bold text-lg">{getQty(opt.id)}</span>
+                      <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty, getQty(opt.id) + 1))} disabled={getQty(opt.id) >= opt.maxQty} className="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-lg flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors">+</button>
                       {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}個</span>}
                     </div>
                   </div>
                 );
-              }
-
-              // 折り畳みあり
-              return (
-                <details key={opt.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700">
-                    <span>▼ {opt.foldTitle}</span>
-                    {opt.foldItems.some(fi => getQty(fi.id) > 0) && (
-                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">選択中</span>
-                    )}
-                  </summary>
-                  <div className="p-4 pt-0 space-y-2">
-                    {opt.foldItems.map(fi => {
-                      const qty = getQty(fi.id);
-                      return (
-                        <div key={fi.id}>
-                          <div className={`p-3 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <span className="text-sm font-medium">{fi.title}</span>
-                                <span className="text-[10px] text-slate-400 ml-1">
-                                  (+{fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                                </span>
-                              </div>
-                              <span className="text-sm font-bold text-slate-600">+¥{fi.price.toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => setQty(fi.id, Math.max(0, qty - 1))} className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center hover:bg-slate-300">−</button>
-                              <span className="w-6 text-center font-bold">{qty}</span>
-                              <button type="button" onClick={() => setQty(fi.id, Math.min(opt.maxQty, qty + 1))} disabled={qty >= opt.maxQty} className="w-7 h-7 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
-                              {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
-                            </div>
-                          </div>
-                          {fi.comment && <p className="text-xs text-slate-500 ml-4 mt-1">💬 {fi.comment}</p>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-              );
-            })}
-            {options.length === 0 && <p className="text-xs text-slate-400 text-center py-2">オプションはありません</p>}
-          </div>
-
-          {/* 合計 */}
-          {totals.summaryItems.length > 0 && (
-            <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-200">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-700">合計見積</span>
-                <span className="text-2xl font-black text-blue-700">¥{totals.price.toLocaleString()}</span>
-              </div>
-              <p className="text-xs text-slate-500">合計作業時間(目安): {durationDisplay}</p>
+              })}
             </div>
-          )}
+          </div>
+          <div className="mt-4 text-right">
+            <p className="text-xs text-slate-500">合計作業時間(目安): {durationDisplay}</p>
+            <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
+          </div>
         </section>
 
         {/* 2. カレンダー選択 */}
         <section>
-          <h4 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800">
-            <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
-            希望日時の選択（仮予約・相談）
-          </h4>
-
-          <div className="border rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between bg-slate-100 p-3">
-              <button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1))} className="px-3 py-1 bg-white rounded border text-sm font-bold">◀</button>
-              <span className="font-bold">{format(calendarMonth, "yyyy年MM月", { locale: ja })}</span>
-              <button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1))} className="px-3 py-1 bg-white rounded border text-sm font-bold">▶</button>
-            </div>
-            <div className="grid grid-cols-7 text-center text-xs font-bold text-slate-500 border-b">
-              {["日", "月", "火", "水", "木", "金", "土"].map(d => <div key={d} className="py-2">{d}</div>)}
-            </div>
-            <div className="grid grid-cols-7 text-center">
-              {days.map((day, i) => {
-                if (!day) return <div key={`empty-${i}`} className="py-3" />;
-                const isPast = day < today;
-                const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString() && !selectedDate.getHours();
-                return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    disabled={isPast}
-                    onClick={() => setSelectedDate(day)}
-                    className={`py-3 text-sm transition-all ${isPast ? 'text-slate-300' : 'hover:bg-blue-50 cursor-pointer'} ${isSelected ? 'bg-blue-600 text-white font-bold rounded' : ''}`}
-                  >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
+          <div className="flex flex-wrap justify-between items-end mb-4 gap-4">
+            <h4 className="flex items-center gap-2 font-bold text-lg text-slate-800">
+              <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+              希望日時の選択（仮予約・相談）
+            </h4>
+            <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
+              <button type="button" onClick={prevWeek} disabled={currentWeekStart <= startOfDay(new Date())} className="px-3 py-1 bg-white rounded shadow-sm text-sm font-bold disabled:opacity-30">◀ 前の週</button>
+              <span className="px-3 py-1 text-sm font-bold text-slate-600">{format(currentWeekStart, "yyyy年M月")}</span>
+              <button type="button" onClick={nextWeek} className="px-3 py-1 bg-white rounded shadow-sm text-sm font-bold">次の週 ▶</button>
             </div>
           </div>
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full border-collapse table-fixed">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="p-1 md:p-3 border-b text-[10px] md:text-xs font-bold w-10 md:w-16 sticky left-0 bg-slate-50 z-10 text-black">時間</th>
+                  {days.map(day => (
+                    <th key={day.toISOString()} className="p-1 md:p-2 border-b border-l text-[10px] md:text-xs font-bold text-center text-black">
+                      {format(day, "M/d")}<br/><span className={format(day, "E", {locale:ja}) === "日" ? "text-red-500" : format(day, "E", {locale:ja}) === "土" ? "text-blue-500" : ""}>({format(day, "E", {locale:ja})})</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map(slot => (
+                  <tr key={slot.toISOString()}>
+                    <td className="p-1 md:p-2 border-b text-center text-[10px] md:text-xs font-bold bg-slate-50 sticky left-0 z-10 text-black">{format(slot, "HH:00")}</td>
+                    {days.map(day => {
+                      const current = new Date(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), 0, 0, 0);
+                      const isBooked = bookedSlots.some(b => {
+                        const start = parseISO(b.startTime);
+                        const end = parseISO(b.endTime);
+                        return current >= start && current < end;
+                      });
+                      const override = overrides.find(o => new Date(o.slotTime).getTime() === current.getTime());
+                      const manualStatus = override?.status;
+                      const isSelected = selectedDate?.getTime() === current.getTime();
+                      const isPast = current < new Date();
 
-          {selectedDate && !selectedDate.getHours() && (
-            <div className="mt-4">
-              <p className="text-sm font-bold mb-2 text-slate-700">時間帯を選択：</p>
-              <div className="flex flex-wrap gap-2">
-                {timeSlots.map(hour => (
-                  <button
-                    key={hour}
-                    type="button"
-                    onClick={() => {
-                      const d = new Date(selectedDate);
-                      d.setHours(hour, 0, 0, 0);
-                      setSelectedDate(d);
-                    }}
-                    className="px-4 py-2 border rounded-lg text-sm font-bold hover:bg-blue-50 transition-colors"
-                  >
-                    {hour}:00
-                  </button>
+                      let displayStatus = "○";
+                      let isDisabled = false;
+                      if (isPast || isBooked || manualStatus === "CLOSED") { displayStatus = "×"; isDisabled = true; }
+                      else if (manualStatus === "CONSULT") { displayStatus = "▲"; }
+
+                      return (
+                        <td key={current.toISOString()} className={`p-0.5 md:p-1 border-b border-l text-center align-middle ${isSelected ? 'bg-blue-100' : ''}`}>
+                          {isDisabled ? (
+                            <span className="text-slate-300 font-bold text-lg md:text-2xl inline-block leading-none">×</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDate(current)}
+                              className={`w-full h-10 md:h-12 flex items-center justify-center rounded font-bold text-lg md:text-2xl transition-colors ${isSelected ? 'text-blue-700' : (displayStatus === '▲' ? 'text-orange-400' : 'text-blue-500 hover:bg-blue-50')}`}
+                            >
+                              {displayStatus}
+                            </button>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {selectedDate && selectedDate.getHours() > 0 && (
-            <div className="mt-3 bg-blue-50 p-3 rounded-xl border border-blue-200">
-              <p className="text-sm font-bold text-blue-700">
-                選択日時：{format(selectedDate, "yyyy年MM月dd日 HH:00", { locale: ja })} 〜
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-center gap-4 mt-3 text-[10px] text-slate-500 font-bold">
+            <span>○：空きあり</span><span>▲：要相談（お問い合わせください）</span><span>×：満き・店休日</span>
+          </div>
+          {selectedDate && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+              <p className="text-sm font-bold text-blue-800">
+                選択日時：{format(selectedDate, "yyyy年MM月dd日 HH:00", {locale:ja})} 〜
               </p>
             </div>
           )}
         </section>
 
-        {/* 3. お客様情報 */}
+        {/* 3. 顧客情報入力 */}
         <section>
           <h4 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800">
             <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span>
-            お客様情報
+            お客様情報の入力
           </h4>
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input placeholder="お名前 (必須)" required value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
-              <input type="tel" placeholder="電話番号 (必須)" required value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <label className="block text-sm font-bold text-slate-700 mb-2">ご確認のご連絡方法</label>
+              <div className="flex flex-wrap gap-4">
+                {["お電話", "メール", "SMS"].map(method => (
+                  <label key={method} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="contactMethod"
+                      value={method}
+                      checked={customer.contactMethod === method}
+                      onChange={e => setCustomer({...customer, contactMethod: e.target.value})}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm font-bold">{method}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <input type="email" placeholder="メールアドレス (必須)" required value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input placeholder="お名前 (必須)" required value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+              <input type="tel" placeholder="電話番号 (必須)" required value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+            </div>
+            <input type="email" placeholder="メールアドレス (必須)" required value={customer.email} onChange={e => setCustomer({...customer, email: e.target.value})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <input placeholder="郵便番号 (7桁・自動入力)" maxLength={7} value={customer.zip} onChange={e => handleZipSearch(e.target.value)} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
-              <input placeholder="住所" value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+              <input placeholder="住所" className="md:col-span-2 p-3 border rounded-lg bg-slate-50 text-black" value={customer.address} readOnly />
             </div>
-            <textarea placeholder="ご要望・詳細など" rows={3} value={customer.notes} onChange={e => setCustomer({ ...customer, notes: e.target.value })} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
-          </div>
+            <textarea placeholder="ご要望・詳細など" rows={3} value={customer.notes} onChange={e => setCustomer({...customer, notes: e.target.value})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" />
+
+            <div className="text-center">
+              <button type="submit" disabled={loading || !selectedDate} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
+                {loading ? "送信中..." : "この内容で仮予約・相談を申し込む"}
+              </button>
+              <p className="text-xs text-slate-500 font-bold">後程担当者よりご連絡いたします。</p>
+            </div>
+          </form>
         </section>
 
-        {/* 送信ボタン */}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {submitting ? "送信中..." : "仮予約・お問い合わせを送信する"}
-        </button>
+        {message.text && (
+          <div className={`p-4 rounded-xl text-center font-bold ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {message.text}
+          </div>
+        )}
       </div>
     </div>
   );
