@@ -6,6 +6,8 @@ import TopPriceSection from "@/components/TopPriceSection";
 import ServiceArea from "@/components/ServiceArea";
 import RegionalLinks from "@/components/RegionalLinks";
 import Link from "next/link";
+import TopPriceAppeal from "@/components/TopPriceAppeal";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -78,6 +80,10 @@ export default async function Home() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <HomeClient settings={settings || defaultSettings} videos={videos}>
+
+                {/* 価格アピール */}
+        <TopPriceAppeal />
+
 
         {/* 2. 選ばれる3つの理由 */}
         <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
