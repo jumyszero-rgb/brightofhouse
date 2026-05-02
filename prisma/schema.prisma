@@ -287,3 +287,14 @@ model BookingOption {
   subMenuId   String
   subMenu     BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
 }
+
+model TopPriceItem {
+  id        String   @id @default(uuid())
+  title     String
+  price     String
+  unit      String   @default("円〜(税込)")
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
