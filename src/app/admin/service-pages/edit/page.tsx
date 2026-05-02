@@ -30,8 +30,10 @@ function EditForm() {
   });
 
   const [bookingData, setBookingData] = useState({
-    mains: [{ id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60 }],
-    options: [] as { id: string; title: string; price: number; durationMin: number; durationMax: number; maxQty: number }[]
+        mains: [{ id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60, foldTitle: "", foldContent: "", foldNote: "" }],
+
+       options: [] as { id: string; title: string; price: number; durationMin: number; durationMax: number; maxQty: number; foldTitle: string; foldContent: string; foldNote: string }[]
+
   });
 
   useEffect(() => {
@@ -116,7 +118,8 @@ function EditForm() {
   // メインサービス操作
   const addMain = () => setBookingData(prev => ({
     ...prev,
-    mains: [...prev.mains, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60 }]
+        mains: [...prev.mains, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60, foldTitle: "", foldContent: "", foldNote: "" }]
+
   }));
   const removeMain = (id: string) => setBookingData(prev => ({
     ...prev,
@@ -130,7 +133,8 @@ function EditForm() {
   // オプション操作
   const addOption = () => setBookingData(prev => ({
     ...prev,
-    options: [...prev.options, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1 }]
+        options: [...prev.options, { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1, foldTitle: "", foldContent: "", foldNote: "" }]
+
   }));
   const removeOption = (id: string) => setBookingData(prev => ({
     ...prev,
@@ -375,6 +379,14 @@ function EditForm() {
                     </div>
                   </div>
                 </div>
+                                {/* 折り畳みセクション */}
+                <div className="border-t border-emerald-100 pt-3 space-y-2">
+                  <p className="text-[10px] font-bold text-amber-600">▼ 折り畳み表示（任意）</p>
+                  <input placeholder="折り畳みタイトル（例: 水回り3点セット）" value={main.foldTitle || ""} onChange={(e) => updateMain(main.id, "foldTitle", e.target.value)} className="w-full p-2 border rounded text-sm bg-amber-50" />
+                  <input placeholder="注意事項（例: 6回分チケット購入が必要）" value={main.foldNote || ""} onChange={(e) => updateMain(main.id, "foldNote", e.target.value)} className="w-full p-2 border rounded text-sm bg-amber-50" />
+                  <textarea placeholder="折り畳み内容（例: キッチン・浴室・レンジフード...）" rows={3} value={main.foldContent || ""} onChange={(e) => updateMain(main.id, "foldContent", e.target.value)} className="w-full p-2 border rounded text-sm bg-amber-50" />
+                </div>
+
               </div>
             ))}
           </div>
@@ -417,6 +429,14 @@ function EditForm() {
                     <input type="number" min={1} value={opt.maxQty || 1} onChange={(e) => updateOption(opt.id, "maxQty", Math.max(1, Number(e.target.value)))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                   </div>
                 </div>
+                                {/* 折り畳みセクション */}
+                <div className="border-t border-emerald-100 pt-2 space-y-2">
+                  <p className="text-[10px] font-bold text-amber-600">▼ 折り畳み表示（任意）</p>
+                  <input placeholder="折り畳みタイトル" value={opt.foldTitle || ""} onChange={(e) => updateOption(opt.id, "foldTitle", e.target.value)} className="w-full p-2 border rounded text-xs bg-amber-50" />
+                  <input placeholder="注意事項" value={opt.foldNote || ""} onChange={(e) => updateOption(opt.id, "foldNote", e.target.value)} className="w-full p-2 border rounded text-xs bg-amber-50" />
+                  <textarea placeholder="折り畳み内容" rows={2} value={opt.foldContent || ""} onChange={(e) => updateOption(opt.id, "foldContent", e.target.value)} className="w-full p-2 border rounded text-xs bg-amber-50" />
+                </div>
+
               </div>
             ))}
             {bookingData.options.length === 0 && <p className="text-center text-xs text-emerald-400 py-2">オプションは設定されていません</p>}
