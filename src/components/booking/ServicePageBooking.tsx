@@ -204,6 +204,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   </div>
                 </div>
                 <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+                              {main.foldTitle && (
+                <details className="mt-2 w-full bg-slate-50 rounded-lg border border-slate-200 p-3 col-span-full">
+                  <summary className="font-bold text-sm text-blue-700 cursor-pointer">{main.foldTitle}</summary>
+                  {main.foldNote && <p className="text-xs text-red-500 mt-2 font-bold">⚠ {main.foldNote}</p>}
+                  {main.foldContent && <p className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{main.foldContent}</p>}
+                </details>
+              )}
+
               </label>
             ))}
 
@@ -238,6 +246,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                     </button>
                     {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}個</span>}
                   </div>
+                                    {opt.foldTitle && (
+                    <details className="mt-2 bg-slate-50 rounded-lg border border-slate-200 p-3">
+                      <summary className="font-bold text-sm text-blue-700 cursor-pointer">{opt.foldTitle}</summary>
+                      {opt.foldNote && <p className="text-xs text-red-500 mt-2 font-bold">⚠ {opt.foldNote}</p>}
+                      {opt.foldContent && <p className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{opt.foldContent}</p>}
+                    </details>
+                  )}
+
                 </div>
               ))}
             </div>
