@@ -60,7 +60,7 @@ export default function AdminServicePageList() {
                     {new Date(page.updatedAt).toLocaleDateString()}
                   </td>
                                    <td className="p-4 text-right space-x-3">
-                    <a href={`/service/${page.slug}`} target="_blank" className="text-green-600 hover:underline font-bold">プレビュー</a>
+                    <a href={`/service/${page.slug}?preview=true`} target="_blank" className="text-green-600 hover:underline font-bold">プレビュー</a>
                     <Link href={`/admin/service-pages/edit?id=${page.id}`} className="text-blue-600 hover:underline font-bold">編集</Link>
                     <button onClick={() => handleDelete(page.id)} className="text-red-500 hover:underline font-bold">削除</button>
                   </td>
