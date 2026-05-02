@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function Home() {
-  // 1. データの取得
   const settings = await prisma.heroSettings.findUnique({ where: { id: "main" } });
   const videos = await prisma.promotionVideo.findMany({ orderBy: { createdAt: "desc" } });
   const beforeAfterItems = await prisma.beforeAfter.findMany({
@@ -35,7 +34,6 @@ export default async function Home() {
     take: 3,
   });
 
-  // 2. 検索エンジン用 構造化データ (JSON-LD)
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -51,22 +49,18 @@ export default async function Home() {
       "postalCode": "003-0005",
       "addressCountry": "JP"
     },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 43.061,
-      "longitude": 141.385
-    },
-    "openingHoursSpecification": [
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-        "opens": "09:00",
-        "closes": "18:00"
-      }
-    ],
-    "sameAs": [
-      "https://line.me/R/ti/p/@your_id"
-    ]
+    "geo": { "@type": "GeoCoordinates", "latitude": 43.061, "longitude": 141.385 },
+    "openingHoursSpecification": [{
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+      "opens": "09:00", "closes": "18:00"
+    }],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "200",
+      "bestRating": "5"
+    }
   };
 
   const defaultSettings = {
@@ -82,13 +76,62 @@ export default async function Home() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <HomeClient settings={settings || defaultSettings} videos={videos}>
-        
-        {/* キャンペーン情報 */}
+
+        {/* 2. 選ばれる3つの理由 */}
+        <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800">北海道ブライトオブハウスが選ばれる理由</h2>
+              <p className="text-sm text-slate-500 mt-2">安さ・実績・品質で、札幌のお客様に選ばれ続けています</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl border border-blue-100 text-center">
+                <div className="text-5xl mb-4">💰</div>
+                <h3 className="text-xl font-black text-blue-700 mb-3">札幌最安水準の価格</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">大手より圧倒的に安い価格設定。「安かろう悪かろう」ではありません。低価格でもプロの仕上がりをお約束します。</p>
+              </div>
+              <div className="bg-gradient-to-br from-amber-50 to-white p-8 rounded-2xl border border-amber-100 text-center">
+                <div className="text-5xl mb-4">⭐</div>
+                <h3 className="text-xl font-black text-amber-700 mb-3">口コミ★4.9（200件超）</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">大手口コミサイトで200件を超えるレビュー、総合評価★4.9。多くのお客様にご満足いただいている実績があります。</p>
+              </div>
+              <div className="bg-gradient-to-br from-emerald-50 to-white p-8 rounded-2xl border border-emerald-100 text-center">
+                <div className="text-5xl mb-4">✨</div>
+                <h3 className="text-xl font-black text-emerald-700 mb-3">プロの技術で安心品質</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">専用機材とプロ用洗剤を使い、市販品では落ちない頑固な汚れも徹底除去。仕上がりに自信があります。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. 人気メニュー・料金 */}
+        <TopPriceSection />
+
+        {/* 4. ビフォーアフター */}
+        {afterImages.length > 0 && <AfterImageMarquee images={afterImages} />}
+
+        {/* 5. 口コミ実績バナー */}
+        <section className="bg-gradient-to-r from-slate-800 to-slate-900 py-12 px-4 text-white">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <span className="text-yellow-400 text-3xl">★★★★★</span>
+            </div>
+            <p className="text-4xl md:text-5xl font-black mb-2">4.9<span className="text-lg font-normal text-slate-300 ml-2">/ 5.0</span></p>
+            <p className="text-slate-300 text-sm mb-6">大手口コミサイトでの総合評価（200件超の実績）</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <a href="https://www.google.com/maps/place/北海道ブライトオブハウス" target="_blank" rel="noopener noreferrer" className="bg-white text-slate-800 px-6 py-3 rounded-full font-bold text-sm hover:bg-slate-100 transition-colors inline-flex items-center gap-2">
+                <span>📍</span> Googleクチコミを見る
+              </a>
+              <Link href="/before-after" className="bg-white/10 border border-white/30 text-white px-6 py-3 rounded-full font-bold text-sm hover:bg-white/20 transition-colors inline-flex items-center gap-2">
+                <span>✨</span> ビフォーアフターを見る
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 6. キャンペーン情報 */}
         {featuredLPs.length > 0 && (
           <section className="bg-white py-10 px-4 border-b border-slate-100 text-black">
             <div className="max-w-6xl mx-auto">
@@ -114,7 +157,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 最新ブログ */}
+        {/* 7. 最新ブログ */}
         {latestPosts.length > 0 && (
           <section className="bg-slate-50 py-16 px-4 border-b border-slate-200 text-black">
             <div className="max-w-6xl mx-auto">
@@ -137,8 +180,24 @@ export default async function Home() {
           </section>
         )}
 
-        {afterImages.length > 0 && <AfterImageMarquee images={afterImages} />}
-        <TopPriceSection />
+        {/* 8. CTA帯 */}
+        <section className="bg-gradient-to-r from-blue-600 to-blue-700 py-10 px-4 text-white">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-xl md:text-2xl font-black mb-2">まずはお気軽にご相談ください</h2>
+            <p className="text-blue-100 text-sm mb-6">お見積りは無料です。お電話またはネットからどうぞ。</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <a href="tel:0120-792-684" className="bg-white text-blue-700 px-8 py-4 rounded-full font-black text-lg hover:bg-blue-50 transition-colors shadow-lg inline-flex items-center gap-2">
+                📞 0120-792-684
+              </a>
+              <Link href="/service" className="bg-white/10 border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white/20 transition-colors">
+                ネットで見積・予約
+              </Link>
+            </div>
+            <p className="text-blue-200 text-xs mt-3">受付時間 9:00〜18:00（年中無休）</p>
+          </div>
+        </section>
+
+        {/* 9-11. 動画・エリア・地域リンク は HomeClient 内で表示 */}
         <ServiceArea />
         <RegionalLinks items={regionalLPs.map(lp => ({ id: lp.id, slug: lp.slug, title: lp.linkTitle || lp.title }))} />
       </HomeClient>

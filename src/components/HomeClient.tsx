@@ -43,7 +43,7 @@ export default function HomeClient({ settings, videos, children }: Props) {
       )}
 
       {/* --- 1. ヒーローセクション --- */}
-      <div 
+      <div
         className={`relative w-full ${settings.mobileHeight} ${settings.pcHeight} bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 overflow-hidden shadow-md z-10 flex items-center justify-center`}
       >
         <div className="absolute top-0 left-0 w-full h-full bg-white/5 mix-blend-overlay"></div>
@@ -51,10 +51,19 @@ export default function HomeClient({ settings, videos, children }: Props) {
         <div className="absolute bottom-0 right-0 w-60 h-60 bg-cyan-300/20 rounded-full blur-2xl"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 text-center text-white flex flex-col items-center gap-4 z-20 w-full">
-          
-          {/* タイトル & サブタイトル (レスポンシブ対応・折り返しなし) */}
+
+          {/* 実績バッジ */}
+          <div className="flex flex-wrap justify-center gap-3 mb-2">
+            <span className="bg-white/20 backdrop-blur-sm border border-white/30 text-white text-xs md:text-sm font-bold px-4 py-1.5 rounded-full">
+              ⭐ 口コミ★4.9（200件超）
+            </span>
+            <span className="bg-white/20 backdrop-blur-sm border border-white/30 text-white text-xs md:text-sm font-bold px-4 py-1.5 rounded-full">
+              💰 札幌最安水準
+            </span>
+          </div>
+
+          {/* タイトル & サブタイトル */}
           <div className="w-full">
-            {/* vw単位を使って画面幅に合わせて縮小 + whitespace-nowrapで折り返し禁止 */}
             <h1 className="font-bold tracking-wider drop-shadow-md mb-2 leading-tight whitespace-nowrap text-[min(6vw,3rem)] md:text-5xl">
               {settings.title}
             </h1>
@@ -91,120 +100,57 @@ export default function HomeClient({ settings, videos, children }: Props) {
         </div>
       </div>
 
-      {/* --- 2. CM・動画ギャラリー --- */}
-      <div className="py-12 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-2">
-            <span className="text-red-600 text-xl">▶</span>
-            <h2 className="text-lg font-bold text-slate-800">
-              プロモーション動画
-            </h2>
-            <span className="text-xs text-slate-400 ml-auto">
-              ※クリックで再生
-            </span>
-          </div>
+      {/* --- children（選ばれる理由、料金、BA、口コミ、キャンペーン、ブログ、CTA、エリア、地域リンク） --- */}
+      {children}
 
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-6">
-            {pcVideos.length > 0 ? (
-              pcVideos.map((video) => (
-                <div 
-                  key={video.id} 
-                  className="group cursor-pointer"
-                  onClick={() => setPlayingVideo(video.videoUrl)}
-                >
+      {/* --- 動画ギャラリー（最下部に移動） --- */}
+      {(pcVideos.length > 0 || mobileVideos.length > 0) && (
+        <div className="py-12 px-4 bg-white border-t border-slate-200">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-2">
+              <span className="text-red-600 text-xl">▶</span>
+              <h2 className="text-lg font-bold text-slate-800">プロモーション動画</h2>
+              <span className="text-xs text-slate-400 ml-auto">※クリックで再生</span>
+            </div>
+
+            <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-6">
+              {pcVideos.map((video) => (
+                <div key={video.id} className="group cursor-pointer" onClick={() => setPlayingVideo(video.videoUrl)}>
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm group-hover:shadow-md transition-all">
                     <div className="aspect-video bg-black rounded overflow-hidden relative shadow-inner">
-                      <video
-                        className="w-full h-full object-contain pointer-events-none"
-                        src={video.videoUrl}
-                        muted
-                        playsInline
-                      />
+                      <video className="w-full h-full object-contain pointer-events-none" src={video.videoUrl} muted playsInline />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
                         <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                           <span className="text-red-600 text-base ml-1">▶</span>
                         </div>
                       </div>
                     </div>
-                    <h3 className="mt-2 font-bold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">
-                      {video.title}
-                    </h3>
+                    <h3 className="mt-2 font-bold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">{video.title}</h3>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400 col-span-full text-center py-10 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                動画が登録されていません
-              </p>
-            )}
-          </div>
+              ))}
+            </div>
 
-          <div className="grid md:hidden grid-cols-2 gap-4">
-            {mobileVideos.length > 0 ? (
-              mobileVideos.map((video) => (
-                <div 
-                  key={video.id} 
-                  className="group cursor-pointer"
-                  onClick={() => setPlayingVideo(video.videoUrl)}
-                >
+            <div className="grid md:hidden grid-cols-2 gap-4">
+              {mobileVideos.map((video) => (
+                <div key={video.id} className="group cursor-pointer" onClick={() => setPlayingVideo(video.videoUrl)}>
                   <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-sm">
                     <div className="aspect-[9/16] w-full bg-black rounded overflow-hidden relative shadow-inner">
-                      <video
-                        className="w-full h-full object-cover pointer-events-none"
-                        src={video.videoUrl}
-                        muted
-                        playsInline
-                      />
+                      <video className="w-full h-full object-cover pointer-events-none" src={video.videoUrl} muted playsInline />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                         <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                           <span className="text-red-600 text-sm ml-0.5">▶</span>
                         </div>
                       </div>
                     </div>
-                    <h3 className="mt-2 font-bold text-slate-700 text-[10px] text-center line-clamp-2">
-                      {video.title}
-                    </h3>
+                    <h3 className="mt-2 font-bold text-slate-700 text-[10px] text-center line-clamp-2">{video.title}</h3>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400 col-span-full text-center py-10 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                動画が登録されていません
-              </p>
-            )}
+              ))}
+            </div>
           </div>
-
         </div>
-      </div>
-
-      {/* --- 3. メインメニュー --- */}
-      <div className="py-10 px-4 border-t border-slate-200 bg-slate-50/50">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/service" className="group flex items-center gap-4 bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all border border-slate-100 hover:border-blue-200">
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">¥</div>
-            <div>
-              <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">サービス・料金</h3>
-              <p className="text-slate-500 text-xs mt-1">水回り、エアコン、特殊清掃</p>
-            </div>
-          </Link>
-          <Link href="/before-after" className="group flex items-center gap-4 bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all border border-slate-100 hover:border-blue-200">
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">✨</div>
-            <div>
-              <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">Before & After</h3>
-              <p className="text-slate-500 text-xs mt-1">清掃実績を写真で公開中</p>
-            </div>
-          </Link>
-          <Link href="/company" className="group flex items-center gap-4 bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all border border-slate-100 hover:border-blue-200">
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">🏢</div>
-            <div>
-              <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">会社概要</h3>
-              <p className="text-slate-500 text-xs mt-1">運営会社情報、アクセス</p>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {children}
+      )}
 
     </main>
   );
