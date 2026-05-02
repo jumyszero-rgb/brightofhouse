@@ -166,6 +166,16 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       </div>
 
       <div className="p-6 md:p-10 space-y-10">
+        
+                {/* LINE案内 */}
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4">
+          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border" />
+          <div>
+            <p className="font-bold text-green-700 text-sm">LINEでもお問い合わせ可能です</p>
+            <p className="text-xs text-slate-600 mt-1">スマホでQRコードを読み取ってお気軽にご相談ください。</p>
+          </div>
+        </div>
+
 
         {/* 1. メニュー選択 */}
         <section>

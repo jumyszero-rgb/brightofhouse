@@ -25,6 +25,18 @@ export default function ContactPage() {
         </div>
 
         {/* ここに部品を置くだけ！ */}
+        
+        {/* LINE案内 */}
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4 mb-8">
+          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border" />
+          <div>
+            <p className="font-bold text-green-700 text-sm">LINEでもお問い合わせ可能です</p>
+            <p className="text-xs text-slate-600 mt-1">スマホでQRコードを読み取ってお気軽にご相談ください。</p>
+          </div>
+        </div>
+
+
+
         <ContactForm />
         
       </div>
