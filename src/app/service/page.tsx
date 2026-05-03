@@ -91,13 +91,14 @@ export default async function ServicePage() {
               <div className="space-y-4">
                 {category.items.map((item) => (
                   <details key={item.id} className="group bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 open:ring-2 open:ring-blue-100 open:border-blue-400">
-                    <summary className="flex items-center justify-between p-5 cursor-pointer list-none">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                        <summary className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-5 cursor-pointer list-none">
+                      <div className="flex flex-col gap-1">
                         <h3 className="font-bold text-slate-800 text-base md:text-lg group-open:text-blue-600 transition-colors">
                           {item.title}
                         </h3>
-                        {(item.regularPrice || item.discountPrice) && (
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 sm:mt-0">
+                           {(item.regularPrice || item.discountPrice) && (
+                          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 mt-2 sm:mt-0">
+
                             {item.regularPrice && (
                               <span className={`${item.discountPrice ? 'text-slate-400 text-[10px] md:text-xs line-through' : 'text-blue-600 font-bold text-sm md:text-base'} inline-block whitespace-nowrap`}>
                                 {item.regularPrice}
@@ -117,7 +118,7 @@ export default async function ServicePage() {
                           <p className="text-[10px] md:text-xs text-blue-600 font-medium mt-0.5">{item.subTitle}</p>
                         )}
                       </div>
-                      <div className="flex items-center ml-2 flex-shrink-0">
+                        <div className="hidden sm:flex items-center ml-2 flex-shrink-0">
                         <span className="text-slate-400 group-open:hidden text-xs md:text-sm whitespace-nowrap">+ 詳細</span>
                         <span className="text-slate-400 hidden group-open:inline text-xs md:text-sm whitespace-nowrap">- 閉じる</span>
                       </div>
