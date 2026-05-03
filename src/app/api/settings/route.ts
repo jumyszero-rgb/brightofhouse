@@ -32,8 +32,15 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const res = await prisma.siteSettings.upsert({
       where: { id: "main" },
-      update: { robotsTxt: body.robotsTxt },
-      create: { id: "main", robotsTxt: body.robotsTxt },
+      update: {
+        robotsTxt: body.robotsTxt,
+        ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
+      },
+      create: {
+        id: "main",
+        robotsTxt: body.robotsTxt,
+        ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
+      },
     });
     return NextResponse.json(res);
   } catch (error) {
