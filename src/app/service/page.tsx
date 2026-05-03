@@ -138,7 +138,8 @@ export default async function ServicePage() {
                       </dl>
 
                       <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
-                        {item.linkedPages.map((lp, idx) => (
+                           {item.linkedPages.slice(0, 5).map((lp, idx) => (
+
                           <Link
                             key={idx}
                             href={`/service/${lp.slug}`}

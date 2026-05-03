@@ -338,6 +338,11 @@ function EditForm() {
           </select>
         </div>
         <div>
+                  <div>
+          <label className="block text-sm font-bold mb-1">一覧ページのボタン表示名</label>
+          <input value={formData.linkTitle} onChange={e => setFormData(prev => ({ ...prev, linkTitle: e.target.value }))} placeholder="例: 浴室クリーニング（空欄時はタイトルを使用）" className="w-full p-3 border rounded-lg" />
+        </div>
+
           <label className="block text-sm font-bold mb-1">URL (slug)</label>
           <input value={formData.slug} onChange={e => setFormData(prev => ({ ...prev, slug: e.target.value }))} className="w-full p-3 border rounded-lg" />
         </div>
