@@ -11,23 +11,36 @@ export default async function TopPriceAppeal() {
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-white py-12 px-4 text-black border-b border-slate-200">
+    <section style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0" }} className="py-12 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <p className="text-slate-500 text-sm font-bold mb-1">札幌最安水準の価格設定</p>
-          <h2 className="text-2xl md:text-3xl font-black text-slate-800">単品料金のご案内</h2>
+        <div style={{ textAlign: "center" }} className="mb-8">
+          <p style={{ color: "#64748b", fontSize: "14px", fontWeight: "bold", marginBottom: "4px" }}>札幌最安水準の価格設定</p>
+          <h2 style={{ color: "#1e293b", fontSize: "clamp(1.5rem, 4vw, 1.875rem)", fontWeight: 900 }}>単品料金のご案内</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {items.map(item => (
-            <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center hover:bg-slate-100 transition-colors">
-              <p className="text-sm font-bold text-slate-600 mb-2">{item.title}</p>
-              <p className="text-3xl md:text-4xl font-black text-slate-800">{item.price}</p>
-              <p className="text-xs text-slate-400 mt-1">{item.unit}</p>
+            <div key={item.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "16px", textAlign: "center" }}>
+              <p style={{ fontSize: "14px", fontWeight: "bold", color: "#475569", marginBottom: "8px" }}>{item.title}</p>
+              <p style={{ fontSize: "clamp(1.875rem, 5vw, 2.25rem)", fontWeight: 900, color: "#1e293b" }}>{item.price}</p>
+              <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>{item.unit}</p>
             </div>
           ))}
         </div>
-        <div className="text-center mt-8">
-          <Link href="/service" className="bg-red-600 text-white px-10 py-4 rounded-full font-black text-base hover:bg-red-700 transition-colors shadow-lg inline-block">
+        <div style={{ textAlign: "center", marginTop: "32px" }}>
+          <Link
+            href="/service"
+            style={{
+              background: "#dc2626",
+              color: "#ffffff",
+              padding: "16px 40px",
+              borderRadius: "9999px",
+              fontWeight: 900,
+              fontSize: "16px",
+              display: "inline-block",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+              textDecoration: "none",
+            }}
+          >
             すべての料金を見る ➝
           </Link>
         </div>
