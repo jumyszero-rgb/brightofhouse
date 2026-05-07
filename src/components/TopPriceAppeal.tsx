@@ -17,12 +17,12 @@ export default async function TopPriceAppeal() {
           <p style={{ color: "#64748b", fontSize: "14px", fontWeight: "bold", marginBottom: "4px" }}>札幌最安水準の価格設定</p>
           <h2 style={{ color: "#1e293b", fontSize: "clamp(1.5rem, 4vw, 1.875rem)", fontWeight: 900 }}>単品料金のご案内</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
           {items.map(item => (
-            <div key={item.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "16px", textAlign: "center" }}>
-              <p style={{ fontSize: "14px", fontWeight: "bold", color: "#475569", marginBottom: "8px" }}>{item.title}</p>
-              <p style={{ fontSize: "clamp(1.875rem, 5vw, 2.25rem)", fontWeight: 900, color: "#1e293b" }}>{item.price}</p>
-              <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>{item.unit}</p>
+            <div key={item.id} style={{ background: "#ff0000d2", border: "1px solid #ff0000cd", borderRadius: "16px", padding: "16px", textAlign: "center" }}>
+              <p style={{ fontSize: "14px", fontWeight: "bold", color: "#ffffff", marginBottom: "8px" }}>{item.title}</p>
+              <p style={{ fontSize: "clamp(1.875rem, 5vw, 2.25rem)", fontWeight: 900, color: "#ffffff" }}>{item.price}</p>
+              <p style={{ fontSize: "12px", color: "#ffffff", marginTop: "4px" }}>{item.unit}</p>
             </div>
           ))}
         </div>
