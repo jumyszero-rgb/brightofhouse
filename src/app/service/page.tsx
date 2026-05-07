@@ -31,7 +31,6 @@ export default async function ServicePage() {
     },
   });
 
-  // 複数の詳細ページに対応（1つのserviceItemIdに複数のページが紐付く）
   const servicePages = await prisma.servicePage.findMany({
     where: { status: "PUBLISHED" },
     select: { serviceItemId: true, slug: true, linkTitle: true }
@@ -73,7 +72,7 @@ export default async function ServicePage() {
               <a
                 key={`nav-${category.id}`}
                 href={`#cat-${category.id}`}
-                className="bg-white border border-slate-200 text-slate-700 text-xs md:text-sm font-bold py-2 px-4 rounded-full hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm"
+                className="bg-white border border-slate-200 text-slate-700 text-xs md:text-sm font-bold py-2 px-4 rounded-full hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm focus:outline-none active:bg-blue-50 [&:not(:hover)]:focus:border-slate-200 [&:not(:hover)]:focus:text-slate-700"
               >
                 {category.title}
               </a>
@@ -91,14 +90,13 @@ export default async function ServicePage() {
               <div className="space-y-4">
                 {category.items.map((item) => (
                   <details key={item.id} className="group bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 open:ring-2 open:ring-blue-100 open:border-blue-400">
-                                        <summary className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-5 cursor-pointer list-none">
+                    <summary className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-5 cursor-pointer list-none focus:outline-none">
                       <div className="flex flex-col gap-1">
                         <h3 className="font-bold text-slate-800 text-base md:text-lg group-open:text-blue-600 transition-colors">
                           {item.title}
                         </h3>
-                           {(item.regularPrice || item.discountPrice) && (
+                        {(item.regularPrice || item.discountPrice) && (
                           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 mt-2 sm:mt-0">
-
                             {item.regularPrice && (
                               <span className={`${item.discountPrice ? 'text-slate-400 text-[10px] md:text-xs line-through' : 'text-blue-600 font-bold text-sm md:text-base'} inline-block whitespace-nowrap`}>
                                 {item.regularPrice}
@@ -118,7 +116,7 @@ export default async function ServicePage() {
                           <p className="text-[10px] md:text-xs text-blue-600 font-medium mt-0.5">{item.subTitle}</p>
                         )}
                       </div>
-                        <div className="hidden sm:flex items-center ml-2 flex-shrink-0">
+                      <div className="hidden sm:flex items-center ml-2 flex-shrink-0">
                         <span className="text-slate-400 group-open:hidden text-xs md:text-sm whitespace-nowrap">+ 詳細</span>
                         <span className="text-slate-400 hidden group-open:inline text-xs md:text-sm whitespace-nowrap">- 閉じる</span>
                       </div>
@@ -139,8 +137,7 @@ export default async function ServicePage() {
                       </dl>
 
                       <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
-                           {item.linkedPages.slice(0, 5).map((lp, idx) => (
-
+                        {item.linkedPages.slice(0, 5).map((lp, idx) => (
                           <Link
                             key={idx}
                             href={`/service/${lp.slug}`}

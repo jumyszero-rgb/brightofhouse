@@ -24,6 +24,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [optionQuantities, setOptionQuantities] = useState<Record<string, number>>({});
   const [selectedMains, setSelectedMains] = useState<number[]>([0]);
   const [selectedFoldItemIds, setSelectedFoldItemIds] = useState<string[]>([]);
+  const [openFolds, setOpenFolds] = useState<Record<string, boolean>>({});
+  const toggleFold = (id: string) => setOpenFolds(prev => ({ ...prev, [id]: !prev[id] }));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
@@ -63,7 +65,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     setSelectedFoldItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  // 合計計算（通常メイン + 折り畳みメイン + 通常オプション + 折り畳みオプション）
+  // 合計計算
   const totalPrice =
     mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0) +
     mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.price || 0), 0) +
@@ -203,41 +205,44 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             {mains.map((main, idx) => {
               // 折り畳みあり
               if (main.foldTitle && main.foldItems && main.foldItems.length > 0) {
+                const foldKey = main.id || `main-fold-${idx}`;
                 return (
-                  <details key={main.id || idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700">
-                      <span>▼ {main.foldTitle}</span>
+                  <div key={foldKey} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700 focus:outline-none">
+                      <span>{openFolds[foldKey] ? "▲" : "▼"} {main.foldTitle}</span>
                       {main.foldItems.some(fi => selectedFoldItemIds.includes(fi.id)) && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">選択中</span>
                       )}
-                    </summary>
-                    <div className="p-4 pt-0 space-y-2">
-                      {main.foldItems.map(fi => {
-                        const checked = selectedFoldItemIds.includes(fi.id);
-                        return (
-                          <div key={fi.id}>
-                            <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
-                              <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-4 h-4 accent-blue-600" />
-                                <div>
-                                  <span className="font-bold text-sm">{fi.title}</span>
-                                  <span className="text-xs text-slate-500 ml-2">
-                                    ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                                  </span>
+                    </button>
+                    {openFolds[foldKey] && (
+                      <div className="p-4 pt-0 space-y-2">
+                        {main.foldItems.map(fi => {
+                          const checked = selectedFoldItemIds.includes(fi.id);
+                          return (
+                            <div key={fi.id}>
+                              <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                                <div className="flex items-center gap-3">
+                                  <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-4 h-4 accent-blue-600" />
+                                  <div>
+                                    <span className="font-bold text-sm">{fi.title}</span>
+                                    <span className="text-xs text-slate-500 ml-2">
+                                      ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                              <span className="font-bold text-blue-600 text-sm">¥{fi.price.toLocaleString()}</span>
-                            </label>
-                            {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </details>
+                                <span className="font-bold text-blue-600 text-sm">¥{fi.price.toLocaleString()}</span>
+                              </label>
+                              {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               }
 
-              // 折り畳みなし（元のまま）
+              // 折り畳みなし
               return (
                 <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
@@ -264,49 +269,52 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
             {/* オプション */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {options.map(opt => {
+              {options.map((opt, optIdx) => {
                 // 折り畳みあり
                 if (opt.foldTitle && opt.foldItems && opt.foldItems.length > 0) {
+                  const foldKey = opt.id || `opt-fold-${optIdx}`;
                   return (
-                    <details key={opt.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden col-span-full">
-                      <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700">
-                        <span>▼ {opt.foldTitle}</span>
+                    <div key={foldKey} className="bg-white border border-slate-200 rounded-xl overflow-hidden col-span-full">
+                      <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700 focus:outline-none">
+                        <span>{openFolds[foldKey] ? "▲" : "▼"} {opt.foldTitle}</span>
                         {opt.foldItems.some(fi => getQty(fi.id) > 0) && (
                           <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">選択中</span>
                         )}
-                      </summary>
-                      <div className="p-4 pt-0 space-y-2">
-                        {opt.foldItems.map(fi => {
-                          const qty = getQty(fi.id);
-                          return (
-                            <div key={fi.id}>
-                              <div className={`p-3 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div>
-                                    <span className="text-sm font-medium">{fi.title}</span>
-                                    <span className="text-[10px] text-slate-400 ml-1">
-                                      (+{fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                                    </span>
+                      </button>
+                      {openFolds[foldKey] && (
+                        <div className="p-4 pt-0 space-y-2">
+                          {opt.foldItems.map(fi => {
+                            const qty = getQty(fi.id);
+                            return (
+                              <div key={fi.id}>
+                                <div className={`p-3 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div>
+                                      <span className="text-sm font-medium">{fi.title}</span>
+                                      <span className="text-[10px] text-slate-400 ml-1">
+                                        (+{fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-600">+¥{fi.price.toLocaleString()}</span>
                                   </div>
-                                  <span className="text-sm font-bold text-slate-600">+¥{fi.price.toLocaleString()}</span>
+                                  <div className="flex items-center gap-2">
+                                    <button type="button" onClick={() => setQty(fi.id, Math.max(0, qty - 1))} className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center hover:bg-slate-300">−</button>
+                                    <span className="w-6 text-center font-bold">{qty}</span>
+                                    <button type="button" onClick={() => setQty(fi.id, Math.min(opt.maxQty || 99, qty + 1))} disabled={qty >= (opt.maxQty || 99)} className="w-7 h-7 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
+                                    {(opt.maxQty || 0) > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <button type="button" onClick={() => setQty(fi.id, Math.max(0, qty - 1))} className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center hover:bg-slate-300">−</button>
-                                  <span className="w-6 text-center font-bold">{qty}</span>
-                                  <button type="button" onClick={() => setQty(fi.id, Math.min(opt.maxQty, qty + 1))} disabled={qty >= opt.maxQty} className="w-7 h-7 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
-                                  {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
-                                </div>
+                                {fi.comment && <p className="text-xs text-slate-500 ml-4 mt-1">💬 {fi.comment}</p>}
                               </div>
-                              {fi.comment && <p className="text-xs text-slate-500 ml-4 mt-1">💬 {fi.comment}</p>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </details>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 }
 
-                // 折り畳みなし（元のまま）
+                // 折り畳みなし
                 return (
                   <div key={opt.id} className={`p-3 rounded-xl border transition-all ${getQty(opt.id) > 0 ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -321,8 +329,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => setQty(opt.id, Math.max(0, getQty(opt.id) - 1))} className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center hover:bg-slate-300 transition-colors">−</button>
                       <span className="w-8 text-center font-bold text-lg">{getQty(opt.id)}</span>
-                      <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty, getQty(opt.id) + 1))} disabled={getQty(opt.id) >= opt.maxQty} className="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-lg flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors">+</button>
-                      {opt.maxQty > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}個</span>}
+                      <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty || 99, getQty(opt.id) + 1))} disabled={getQty(opt.id) >= (opt.maxQty || 99)} className="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-lg flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors">+</button>
+                      {(opt.maxQty || 0) > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}個</span>}
                     </div>
                   </div>
                 );
