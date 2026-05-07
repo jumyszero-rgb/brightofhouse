@@ -24,7 +24,8 @@ const DetailsNode = Node.create({
     return [{ tag: "details" }];
   },
 renderHTML({ HTMLAttributes }) {
-    return ["details", mergeAttributes(HTMLAttributes, { open: true }), 0];
+        return ["details", mergeAttributes(HTMLAttributes), 0];
+
 },
 
 });
