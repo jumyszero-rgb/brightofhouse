@@ -147,8 +147,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       });
 
       if (res.ok) {
-        setMessage({ type: "success", text: "仮予約、お問い合わせを受け付けました。担当者より確認のご連絡が行きますので少々おまちください。" });
-        setSelectedDate(null);
+        window.location.href = "/thank-you";
+        return;
+
       } else {
         throw new Error();
       }
