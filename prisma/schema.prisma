@@ -162,6 +162,8 @@ model LandingPage {
   linkTitle       String?
   metaDescription String?
   metaKeywords    String?
+  showBottomCta   Boolean  @default(true)
+
 }
 
 model BlogPost {

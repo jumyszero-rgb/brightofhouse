@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
         // ▼ 追加
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
+        showBottomCta: formData.get("showBottomCta") !== "false",
+
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -151,6 +153,8 @@ export async function PUT(request: NextRequest) {
         // ▼ 追加
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
+        showBottomCta: formData.get("showBottomCta") !== "false",
+
       }
     });
     if (updatedLp.status === "PUBLISHED") {

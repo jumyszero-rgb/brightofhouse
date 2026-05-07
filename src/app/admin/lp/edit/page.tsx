@@ -31,6 +31,7 @@ function EditForm() {
     ctaLink: "/contact",
     metaKeywords: "",    
     metaDescription: "", 
+    showBottomCta: true,
   });
 
   useEffect(() => {
@@ -52,6 +53,8 @@ function EditForm() {
           ctaLink: data.ctaLink || "/contact",
           metaKeywords: data.metaKeywords || "",
           metaDescription: data.metaDescription || "",
+          showBottomCta: data.showBottomCta !== false,
+
         });
         if (data.heroImage) setPreviewImage(data.heroImage);
       });
@@ -98,6 +101,8 @@ function EditForm() {
     form.set("category", formData.category);
     form.set("metaKeywords", formData.metaKeywords);
     form.set("metaDescription", formData.metaDescription);
+    form.set("showBottomCta", String(formData.showBottomCta));
+
 
     try {
       const res = await fetch("/api/lp", {
@@ -170,6 +175,14 @@ function EditForm() {
                 トップページに表示する
               </label>
             </div>
+            
+               <div className="flex items-center pt-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-orange-700 cursor-pointer">
+                <input type="checkbox" checked={formData.showBottomCta} onChange={() => setFormData(prev => ({ ...prev, showBottomCta: !prev.showBottomCta }))} className="w-5 h-5 accent-orange-600" />
+                下部CTA（電話・LINE・問い合わせ）を表示する
+              </label>
+            </div>
+
           </div>
         </div>
 

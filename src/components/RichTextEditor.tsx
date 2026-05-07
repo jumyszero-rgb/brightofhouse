@@ -23,12 +23,9 @@ const DetailsNode = Node.create({
   parseHTML() {
     return [{ tag: "details" }];
   },
-renderHTML({ HTMLAttributes }) {
-           return ["details", mergeAttributes(HTMLAttributes, { open: true }), 0];
-
-
-},
-
+  renderHTML({ HTMLAttributes }) {
+    return ["details", mergeAttributes(HTMLAttributes, { open: true }), 0];
+  },
 });
 
 const DetailsSummary = Node.create({
@@ -94,7 +91,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value || "", { emitUpdate: false });
-
     }
   }, [value]);
 
@@ -136,6 +132,27 @@ export default function RichTextEditor({ value, onChange }: Props) {
         { type: "detailsContent", content: [{ type: "paragraph", content: [{ type: "text", text: "ここに内容を入力" }] }] },
       ],
     }).run();
+  }, [editor]);
+
+  const insertCtaButton = useCallback(() => {
+    const text = prompt("ボタンのテキストを入力", "無料お見積りはこちら");
+    if (!text) return;
+    const url = prompt("リンク先URLを入力", "/contact");
+    if (!url) return;
+    const align = prompt("配置（left / center / right）", "center") || "center";
+    const color = prompt("ボタン色（red / blue / green / orange）", "red") || "red";
+
+    const colorMap: Record<string, string> = {
+      red: "background:#dc2626;",
+      blue: "background:#2563eb;",
+      green: "background:#16a34a;",
+      orange: "background:#ea580c;",
+    };
+    const bg = colorMap[color] || colorMap.red;
+
+    const html = `<div style="text-align:${align};margin:24px 0;"><a href="${url}" style="${bg}color:#fff;font-weight:900;font-size:1.1em;padding:16px 40px;border-radius:9999px;text-decoration:none;display:inline-block;box-shadow:0 4px 14px rgba(0,0,0,0.15);">🔥 ${text}</a></div>`;
+
+    editor?.chain().focus().insertContent(html).run();
   }, [editor]);
 
   const setColor = useCallback((color: string) => {
@@ -182,6 +199,13 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
+        {/* 配置 */}
+        <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "left" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>左</button>
+        <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "center" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>中</button>
+        <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "right" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>右</button>
+
+        <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
+
         {/* リンク・画像 */}
         <button type="button" onClick={addLink} className={`px-2 py-1 text-xs rounded ${editor.isActive("link") ? "bg-blue-600 text-white" : "bg-white border"}`}>🔗</button>
         {editor.isActive("link") && <button type="button" onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
@@ -189,8 +213,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* 折り畳み */}
+        {/* 折り畳み・CTA */}
         <button type="button" onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
+        <button type="button" onClick={insertCtaButton} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
 
         {/* HTMLモード */}
         <button
