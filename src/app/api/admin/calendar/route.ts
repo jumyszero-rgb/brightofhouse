@@ -16,7 +16,6 @@ async function checkAuth() {
 }
 
 export async function GET() {
-  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const overrides = await prisma.calendarOverride.findMany();
     return NextResponse.json(overrides);
@@ -24,6 +23,7 @@ export async function GET() {
     return NextResponse.json({ error: "Fetch error" }, { status: 500 });
   }
 }
+
 
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) {
