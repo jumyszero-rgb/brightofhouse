@@ -115,7 +115,19 @@ export default function RootLayout({
 
         <BottomNav />
         
-        {gaId && <GoogleAnalytics gaId={gaId} />}
+       {gaId && <GoogleAnalytics gaId={gaId} />}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17996016781" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-17996016781');
+            `,
+          }}
+        />
+
       </body>
     </html>
   );
