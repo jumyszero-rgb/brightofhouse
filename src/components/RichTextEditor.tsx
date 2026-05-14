@@ -122,6 +122,14 @@ export default function RichTextEditor({ value, onChange }: Props) {
     editor?.chain().focus().unsetLink().run();
   }, [editor]);
 
+  const addTelLink = useCallback(() => {
+    const tel = prompt("電話番号を入力（例: 0120-792-684）", "0120-792-684");
+    if (!tel) return;
+    const digits = tel.replace(/[^0-9]/g, "");
+    editor?.chain().focus().setLink({ href: `tel:${digits}` }).run();
+  }, [editor]);
+
+
   const insertDetails = useCallback(() => {
     const title = prompt("折り畳みのタイトルを入力してください", "クリックで開閉");
     if (!title) return;
@@ -209,6 +217,8 @@ export default function RichTextEditor({ value, onChange }: Props) {
         {/* リンク・画像 */}
         <button type="button" onClick={addLink} className={`px-2 py-1 text-xs rounded ${editor.isActive("link") ? "bg-blue-600 text-white" : "bg-white border"}`}>🔗</button>
         {editor.isActive("link") && <button type="button" onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
+                {editor.isActive("link") && <button type="button" onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
+        <button type="button" onClick={addTelLink} className="px-2 py-1 text-xs rounded bg-green-600 text-white font-bold hover:bg-green-700">📞 TEL</button>
         <button type="button" onClick={addImage} className="px-2 py-1 text-xs rounded bg-white border">🖼</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />

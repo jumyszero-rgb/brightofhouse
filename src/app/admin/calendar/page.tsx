@@ -108,8 +108,8 @@ export default function AdminCalendarPage() {
 
   const days = [...Array(14)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
-    start: setHours(startOfDay(new Date()), 8),
-    end: setHours(startOfDay(new Date()), 20),
+    start: setHours(startOfDay(new Date()), 0),
+    end: setHours(startOfDay(new Date()), 23),
   });
 
   return (

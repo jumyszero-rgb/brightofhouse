@@ -178,8 +178,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfDay(new Date()));
   const days = [...Array(7)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
-    start: setHours(startOfDay(new Date()), 9),
-    end: setHours(startOfDay(new Date()), 18),
+    start: setHours(startOfDay(new Date()), 0),
+    end: setHours(startOfDay(new Date()), 23),
   });
 
   const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
