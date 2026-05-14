@@ -1,7 +1,8 @@
 // @/src/components/booking/ServicePageBooking.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -152,8 +153,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           address: customer.address,
           contactMethod: customer.contactMethod,
           notes: customer.notes,
-          startTime: selectedDate,
-          endTime: new Date(selectedDate.getTime() + totalMinutesMax * 60000),
+          startTime: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
+          endTime: format(new Date(selectedDate.getTime() + totalMinutesMax * 60000), "yyyy-MM-dd'T'HH:mm:ss"),
           items: itemsText,
           totalPrice,
           totalMinutes: `${totalMinutesMin}〜${totalMinutesMax}`,
@@ -181,6 +182,20 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     start: setHours(startOfDay(new Date()), 0),
     end: setHours(startOfDay(new Date()), 23),
   });
+
+    const calendarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = calendarRef.current;
+    if (el) {
+      // 8:00の行までスクロール（0:00〜7:00の8行分を飛ばす）
+      const rows = el.querySelectorAll("tbody tr");
+      if (rows.length > 8) {
+        rows[8].scrollIntoView({ block: "start" });
+        // scrollIntoView がページ全体を動かさないよう補正
+        el.scrollTop = (rows[8] as HTMLElement).offsetTop - el.offsetTop;
+      }
+    }
+  }, [currentWeekStart]);
 
   const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
   const prevWeek = () => {
@@ -372,7 +387,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <button type="button" onClick={nextWeek} className="px-3 py-1 bg-white rounded shadow-sm text-sm font-bold">次の週 ▶</button>
             </div>
           </div>
-          <div className="overflow-x-auto -mx-4 md:mx-0">
+          <div ref={calendarRef} className="overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth">
             <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-slate-50">
