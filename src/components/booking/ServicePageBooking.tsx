@@ -119,7 +119,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate) return alert("日時を選択してください");
-    setLoading(true);
 
     const itemsText = [
       ...mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).map(m => m.title),
@@ -128,31 +127,47 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       ...options.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0).map(fi => `${fi.title} ×${getQty(fi.id)}`))
     ].join(", ");
 
+    // 必須チェック
+    if (!itemsText) {
+      alert("作業メニューを1つ以上選択してください。");
+      return;
+    }
+    if (!customer.contactMethod) {
+      alert("ご連絡方法を選択してください。");
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const res = await fetch("/api/booking", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           category: pageTitle,
           name: customer.name,
           email: customer.email,
           tel: customer.phone,
+          zip: customer.zip,
           address: customer.address,
-          notes: `【希望連絡方法: ${customer.contactMethod}】\n${customer.notes}`,
+          contactMethod: customer.contactMethod,
+          notes: customer.notes,
           startTime: selectedDate,
           endTime: new Date(selectedDate.getTime() + totalMinutesMax * 60000),
           items: itemsText,
           totalPrice,
-          totalMinutes: totalMinutesMax,
+          totalMinutes: `${totalMinutesMin}〜${totalMinutesMax}`,
         }),
       });
 
       if (res.ok) {
         window.location.href = "/thank-you";
         return;
-
       } else {
         throw new Error();
       }
+
+      
     } catch (e) {
       setMessage({ type: "error", text: "送信に失敗しました。お電話でご連絡ください。" });
     } finally {

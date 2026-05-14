@@ -1,31 +1,33 @@
 // @/src/lib/mail.ts
 import nodemailer from "nodemailer";
 
-export async function sendAuthCode(to: string, code: string) {
+function createTransporter() {
   const SMTP_HOST = process.env.SMTP_HOST;
   const SMTP_PORT = Number(process.env.SMTP_PORT);
   const SMTP_USER = process.env.SMTP_USER;
   const SMTP_PASS = process.env.SMTP_PASS;
-  const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
-
-  // ★修正ポイント: ポート465ならSSL(secure:true)、それ以外ならTLS(secure:false)にする
   const isSecure = SMTP_PORT === 465;
 
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: isSecure, 
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
+    secure: isSecure,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
+}
+
+/**
+ * 認証コード送信
+ */
+export async function sendAuthCode(to: string, code: string) {
+  const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const transporter = createTransporter();
 
   await transporter.sendMail({
-    from: `"Bright House Admin" <${SMTP_FROM}>`,
+    from: `"Bright House" <${SMTP_FROM}>`,
     to,
-    subject: "【管理画面】認証コードのお知らせ",
-    text: `管理画面へのログイン認証コードです。\n\nコード: ${code}\n\n有効期限は10分間です。`,
+    subject: "認証コード",
+    text: `認証コード: ${code}\n\n有効期限は10分です。`,
   });
 }
 
@@ -33,24 +35,21 @@ export async function sendAuthCode(to: string, code: string) {
  * 管理者へ新しい予約が入ったことを知らせるメール
  */
 export async function sendBookingNotification(bookingData: any) {
-  const SMTP_HOST = process.env.SMTP_HOST;
-  const SMTP_PORT = Number(process.env.SMTP_PORT);
-  const SMTP_USER = process.env.SMTP_USER;
-  const SMTP_PASS = process.env.SMTP_PASS;
-  const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+  const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER;
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+  const transporter = createTransporter();
 
-  const isSecure = SMTP_PORT === 465;
+  const {
+    customerName, phone, email, address, startTime, endTime,
+    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes
+  } = bookingData;
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: isSecure,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
+    year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
   });
-
-  const { customerName, phone, email, address, startTime, items, totalPrice, category } = bookingData;
-  const formattedDate = new Date(startTime).toLocaleString("ja-JP");
+  const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
+    hour: "2-digit", minute: "2-digit"
+  });
 
   await transporter.sendMail({
     from: `"Bright House Booking" <${SMTP_FROM}>`,
@@ -63,19 +62,22 @@ export async function sendBookingNotification(bookingData: any) {
 ------------------------------------------
 ■サービス: ${category}
 ■メニュー: ${items}
-■日時: ${formattedDate} 〜
-■合計金額: ¥${totalPrice.toLocaleString()} (税込)
+■希望日時: ${startFormatted} 〜 ${endFormatted}
+■作業時間目安: ${totalMinutesDisplay}分
+■概算合計金額: ¥${Number(totalPrice).toLocaleString()} (税込)
 
 【お客様情報】
 ------------------------------------------
 ■お名前: ${customerName} 様
 ■電話番号: ${phone}
 ■メール: ${email}
+■郵便番号: ${zip || "未入力"}
 ■住所: ${address || "未入力"}
+■希望連絡方法: ${contactMethod}
 
 【備考・要望】
 ------------------------------------------
-${bookingData.notes || "なし"}
+${notes || "なし"}
 
 ------------------------------------------
 管理画面で確認：https://brightofhouse.jp/admin/bookings
@@ -87,24 +89,19 @@ ${bookingData.notes || "なし"}
  * お客様へ「仮予約・お問い合わせ受付」を知らせる自動返信メール
  */
 export async function sendBookingConfirmationToUser(bookingData: any) {
-  const SMTP_HOST = process.env.SMTP_HOST;
-  const SMTP_PORT = Number(process.env.SMTP_PORT);
-  const SMTP_USER = process.env.SMTP_USER;
-  const SMTP_PASS = process.env.SMTP_PASS;
-  const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+  const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const transporter = createTransporter();
 
-  const isSecure = SMTP_PORT === 465;
+  const {
+    customerName, email, startTime, endTime,
+    items, totalPrice, category, totalMinutesDisplay
+  } = bookingData;
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: isSecure,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
+    year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
   });
-
-  const { customerName, email, startTime, items, totalPrice, category } = bookingData;
-  const formattedDate = new Date(startTime).toLocaleString("ja-JP", {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
+    hour: "2-digit", minute: "2-digit"
   });
 
   await transporter.sendMail({
@@ -124,8 +121,9 @@ ${customerName} 様
 ------------------------------------------
 ■サービス: ${category}
 ■メニュー: ${items}
-■第一希望日時: ${formattedDate} 〜
-■概算合計金額: ¥${totalPrice.toLocaleString()} (税込)
+■第一希望日時: ${startFormatted} 〜 ${endFormatted}
+■作業時間目安: ${totalMinutesDisplay}分
+■概算合計金額: ¥${Number(totalPrice).toLocaleString()} (税込)
 ------------------------------------------
 
 ※このメールは送信専用アドレスから自動送信されています。
@@ -133,11 +131,11 @@ ${customerName} 様
 
 もし、お急ぎの場合や内容の変更がある場合は、以下までお電話にてご連絡ください。
 
-━━━━━━━━━━━━━━━━━━━━━━
+══════════════════════
 北海道ブライトオブハウス
 電話番号: 0120-792-684
 営業時間: 9:00 〜 18:00
-━━━━━━━━━━━━━━━━━━━━━━
+══════════════════════
 `,
   });
 }

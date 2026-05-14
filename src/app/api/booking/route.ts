@@ -40,13 +40,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 管理者へメール通知
-    sendBookingNotification(booking).catch(err => console.error("Admin Email notification error:", err));
-    
-    // お客様へ自動返信メール
-    sendBookingConfirmationToUser(booking).catch(err => console.error("User Email notification error:", err));
+    const mailData = {
+      ...booking,
+      zip: body.zip || "",
+      contactMethod: body.contactMethod || "未指定",
+      totalMinutesDisplay: body.totalMinutes || "未定",
+    };
+
+    sendBookingNotification(mailData).catch(err => console.error("Admin Email notification error:", err));
+    sendBookingConfirmationToUser(mailData).catch(err => console.error("User Email notification error:", err));
 
     return NextResponse.json(booking);
+
+
   } catch (error: any) {
     console.error("Booking POST Error:", error.message);
     return NextResponse.json({ error: "Booking failed" }, { status: 500 });

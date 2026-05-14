@@ -124,9 +124,13 @@ export default function RootLayout({
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', 'AW-17996016781');
+              gtag('config', 'AW-17996016781/DTKqCPuhmawcEI3ZlYVcEI3ZlYVD', {
+                'phone_conversion_number': '0120-792-684'
+              });
             `,
           }}
         />
+
 
       </body>
     </html>
