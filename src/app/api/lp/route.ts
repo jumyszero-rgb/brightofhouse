@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
         showBottomCta: formData.get("showBottomCta") !== "false",
+        noIndex: formData.get("noIndex") === "true",
+
 
       }
     });
@@ -154,6 +156,8 @@ export async function PUT(request: NextRequest) {
         metaKeywords: formData.get("metaKeywords") as string,
         metaDescription: formData.get("metaDescription") as string,
         showBottomCta: formData.get("showBottomCta") !== "false",
+        noIndex: formData.get("noIndex") === "true",
+
 
       }
     });

@@ -13,7 +13,7 @@ function EditForm() {
   const editId = searchParams.get("id");
 
   const [loading, setLoading] = useState(false);
-  const [loadingSeo, setLoadingSeo] = useState(false); // SEO提案用
+  const [loadingSeo, setLoadingSeo] = useState(false);
   const [message, setMessage] = useState("");
   const [previewImage, setPreviewImage] = useState("");
 
@@ -29,9 +29,10 @@ function EditForm() {
     content: "",
     ctaText: "無料お見積りはこちら",
     ctaLink: "/contact",
-    metaKeywords: "",    
-    metaDescription: "", 
+    metaKeywords: "",
+    metaDescription: "",
     showBottomCta: true,
+    noIndex: false,
   });
 
   useEffect(() => {
@@ -54,13 +55,12 @@ function EditForm() {
           metaKeywords: data.metaKeywords || "",
           metaDescription: data.metaDescription || "",
           showBottomCta: data.showBottomCta !== false,
-
+          noIndex: data.noIndex || false,
         });
         if (data.heroImage) setPreviewImage(data.heroImage);
       });
   }, [editId]);
 
-  // --- AIによるSEOキーワード提案 ---
   const handleSeoSuggest = async () => {
     if (!formData.title || !formData.content) {
       return alert("タイトルと本文を先に入力してください。");
@@ -94,15 +94,14 @@ function EditForm() {
 
     const form = new FormData(e.currentTarget);
     if (editId) form.append("id", editId);
-   
-    // 手動セットが必要な項目
+
     form.set("content", formData.content);
     form.set("showOnHome", String(formData.showOnHome));
     form.set("category", formData.category);
     form.set("metaKeywords", formData.metaKeywords);
     form.set("metaDescription", formData.metaDescription);
     form.set("showBottomCta", String(formData.showBottomCta));
-
+    form.set("noIndex", String(formData.noIndex));
 
     try {
       const res = await fetch("/api/lp", {
@@ -134,7 +133,7 @@ function EditForm() {
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md text-black">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">{editId ? "ページ編集" : "新規作成"}</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
-       
+
         {/* 基本設定 */}
         <div className="bg-slate-50 p-4 rounded-lg space-y-4 border border-slate-200">
           <div className="grid grid-cols-1 gap-4">
@@ -158,7 +157,6 @@ function EditForm() {
               <select name="category" value={formData.category} onChange={handleChange} className="p-2 border rounded font-bold bg-white text-black">
                 <option value="CAMPAIGN">🔥 キャンペーン</option>
                 <option value="AREA">📍 地域別ページ</option>
-                {/* ▼ 追加：サービス詳細ページ */}
                 <option value="SERVICE_DETAIL">🛠 サービス詳細ページ</option>
               </select>
             </div>
@@ -175,11 +173,18 @@ function EditForm() {
                 トップページに表示する
               </label>
             </div>
-            
-               <div className="flex items-center pt-2">
+
+            <div className="flex items-center pt-2">
               <label className="flex items-center gap-2 text-sm font-bold text-orange-700 cursor-pointer">
                 <input type="checkbox" checked={formData.showBottomCta} onChange={() => setFormData(prev => ({ ...prev, showBottomCta: !prev.showBottomCta }))} className="w-5 h-5 accent-orange-600" />
                 下部CTA（電話・LINE・問い合わせ）を表示する
+              </label>
+            </div>
+
+            <div className="flex items-center pt-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-red-700 cursor-pointer">
+                <input type="checkbox" name="noIndex" checked={formData.noIndex} onChange={handleChange} className="w-5 h-5 accent-red-600" />
+                インデックスしない（noindex）
               </label>
             </div>
 
@@ -221,7 +226,7 @@ function EditForm() {
               {loadingSeo ? "考え中..." : "✨ AIにSEO案を作成させる"}
             </button>
           </div>
-         
+
           <div>
             <label className="block text-xs font-bold text-indigo-700 mb-1">重要キーワード（3〜5個・カンマ区切り）</label>
             <input

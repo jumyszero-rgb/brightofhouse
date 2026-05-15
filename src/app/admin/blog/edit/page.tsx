@@ -24,8 +24,9 @@ function BlogEditForm() {
     instaContent: "",
     xContent: "",
     googleContent: "",
-    metaKeywords: "",    // 追加
-    metaDescription: "", // 追加
+    metaKeywords: "",
+    metaDescription: "",
+    noIndex: false,
   });
 
   useEffect(() => {
@@ -43,11 +44,11 @@ function BlogEditForm() {
           googleContent: data.googleContent || "",
           metaKeywords: data.metaKeywords || "",
           metaDescription: data.metaDescription || "",
+          noIndex: data.noIndex || false,
         });
       });
   }, [editId]);
 
-  // --- AIによる本文・SNS・SEOの一括生成 ---
   const handleAiGenerate = async () => {
     if (!targetKeywords) return alert("テーマを入力してください");
     setAiLoading(true);
@@ -67,7 +68,6 @@ function BlogEditForm() {
           instaContent: data.insta,
           xContent: data.x,
           googleContent: data.google,
-          // 生成時にSEO項目も自動で埋める
           metaKeywords: data.metaKeywords || "",
           metaDescription: data.metaDescription || "",
         }));
@@ -79,7 +79,6 @@ function BlogEditForm() {
     }
   };
 
-  // --- AIによるSEOキーワードのみの提案 ---
   const handleSeoSuggest = async () => {
     if (!formData.title || !formData.content) return alert("タイトルと本文を先に入力してください");
     setLoadingSeo(true);
@@ -113,8 +112,11 @@ function BlogEditForm() {
   };
 
   const handleChange = (e: any) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
   };
 
   return (
@@ -128,9 +130,9 @@ function BlogEditForm() {
       <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 rounded-2xl text-white shadow-lg">
         <h2 className="font-bold mb-4 flex items-center gap-2">✨ AI自動執筆アシスタント</h2>
         <div className="flex gap-4">
-          <input 
-            type="text" 
-            placeholder="記事のテーマを入力" 
+          <input
+            type="text"
+            placeholder="記事のテーマを入力"
             className="flex-1 p-3 rounded-xl text-black outline-none"
             value={targetKeywords}
             onChange={(e) => setTargetKeywords(e.target.value)}
@@ -149,7 +151,7 @@ function BlogEditForm() {
             <RichTextEditor value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
           </div>
 
-          {/* SEO設定エリア (NEW!) */}
+          {/* SEO設定エリア */}
           <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100 space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-indigo-900">🔍 ブログSEO設定</h2>
@@ -182,6 +184,12 @@ function BlogEditForm() {
               <option value="DRAFT">下書き保存</option>
               <option value="PUBLISHED">公開する</option>
             </select>
+
+            <label className="flex items-center gap-2 text-sm font-bold text-red-400 cursor-pointer">
+              <input type="checkbox" name="noIndex" checked={formData.noIndex} onChange={handleChange} className="w-5 h-5 accent-red-600" />
+              インデックスしない（noindex）
+            </label>
+
             <button onClick={handleSave} disabled={loading} className="w-full bg-green-500 text-white py-4 rounded-xl font-black text-lg hover:bg-green-400 shadow-lg">
               {loading ? "保存中..." : "保存して完了"}
             </button>

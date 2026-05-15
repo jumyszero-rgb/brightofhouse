@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
         phone: body.tel || body.phone,
         address: body.address,
         notes: body.notes,
-        startTime: new Date(body.startTime),
-        endTime: new Date(body.endTime),
+        startTime: new Date(body.startTime + "+09:00"),
+        endTime: new Date(body.endTime + "+09:00"),
+
         status: "PENDING",
         items: body.items || "未選択",
         totalPrice: Number(body.totalPrice) || 0,

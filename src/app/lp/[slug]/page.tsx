@@ -22,10 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const keywords = lp.metaKeywords ? lp.metaKeywords.split(",").map(k => k.trim()) : [];
 
-  return {
+    return {
     title: `${lp.title} | 北海道ブライトオブハウス`,
     description: lp.metaDescription || lp.catchphrase || "北海道ブライトオブハウスのお得なキャンペーン情報です。",
     keywords,
+    ...(lp.noIndex && { robots: { index: false, follow: true } }),
     alternates: { canonical: `/lp/${lp.slug}` },
     openGraph: {
       title: lp.title,
@@ -34,6 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://brightofhouse.jp/lp/${lp.slug}`,
     },
   };
+
 }
 
 export default async function LPPage({ params }: Props) {

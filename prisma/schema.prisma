@@ -162,6 +162,7 @@ model LandingPage {
   linkTitle       String?
   metaDescription String?
   metaKeywords    String?
+  noIndex         Boolean  @default(false)
   showBottomCta   Boolean  @default(true)
 
 }
@@ -180,6 +181,8 @@ model BlogPost {
   updatedAt       DateTime @updatedAt
   metaDescription String?
   metaKeywords    String?
+  noIndex         Boolean  @default(false)
+
 }
 
 model BlogSettings {

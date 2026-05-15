@@ -26,12 +26,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${lp.title} | 北海道ブライトオブハウス`,
     description: lp.catchphrase || `${lp.title}の清掃・片付けサービス。お見積り無料、迅速対応。`,
+    ...(lp.noIndex && { robots: { index: false, follow: true } }),
     openGraph: {
       title: lp.title,
       description: lp.catchphrase || "",
-      images: lp.heroImage ? [lp.heroImage] :[],
+      images: lp.heroImage ? [lp.heroImage] : [],
     },
   };
+
 }
 
 export default async function AreaPage({ params }: Props) {

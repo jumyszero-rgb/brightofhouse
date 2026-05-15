@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
         // ▼ 追加: SEO項目
         metaKeywords: body.metaKeywords,
         metaDescription: body.metaDescription,
+        noIndex: body.noIndex || false,
+
       },
     });
 
@@ -119,6 +121,8 @@ export async function PUT(request: NextRequest) {
         // ▼ 追加: SEO項目
         metaKeywords: body.metaKeywords,
         metaDescription: body.metaDescription,
+        noIndex: body.noIndex || false,
+
       },
     });
 

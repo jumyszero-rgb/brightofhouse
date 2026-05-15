@@ -26,9 +26,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${post.title} | 北海道ブライトオブハウス`,
     description: post.metaDescription || post.title,
-    keywords: keywords, // 管理画面で設定したキーワードを適用
+    keywords: keywords,
+    ...(post.noIndex && { robots: { index: false, follow: true } }),
     alternates: {
-      canonical: `/blog/${post.slug}`, // 正規URLの指定
+      canonical: `/blog/${post.slug}`,
     },
     openGraph: {
       title: post.title,
@@ -37,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://brightofhouse.jp/blog/${post.slug}`,
     },
   };
+
 }
 
 // --- ページ本体 ---
