@@ -20,12 +20,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!page || page.status === "DRAFT") return { title: "ページが見つかりません" };
 
-  const keywords = page.metaKeywords ? page.metaKeywords.split(",").map(k => k.trim()) : [];
+    // セットページは本体ページに評価集約
+  const SET_PAGES = [
+    "water-area-cleaning-special-set",
+    "water-area-cleaning-3set-campaign",
+    "water-area-cleaning-4-set",
+    "water-area-cleaning-5-piece-set",
+  ];
+
+  const canonicalUrl = SET_PAGES.includes(slug)
+    ? "https://brightofhouse.jp/service/water-area-cleaning-sapporo"
+    : `https://brightofhouse.jp/service/${slug}`;
 
   return {
-    title: `${page.title} | 北海道ブライトオブハウス`,
+    title: page.title,
     description: page.metaDescription || page.catchphrase || "サービス詳細情報",
-    keywords: keywords,
     alternates: { canonical: `/service/${page.slug}` },
   };
 }

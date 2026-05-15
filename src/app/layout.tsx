@@ -13,12 +13,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   // ▼ 正規URLのベースとなるドメインを設定
   metadataBase: new URL("https://brightofhouse.jp"),
-  title: {
-    default: "北海道ブライトオブハウス | 札幌のハウスクリーニング・特殊清掃",
-    template: "%s | 北海道ブライトオブハウス",
-  },
+ title: "札幌のハウスクリーニング・水回り清掃・片づけサブスク｜北海道ブライトオブハウス",
+
   description: "札幌市を中心に、浴室・キッチン等の水回り清掃から、壁紙再生・床ワックス剥離、ゴミ屋敷片付け・遺品整理までプロの技術で迅速対応。お見積り無料。",
-  keywords:["札幌 家 清掃", "札幌 水回り 清掃", "札幌 ハウスクリーニング おすすめ", "空室 清掃 札幌", "退去 清掃 札幌", "ゴミ屋敷 片付け 札幌", "遺品整理 札幌"],
   
   // ▼ Canonicalタグ（重複ページ対策）
   alternates: {
@@ -117,19 +114,20 @@ export default function RootLayout({
         
        {gaId && <GoogleAnalytics gaId={gaId} />}
         <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17996016781" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-17996016781');
-              gtag('config', 'AW-17996016781/DTKqCPuhmawcEI3ZlYVcEI3ZlYVD', {
-                'phone_conversion_number': '0120-792-684'
-              });
-            `,
-          }}
-        />
+<script
+  dangerouslySetInnerHTML={{
+    __html: `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-17996016781');
+      gtag('config', 'AW-17996016781/DTKqCPuhmawcEI3ZlYVD', {
+        'phone_conversion_number': '0120-792-684'
+      });
+    `,
+  }}
+/>
+
 
 
       </body>

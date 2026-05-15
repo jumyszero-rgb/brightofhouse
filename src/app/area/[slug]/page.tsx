@@ -24,8 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!lp || lp.status === "DRAFT") return { title: "ページが見つかりません" };
 
   return {
-    title: `${lp.title} | 北海道ブライトオブハウス`,
-    description: lp.catchphrase || `${lp.title}の清掃・片付けサービス。お見積り無料、迅速対応。`,
+  title: lp.title,
+  description: lp.metaDescription || lp.catchphrase || `${lp.title}。お見積り無料、迅速対応。`,
+
+
     ...(lp.noIndex && { robots: { index: false, follow: true } }),
     openGraph: {
       title: lp.title,

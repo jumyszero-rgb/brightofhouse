@@ -20,13 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // 記事がない、または下書きの場合はインデックスさせない
   if (!post || post.status === "DRAFT") return { title: "記事が見つかりません" };
 
-  // カンマ区切りのキーワードを配列に変換
-  const keywords = post.metaKeywords ? post.metaKeywords.split(",").map(k => k.trim()) :[];
 
   return {
-    title: `${post.title} | 北海道ブライトオブハウス`,
+    title: post.title,
     description: post.metaDescription || post.title,
-    keywords: keywords,
     ...(post.noIndex && { robots: { index: false, follow: true } }),
     alternates: {
       canonical: `/blog/${post.slug}`,
