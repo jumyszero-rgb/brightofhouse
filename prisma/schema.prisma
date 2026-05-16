@@ -163,6 +163,7 @@ model LandingPage {
   metaDescription String?
   metaKeywords    String?
   noIndex         Boolean  @default(false)
+  canonicalUrl    String?
   showBottomCta   Boolean  @default(true)
 
 }
@@ -250,6 +251,8 @@ model ServicePage {
   serviceItemId   String?
   bookingData     Json?
   noIndex         Boolean  @default(false)
+  canonicalUrl    String?
+
 
 }
 

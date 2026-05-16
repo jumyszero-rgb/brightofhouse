@@ -26,6 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
   title: lp.title,
   description: lp.metaDescription || lp.catchphrase || `${lp.title}。お見積り無料、迅速対応。`,
+    ...(lp.noIndex && { robots: { index: false, follow: true } }),
+    alternates: { canonical: lp.canonicalUrl || `/area/${lp.slug}` },
 
 
     ...(lp.noIndex && { robots: { index: false, follow: true } }),

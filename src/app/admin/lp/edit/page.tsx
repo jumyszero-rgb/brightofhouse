@@ -33,6 +33,7 @@ function EditForm() {
     metaDescription: "",
     showBottomCta: true,
     noIndex: false,
+    canonicalUrl: "",
   });
 
   useEffect(() => {
@@ -56,6 +57,8 @@ function EditForm() {
           metaDescription: data.metaDescription || "",
           showBottomCta: data.showBottomCta !== false,
           noIndex: data.noIndex || false,
+          canonicalUrl: data.canonicalUrl || "",
+
         });
         if (data.heroImage) setPreviewImage(data.heroImage);
       });
@@ -102,6 +105,8 @@ function EditForm() {
     form.set("metaDescription", formData.metaDescription);
     form.set("showBottomCta", String(formData.showBottomCta));
     form.set("noIndex", String(formData.noIndex));
+    form.set("canonicalUrl", formData.canonicalUrl);
+
 
     try {
       const res = await fetch("/api/lp", {
@@ -246,6 +251,16 @@ function EditForm() {
               rows={3}
               placeholder="検索結果に表示される魅力的な紹介文を入力してください"
               className="w-full p-2 border border-indigo-200 rounded text-black text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-indigo-700 mb-1">canonical URL（空欄でデフォルト）</label>
+            <input
+              name="canonicalUrl"
+              value={formData.canonicalUrl}
+              onChange={handleChange}
+              placeholder="例: https://brightofhouse.jp/lp/example"
+              className="w-full p-2 border border-indigo-200 rounded text-black text-sm font-mono"
             />
           </div>
         </div>

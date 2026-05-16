@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: lp.title,
     description: lp.metaDescription || lp.catchphrase || "北海道ブライトオブハウスのお得なキャンペーン情報です。",
     ...(lp.noIndex && { robots: { index: false, follow: true } }),
-    alternates: { canonical: `/lp/${lp.slug}` },
+    alternates: { canonical: lp.canonicalUrl || `/lp/${lp.slug}` },
     openGraph: {
       title: lp.title,
       description: lp.metaDescription || lp.catchphrase || "",

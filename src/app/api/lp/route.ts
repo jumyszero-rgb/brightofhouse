@@ -111,6 +111,8 @@ export async function POST(request: NextRequest) {
         metaDescription: formData.get("metaDescription") as string,
         showBottomCta: formData.get("showBottomCta") !== "false",
         noIndex: formData.get("noIndex") === "true",
+        canonicalUrl: formData.get("canonicalUrl") as string || null,
+
 
 
       }
@@ -157,8 +159,7 @@ export async function PUT(request: NextRequest) {
         metaDescription: formData.get("metaDescription") as string,
         showBottomCta: formData.get("showBottomCta") !== "false",
         noIndex: formData.get("noIndex") === "true",
-
-
+        canonicalUrl: formData.get("canonicalUrl") as string || null,
       }
     });
     if (updatedLp.status === "PUBLISHED") {

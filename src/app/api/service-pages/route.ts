@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
+        canonicalUrl: formData.get("canonicalUrl") as string || null,
+
 
 
         metaDescription: formData.get("metaDescription") as string,
@@ -157,7 +159,7 @@ export async function PUT(request: NextRequest) {
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
-
+        canonicalUrl: formData.get("canonicalUrl") as string || null,
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,

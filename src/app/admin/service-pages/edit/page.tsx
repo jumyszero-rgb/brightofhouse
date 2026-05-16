@@ -66,7 +66,8 @@ function EditForm() {
 
   const [formData, setFormData] = useState({
     slug: "", title: "", linkTitle: "", status: "DRAFT",
-    serviceItemId: "",    catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false
+    catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, canonicalUrl: ""
+
 
   });
 
@@ -85,7 +86,7 @@ function EditForm() {
         slug: data.slug || "", title: data.title || "", linkTitle: data.linkTitle || "",
         status: data.status || "DRAFT", serviceItemId: data.serviceItemId || "",
         catchphrase: data.catchphrase || "", content: data.content || "",
-                metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "", noIndex: data.noIndex || false
+        metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "", noIndex: data.noIndex || false, canonicalUrl: data.canonicalUrl || ""
 
       });
       if (data.heroImage) setPreviewImage(data.heroImage);
@@ -269,8 +270,9 @@ function EditForm() {
       form.set("metaKeywords", formData.metaKeywords);
       form.set("metaDescription", formData.metaDescription);
       form.set("noIndex", String(formData.noIndex));
-
+      form.set("canonicalUrl", formData.canonicalUrl);
       form.set("bookingData", JSON.stringify(bookingData));
+
       const res = await fetch("/api/service-pages", { method: editId ? "PUT" : "POST", body: form });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "保存失敗");
@@ -517,6 +519,7 @@ function EditForm() {
         </div>
         <input placeholder="メタキーワード" value={formData.metaKeywords} onChange={e => setFormData(prev => ({ ...prev, metaKeywords: e.target.value }))} className="w-full p-2 border rounded text-sm" />
         <textarea placeholder="メタディスクリプション" value={formData.metaDescription} onChange={e => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))} rows={2} className="w-full p-2 border rounded text-sm" />
+        <input placeholder="canonical URL" value={formData.canonicalUrl} onChange={e => setFormData(prev => ({ ...prev, canonicalUrl: e.target.value }))} className="w-full p-2 border rounded text-sm" />
       </div>
 
       {/* Actions */}
