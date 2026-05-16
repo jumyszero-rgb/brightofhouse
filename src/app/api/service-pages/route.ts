@@ -109,6 +109,9 @@ export async function POST(request: NextRequest) {
         catchphrase: formData.get("catchphrase") as string,
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
+        noIndex: formData.get("noIndex") === "true",
+
+
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
@@ -153,6 +156,8 @@ export async function PUT(request: NextRequest) {
         catchphrase: formData.get("catchphrase") as string,
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
+        noIndex: formData.get("noIndex") === "true",
+
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,

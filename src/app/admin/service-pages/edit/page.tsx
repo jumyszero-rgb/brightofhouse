@@ -66,8 +66,8 @@ function EditForm() {
 
   const [formData, setFormData] = useState({
     slug: "", title: "", linkTitle: "", status: "DRAFT",
-    serviceItemId: "",
-    catchphrase: "", content: "", metaKeywords: "", metaDescription: ""
+    serviceItemId: "",    catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false
+
   });
 
   const [bookingData, setBookingData] = useState<{ mains: MainService[]; options: OptionService[] }>({
@@ -85,7 +85,8 @@ function EditForm() {
         slug: data.slug || "", title: data.title || "", linkTitle: data.linkTitle || "",
         status: data.status || "DRAFT", serviceItemId: data.serviceItemId || "",
         catchphrase: data.catchphrase || "", content: data.content || "",
-        metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || ""
+                metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "", noIndex: data.noIndex || false
+
       });
       if (data.heroImage) setPreviewImage(data.heroImage);
       if (data.bookingData) {
@@ -267,6 +268,8 @@ function EditForm() {
       form.set("content", formData.content);
       form.set("metaKeywords", formData.metaKeywords);
       form.set("metaDescription", formData.metaDescription);
+      form.set("noIndex", String(formData.noIndex));
+
       form.set("bookingData", JSON.stringify(bookingData));
       const res = await fetch("/api/service-pages", { method: editId ? "PUT" : "POST", body: form });
       const result = await res.json();
@@ -352,6 +355,11 @@ function EditForm() {
             <option value="DRAFT">下書き</option>
             <option value="PUBLISHED">公開</option>
           </select>
+                    <label className="flex items-center gap-2 text-sm font-bold text-red-700 cursor-pointer mt-3">
+            <input type="checkbox" checked={formData.noIndex} onChange={() => setFormData(prev => ({ ...prev, noIndex: !prev.noIndex }))} className="w-5 h-5 accent-red-600" />
+            インデックスしない（noindex）
+          </label>
+
         </div>
       </div>
 

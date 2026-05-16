@@ -35,8 +35,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: page.title,
     description: page.metaDescription || page.catchphrase || "サービス詳細情報",
+    ...(page.noIndex && { robots: { index: false, follow: true } }),
     alternates: { canonical: `/service/${page.slug}` },
   };
+
+
 }
 
 export default async function ServiceDetailPage({ params, searchParams }: Props) {
