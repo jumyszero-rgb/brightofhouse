@@ -1,7 +1,7 @@
 // @/src/components/RichTextEditor.tsx
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -18,7 +18,6 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { Node, mergeAttributes, Extension } from "@tiptap/core";
 
-// --- FontSize 拡張（自前実装） ---
 const FontSize = Extension.create({
   name: "fontSize",
   addGlobalAttributes() {
@@ -48,7 +47,79 @@ const FontSize = Extension.create({
   },
 });
 
-// --- details カスタムノード ---
+const ResizableImage = Node.create({
+  name: "resizableImage",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: null },
+      title: { default: null },
+      width: { default: "100%" },
+      caption: { default: "" },
+      float: { default: "none" },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: "figure[data-resizable-image]",
+        getAttrs: (el: any) => ({
+          src: el.querySelector("img")?.getAttribute("src"),
+          alt: el.querySelector("img")?.getAttribute("alt"),
+          width: el.querySelector("img")?.style.width || el.getAttribute("data-width") || "100%",
+          caption: el.querySelector("figcaption")?.textContent || "",
+          float: el.getAttribute("data-float") || "none",
+        }),
+      },
+      {
+        tag: "img[src]",
+        getAttrs: (el: any) => ({
+          src: el.getAttribute("src"),
+          alt: el.getAttribute("alt"),
+          width: el.style.width || "100%",
+          caption: "",
+          float: "none",
+        }),
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const { src, alt, width, caption, float: f } = HTMLAttributes;
+    const floatStyle = f === "left" ? "float:left;margin-right:16px;" : f === "right" ? "float:right;margin-left:16px;" : "";
+    const figureAttrs: any = {
+      "data-resizable-image": "",
+      "data-width": width,
+      "data-float": f || "none",
+      style: `${floatStyle}width:${width};margin:10px 0;`,
+    };
+    if (caption) {
+      return ["figure", figureAttrs,
+        ["img", { src, alt: alt || "", style: "width:100%;height:auto;border-radius:8px;" }],
+        ["figcaption", { style: "text-align:center;font-size:0.85em;color:#6b7280;margin-top:6px;" }, caption],
+      ];
+    }
+    return ["figure", figureAttrs,
+      ["img", { src, alt: alt || "", style: "width:100%;height:auto;border-radius:8px;" }],
+    ];
+  },
+});
+
+const ImageRow = Node.create({
+  name: "imageRow",
+  group: "block",
+  content: "resizableImage+",
+  parseHTML() { return [{ tag: "div[data-image-row]" }]; },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, {
+      "data-image-row": "",
+      style: "display:flex;gap:16px;margin:16px 0;flex-wrap:wrap;",
+    }), 0];
+  },
+});
+
 const DetailsNode = Node.create({
   name: "details",
   group: "block",
@@ -82,19 +153,16 @@ const DetailsContent = Node.create({
   },
 });
 
-// --- 背景ボックス カスタムノード ---
 const BoxBlock = Node.create({
   name: "boxBlock",
   group: "block",
   content: "block+",
   defining: true,
   addAttributes() {
-    return {
-      boxType: { default: "info" },
-    };
+    return { boxType: { default: "info" } };
   },
   parseHTML() {
-    return [{ tag: 'div[data-box-type]', getAttrs: (el: any) => ({ boxType: el.getAttribute("data-box-type") || "info" }) }];
+    return [{ tag: "div[data-box-type]", getAttrs: (el: any) => ({ boxType: el.getAttribute("data-box-type") || "info" }) }];
   },
   renderHTML({ HTMLAttributes }) {
     const type = HTMLAttributes.boxType || "info";
@@ -109,6 +177,52 @@ const BoxBlock = Node.create({
   },
 });
 
+const BalloonBlock = Node.create({
+  name: "balloonBlock",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() {
+    return {
+      direction: { default: "left" },
+      name: { default: "" },
+      avatar: { default: "" },
+      color: { default: "#e0f2fe" },
+    };
+  },
+  parseHTML() {
+    return [{
+      tag: "div[data-balloon]",
+      getAttrs: (el: any) => ({
+        direction: el.getAttribute("data-balloon-dir") || "left",
+        name: el.getAttribute("data-balloon-name") || "",
+        avatar: el.getAttribute("data-balloon-avatar") || "",
+        color: el.getAttribute("data-balloon-color") || "#e0f2fe",
+      }),
+    }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const { direction, name, avatar, color } = HTMLAttributes;
+    const isLeft = direction === "left";
+    return ["div", {
+      "data-balloon": "",
+      "data-balloon-dir": direction,
+      "data-balloon-name": name,
+      "data-balloon-avatar": avatar,
+      "data-balloon-color": color,
+      style: `display:flex;gap:12px;margin:16px 0;align-items:flex-start;${isLeft ? "" : "flex-direction:row-reverse;"}`,
+    },
+      ["div", { style: "flex-shrink:0;text-align:center;" },
+        ...(avatar ? [["img", { src: avatar, style: "width:48px;height:48px;border-radius:50%;object-fit:cover;" }]] : [["div", { style: "width:48px;height:48px;border-radius:50%;background:#cbd5e1;display:flex;align-items:center;justify-content:center;font-size:20px;" }, "👤"]]),
+        ...(name ? [["div", { style: "font-size:11px;font-weight:bold;color:#64748b;margin-top:4px;" }, name]] : []),
+      ],
+      ["div", {
+        style: `background:${color};border-radius:12px;padding:12px 16px;max-width:75%;position:relative;`,
+      }, 0],
+    ];
+  },
+});
+
 type Props = {
   value: string;
   onChange: (content: string) => void;
@@ -116,18 +230,21 @@ type Props = {
 
 export default function RichTextEditor({ value, onChange }: Props) {
   const [htmlMode, setHtmlMode] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
+  const [headings, setHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
-      }),
+      StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
       Underline,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
       }),
       Image.configure({ inline: false }),
+      ResizableImage,
+      ImageRow,
       TextStyle,
       Color,
       FontSize,
@@ -142,18 +259,45 @@ export default function RichTextEditor({ value, onChange }: Props) {
       DetailsSummary,
       DetailsContent,
       BoxBlock,
+      BalloonBlock,
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+      updateHeadings(editor);
     },
   });
+
+  const updateHeadings = useCallback((ed: any) => {
+    if (!ed) return;
+    const h: { level: number; text: string; pos: number }[] = [];
+    ed.state.doc.descendants((node: any, pos: number) => {
+      if (node.type.name === "heading") {
+        h.push({ level: node.attrs.level, text: node.textContent, pos });
+      }
+    });
+    setHeadings(h);
+  }, []);
 
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value || "", { emitUpdate: false });
     }
   }, [value]);
+
+  useEffect(() => {
+    if (editor) updateHeadings(editor);
+  }, [editor]);
+
+  const jumpToPos = useCallback((pos: number) => {
+    if (!editor) return;
+    editor.chain().focus().setTextSelection(pos).run();
+    const domAtPos = editor.view.domAtPos(pos);
+    if (domAtPos?.node) {
+      const el = domAtPos.node instanceof HTMLElement ? domAtPos.node : domAtPos.node.parentElement;
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [editor]);
 
   const addImage = useCallback(() => {
     const input = document.createElement("input");
@@ -168,9 +312,92 @@ export default function RichTextEditor({ value, onChange }: Props) {
       const res = await fetch("/api/lp/upload", { method: "POST", body: formData });
       if (res.ok) {
         const { url } = await res.json();
-        editor?.chain().focus().setImage({ src: url }).run();
+        const width = prompt("画像の幅（例: 100%, 50%, 300px）", "100%") || "100%";
+        const caption = prompt("キャプション（空欄でなし）", "") || "";
+        editor?.chain().focus().insertContent({
+          type: "resizableImage",
+          attrs: { src: url, width, caption, float: "none" },
+        }).run();
       }
     };
+  }, [editor]);
+
+  const insertImageRow = useCallback(() => {
+    if (!editor) return;
+    const count = parseInt(prompt("横に並べる画像の数（2〜4）", "2") || "2", 10);
+    if (count < 2 || count > 4) return alert("2〜4を入力してください");
+    const images: any[] = [];
+    const w = `${Math.floor(100 / count)}%`;
+    const pickImage = (idx: number) => {
+      return new Promise<void>((resolve) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.click();
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) { resolve(); return; }
+          const formData = new FormData();
+          formData.append("image", file);
+          const res = await fetch("/api/lp/upload", { method: "POST", body: formData });
+          if (res.ok) {
+            const { url } = await res.json();
+            const caption = prompt(`画像${idx + 1}のキャプション（空欄でなし）`, "") || "";
+            images.push({ type: "resizableImage", attrs: { src: url, width: w, caption, float: "none" } });
+          }
+          resolve();
+        };
+      });
+    };
+    (async () => {
+      for (let i = 0; i < count; i++) {
+        await pickImage(i);
+      }
+      if (images.length > 0) {
+        editor.chain().focus().insertContent({
+          type: "imageRow",
+          content: images,
+        }).run();
+      }
+    })();
+  }, [editor]);
+
+  const changeImageSize = useCallback(() => {
+    if (!editor) return;
+    const { state } = editor;
+    const { from } = state.selection;
+    let found = false;
+    state.doc.descendants((node, pos) => {
+      if (found) return false;
+      if (node.type.name === "resizableImage" && pos <= from && from <= pos + node.nodeSize) {
+        const newWidth = prompt("新しい幅（例: 50%, 300px, 100%）", node.attrs.width || "100%");
+        if (newWidth) {
+          const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, width: newWidth });
+          editor.view.dispatch(tr);
+        }
+        found = true;
+        return false;
+      }
+    });
+    if (!found) alert("画像を選択してからクリックしてください");
+  }, [editor]);
+
+  const changeImageCaption = useCallback(() => {
+    if (!editor) return;
+    const { state } = editor;
+    const { from } = state.selection;
+    let found = false;
+    state.doc.descendants((node, pos) => {
+      if (found) return false;
+      if (node.type.name === "resizableImage" && pos <= from && from <= pos + node.nodeSize) {
+        const newCaption = prompt("キャプションを入力（空欄で削除）", node.attrs.caption || "");
+        const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, caption: newCaption || "" });
+        editor.view.dispatch(tr);
+        found = true;
+        return false;
+      }
+    });
+    if (!found) alert("画像を選択してからクリックしてください");
   }, [editor]);
 
   const addLink = useCallback(() => {
@@ -208,7 +435,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
     const { from } = state.selection;
     let detailsPos: number | null = null;
     let detailsNode: any = null;
-
     state.doc.descendants((node, pos) => {
       if (node.type.name === "details" && pos <= from && from <= pos + node.nodeSize) {
         detailsPos = pos;
@@ -216,7 +442,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
         return false;
       }
     });
-
     if (detailsPos !== null && detailsNode) {
       const content: any[] = [];
       detailsNode.forEach((child: any) => {
@@ -226,11 +451,10 @@ export default function RichTextEditor({ value, onChange }: Props) {
           child.forEach((block: any) => { content.push(block.toJSON()); });
         }
       });
-      editor.chain().focus()
-        .command(({ tr }) => {
-          tr.replaceWith(detailsPos!, detailsPos! + detailsNode.nodeSize, content.map((c: any) => state.schema.nodeFromJSON(c)));
-          return true;
-        }).run();
+      editor.chain().focus().command(({ tr }) => {
+        tr.replaceWith(detailsPos!, detailsPos! + detailsNode.nodeSize, content.map((c: any) => state.schema.nodeFromJSON(c)));
+        return true;
+      }).run();
     }
   }, [editor]);
 
@@ -241,7 +465,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
     if (!url) return;
     const align = prompt("配置（left / center / right）", "center") || "center";
     const color = prompt("ボタン色（red / blue / green / orange）", "red") || "red";
-
     const colorMap: Record<string, { bg: string; shadow: string }> = {
       red: { bg: "linear-gradient(135deg,#ef4444,#dc2626)", shadow: "0 6px 20px rgba(220,38,38,0.4)" },
       blue: { bg: "linear-gradient(135deg,#3b82f6,#2563eb)", shadow: "0 6px 20px rgba(37,99,235,0.4)" },
@@ -249,9 +472,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
       orange: { bg: "linear-gradient(135deg,#f97316,#ea580c)", shadow: "0 6px 20px rgba(234,88,12,0.4)" },
     };
     const c = colorMap[color] || colorMap.red;
-
-    const html = `<div style="text-align:${align};margin:32px 0;"><a href="${url}" style="background:${c.bg};color:#fff;font-weight:900;font-size:1.15em;padding:18px 48px;border-radius:9999px;text-decoration:none;display:inline-block;box-shadow:${c.shadow};letter-spacing:0.05em;transition:transform 0.2s;">🔥 ${text}</a></div>`;
-
+    const html = `<div style="text-align:${align};margin:32px 0;"><a href="${url}" style="background:${c.bg};color:#fff;font-weight:900;font-size:1.15em;padding:18px 48px;border-radius:9999px;text-decoration:none;display:inline-block;box-shadow:${c.shadow};letter-spacing:0.05em;">🔥 ${text}</a></div>`;
     editor?.chain().focus().insertContent(html).run();
   }, [editor]);
 
@@ -259,6 +480,25 @@ export default function RichTextEditor({ value, onChange }: Props) {
     editor?.chain().focus().insertContent({
       type: "boxBlock",
       attrs: { boxType },
+      content: [{ type: "paragraph", content: [{ type: "text", text: "ここにテキストを入力" }] }],
+    }).run();
+  }, [editor]);
+
+  const insertBalloon = useCallback(() => {
+    const direction = prompt("吹き出しの向き（left / right）", "left") || "left";
+    const name = prompt("名前（空欄でなし）", "") || "";
+    const avatar = prompt("アバター画像URL（空欄でデフォルト）", "") || "";
+    const colorChoice = prompt("吹き出し色（blue / green / pink / gray）", "blue") || "blue";
+    const colorMap: Record<string, string> = {
+      blue: "#e0f2fe",
+      green: "#dcfce7",
+      pink: "#fce7f3",
+      gray: "#f1f5f9",
+    };
+    const color = colorMap[colorChoice] || colorMap.blue;
+    editor?.chain().focus().insertContent({
+      type: "balloonBlock",
+      attrs: { direction, name, avatar, color },
       content: [{ type: "paragraph", content: [{ type: "text", text: "ここにテキストを入力" }] }],
     }).run();
   }, [editor]);
@@ -288,16 +528,13 @@ export default function RichTextEditor({ value, onChange }: Props) {
   if (!editor) return <div className="h-64 w-full bg-slate-50 border rounded animate-pulse" />;
 
   return (
-    <div className="bg-white rounded-md border border-slate-300 overflow-hidden min-h-[350px]">
-      {/* ツールバー */}
+    <div className="bg-white rounded-md border border-slate-300 overflow-hidden min-h-[350px]" ref={editorRef}>
+      {/* ツールバー1段目 */}
       <div className="flex flex-wrap gap-1 p-2 bg-slate-50 border-b">
-
-        {/* 見出し */}
         <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 2 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H2</button>
         <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 3 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H3</button>
         <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 4 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H4</button>
 
-        {/* フォントサイズ */}
         <select onChange={(e) => setFontSize(e.target.value)} className="text-xs border rounded px-1 py-1 bg-white" defaultValue="">
           <option value="" disabled>サイズ</option>
           <option value="">標準</option>
@@ -314,7 +551,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* 文字装飾 */}
         <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("bold") ? "bg-blue-600 text-white" : "bg-white border"}`}>B</button>
         <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("italic") ? "bg-blue-600 text-white" : "bg-white border"}`}><i>I</i></button>
         <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("underline") ? "bg-blue-600 text-white" : "bg-white border"}`}><u>U</u></button>
@@ -322,12 +558,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* 文字色（リセット付き） */}
-        <select
-          onChange={(e) => { setColor(e.target.value); e.target.value = ""; }}
-          className="text-xs border rounded px-1 py-1 bg-white"
-          value=""
-        >
+        <select onChange={(e) => { setColor(e.target.value); e.target.value = ""; }} className="text-xs border rounded px-1 py-1 bg-white" value="">
           <option value="" disabled>文字色</option>
           <option value="unset">● リセット</option>
           <option value="#000000">● 黒</option>
@@ -340,12 +571,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
           <option value="#6b7280">● グレー</option>
         </select>
 
-        {/* 背景色 */}
-        <select
-          onChange={(e) => { editor.chain().focus().toggleHighlight({ color: e.target.value }).run(); e.target.value = ""; }}
-          className="text-xs border rounded px-1 py-1 bg-white"
-          value=""
-        >
+        <select onChange={(e) => { editor.chain().focus().toggleHighlight({ color: e.target.value }).run(); e.target.value = ""; }} className="text-xs border rounded px-1 py-1 bg-white" value="">
           <option value="" disabled>背景色</option>
           <option value="#fef08a">■ 黄</option>
           <option value="#bbf7d0">■ 緑</option>
@@ -357,28 +583,31 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* リスト */}
         <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("bulletList") ? "bg-blue-600 text-white" : "bg-white border"}`}>・リスト</button>
         <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("orderedList") ? "bg-blue-600 text-white" : "bg-white border"}`}>1.リスト</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* 配置 */}
         <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "left" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>左</button>
         <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "center" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>中</button>
         <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "right" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>右</button>
+      </div>
 
-        <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
-
-        {/* リンク */}
+      {/* ツールバー2段目 */}
+      <div className="flex flex-wrap gap-1 p-2 bg-slate-100 border-b">
         <button type="button" onClick={addLink} className={`px-2 py-1 text-xs rounded ${editor.isActive("link") ? "bg-blue-600 text-white" : "bg-white border"}`}>🔗</button>
         {editor.isActive("link") && <button type="button" onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
         <button type="button" onClick={addTelLink} className="px-2 py-1 text-xs rounded bg-green-600 text-white font-bold hover:bg-green-700">📞</button>
-        <button type="button" onClick={addImage} className="px-2 py-1 text-xs rounded bg-white border">🖼</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* テーブル */}
+        <button type="button" onClick={addImage} className="px-2 py-1 text-xs rounded bg-white border">🖼 画像</button>
+        <button type="button" onClick={insertImageRow} className="px-2 py-1 text-xs rounded bg-white border">🖼🖼 横並び</button>
+        <button type="button" onClick={changeImageSize} className="px-2 py-1 text-xs rounded bg-white border">📐 サイズ</button>
+        <button type="button" onClick={changeImageCaption} className="px-2 py-1 text-xs rounded bg-white border">💬 キャプション</button>
+
+        <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
+
         <button type="button" onClick={insertTable} className="px-2 py-1 text-xs rounded bg-white border font-bold">📊 表</button>
         {editor.isActive("table") && (
           <>
@@ -392,12 +621,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        {/* ボックス装飾 */}
-        <select
-          onChange={(e) => { insertBox(e.target.value); e.target.value = ""; }}
-          className="text-xs border rounded px-1 py-1 bg-white"
-          value=""
-        >
+        <select onChange={(e) => { insertBox(e.target.value); e.target.value = ""; }} className="text-xs border rounded px-1 py-1 bg-white" value="">
           <option value="" disabled>📦 装飾</option>
           <option value="info">ℹ️ 情報（青）</option>
           <option value="warning">⚠️ 注意（黄）</option>
@@ -406,22 +630,37 @@ export default function RichTextEditor({ value, onChange }: Props) {
           <option value="gray">📝 メモ（灰）</option>
         </select>
 
-        {/* 折り畳み */}
+        <button type="button" onClick={insertBalloon} className="px-2 py-1 text-xs rounded bg-sky-500 text-white font-bold hover:bg-sky-600">💬 吹出</button>
         <button type="button" onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
         <button type="button" onClick={removeDetails} className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 border border-amber-300 font-bold">▼ 解除</button>
-
-        {/* CTA */}
         <button type="button" onClick={insertCtaButton} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
 
-        {/* HTMLモード */}
-        <button
-          type="button"
-          onClick={() => setHtmlMode(!htmlMode)}
-          className={`px-2 py-1 text-xs rounded font-bold ml-auto ${htmlMode ? "bg-blue-600 text-white" : "bg-white border"}`}
-        >
+        <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
+
+        <button type="button" onClick={() => { setShowOutline(!showOutline); updateHeadings(editor); }} className={`px-2 py-1 text-xs rounded font-bold ${showOutline ? "bg-indigo-600 text-white" : "bg-white border"}`}>📑 見出し</button>
+
+        <button type="button" onClick={() => setHtmlMode(!htmlMode)} className={`px-2 py-1 text-xs rounded font-bold ml-auto ${htmlMode ? "bg-blue-600 text-white" : "bg-white border"}`}>
           {htmlMode ? "ビジュアル" : "HTML"}
         </button>
       </div>
+
+      {/* 見出しアウトライン */}
+      {showOutline && headings.length > 0 && (
+        <div className="bg-indigo-50 border-b p-2 max-h-48 overflow-y-auto">
+          <p className="text-[10px] font-bold text-indigo-400 mb-1">📑 見出しジャンプ</p>
+          {headings.map((h, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => jumpToPos(h.pos + 1)}
+              className="block w-full text-left text-xs py-1 px-2 hover:bg-indigo-100 rounded truncate text-indigo-800"
+              style={{ paddingLeft: `${(h.level - 2) * 16 + 8}px` }}
+            >
+              <span className="font-bold text-indigo-400 mr-1">H{h.level}</span> {h.text}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* エディタ本体 */}
       {htmlMode ? (
@@ -444,25 +683,28 @@ export default function RichTextEditor({ value, onChange }: Props) {
         .tiptap ul { list-style: disc; padding-left: 1.5em; margin-bottom: 1em; }
         .tiptap ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 1em; }
         .tiptap a { color: #2563eb; text-decoration: underline; }
-        .tiptap img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
+        .tiptap img { max-width: 100%; height: auto; border-radius: 8px; }
+        .tiptap figure[data-resizable-image] { display: inline-block; }
+        .tiptap figure[data-resizable-image] img { width: 100%; height: auto; border-radius: 8px; }
+        .tiptap figure[data-resizable-image] figcaption { text-align: center; font-size: 0.85em; color: #6b7280; margin-top: 6px; }
+        .tiptap div[data-image-row] { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+        .tiptap div[data-image-row] figure { flex: 1; min-width: 0; }
         .tiptap details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
         .tiptap details summary { font-weight: bold; cursor: pointer; color: #1e40af; font-size: 1.1em; }
         .tiptap [data-details-content] { margin-top: 8px; }
         .tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #adb5bd; pointer-events: none; float: left; height: 0; }
-
-        /* テーブル */
         .tiptap table { border-collapse: collapse; width: 100%; margin: 16px 0; }
         .tiptap th { background: #f1f5f9; font-weight: bold; text-align: left; }
         .tiptap th, .tiptap td { border: 1px solid #cbd5e1; padding: 8px 12px; min-width: 80px; vertical-align: top; }
         .tiptap td p, .tiptap th p { margin: 0; }
-
-        /* ボックス装飾 */
         .tiptap div[data-box-type] { border-radius: 8px; padding: 16px; margin: 16px 0; }
         .tiptap div[data-box-type="info"] { background: #eff6ff; border: 1px solid #bfdbfe; }
         .tiptap div[data-box-type="warning"] { background: #fefce8; border: 1px solid #fde68a; }
         .tiptap div[data-box-type="success"] { background: #f0fdf4; border: 1px solid #bbf7d0; }
         .tiptap div[data-box-type="danger"] { background: #fef2f2; border: 1px solid #fecaca; }
         .tiptap div[data-box-type="gray"] { background: #f8fafc; border: 1px solid #e2e8f0; }
+        .tiptap div[data-balloon] { display: flex; gap: 12px; margin: 16px 0; align-items: flex-start; }
+        .tiptap div[data-balloon] img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
       `}</style>
     </div>
   );
