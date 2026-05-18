@@ -550,9 +550,21 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                           return current >= s && current < e;
                         });
 
-                        const dateStr = format(day, "yyyy-MM-dd");
-                        const override = overrides.find((o: any) => o.date === dateStr && o.hour === hour);
+                        const override = overrides.find((o: any) => {
+                          if (o.date && o.hour !== undefined) {
+                            return o.date === format(day, "yyyy-MM-dd") && o.hour === hour;
+                          }
+                          if (o.slotTime) {
+                            const st = new Date(o.slotTime);
+                            return st.getUTCFullYear() === current.getFullYear()
+                              && st.getUTCMonth() === current.getMonth()
+                              && st.getUTCDate() === current.getDate()
+                              && st.getUTCHours() === hour;
+                          }
+                          return false;
+                        });
                         const manualStatus = override?.status;
+
 
                         const isUnavailable = isPast || isBooked || manualStatus === "CLOSED";
                         const isConsult = manualStatus === "CONSULT";
