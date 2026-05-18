@@ -550,24 +550,30 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                           return current >= s && current < e;
                         });
 
+                        // 現在時刻から2時間後まで×
+                        const now = new Date();
+                        const bufferTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                        const isWithinBuffer = current <= bufferTime && current >= now;
+
+                        // 当日は12時（JST）より前を非表示扱い
+                        const isToday = format(day, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+                        const isTodayBeforeNoon = isToday && hour < 12;
+
+                        // オーバーライド判定（管理画面と同じISO比較）
+                        const currentISO = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0, 0).toISOString();
                         const override = overrides.find((o: any) => {
+                          if (o.slotTime) {
+                            return new Date(o.slotTime).toISOString() === currentISO;
+                          }
                           if (o.date && o.hour !== undefined) {
                             return o.date === format(day, "yyyy-MM-dd") && o.hour === hour;
-                          }
-                          if (o.slotTime) {
-                            const st = new Date(o.slotTime);
-                            return st.getUTCFullYear() === current.getFullYear()
-                              && st.getUTCMonth() === current.getMonth()
-                              && st.getUTCDate() === current.getDate()
-                              && st.getUTCHours() === hour;
                           }
                           return false;
                         });
                         const manualStatus = override?.status;
 
-
-                        const isUnavailable = isPast || isBooked || manualStatus === "CLOSED";
-                        const isConsult = manualStatus === "CONSULT";
+                        const isUnavailable = isPast || isWithinBuffer || isTodayBeforeNoon || isBooked || manualStatus === "CLOSED";
+                        const isConsult = !isUnavailable && manualStatus === "CONSULT";
                         const isSelected = selectedDate?.getTime() === current.getTime();
 
                         let display = "○";
@@ -603,6 +609,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </p>
             </div>
           )}
+
+                    {/* 当日予約の案内 */}
+          <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
+            <p className="text-xs text-amber-700 text-center font-bold">
+              ⚠️ 当日のお申し込みは12時以降の時間帯のみ表示しております。<br />
+              作業時はお申し込みに気が付かない場合がございます。<br />
+              お急ぎの場合はお電話にてお申し込みお願いいたします。
+            </p>
+            <p className="text-center mt-2">
+              <a href="tel:0120-792-684" className="text-sm font-bold text-blue-700 underline">📞 0120-792-684（9:00〜18:00）</a>
+            </p>
+          </div>
+
 
           {/* 深夜帯・時間外案内 */}
           <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
