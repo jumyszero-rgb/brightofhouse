@@ -20,7 +20,12 @@ async function checkAuth() {
 export async function GET() {
   try {
     const settings = await prisma.siteSettings.findUnique({ where: { id: "main" } });
-    return NextResponse.json(settings || { robotsTxt: "User-agent: *\nAllow: /\nDisallow: /admin/" });
+    return NextResponse.json(settings || {
+      robotsTxt: "User-agent: *\nAllow: /\nDisallow: /admin/",
+      reviewIpBlock: true,
+      calendarStartHour: 5,
+      calendarEndHour: 22,
+    });
   } catch (error) {
     return NextResponse.json({ error: "Error" }, { status: 500 });
   }
@@ -35,11 +40,15 @@ export async function PUT(request: NextRequest) {
       update: {
         robotsTxt: body.robotsTxt,
         ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
+        ...(body.calendarStartHour !== undefined && { calendarStartHour: body.calendarStartHour }),
+        ...(body.calendarEndHour !== undefined && { calendarEndHour: body.calendarEndHour }),
       },
       create: {
         id: "main",
         robotsTxt: body.robotsTxt,
         ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
+        ...(body.calendarStartHour !== undefined && { calendarStartHour: body.calendarStartHour }),
+        ...(body.calendarEndHour !== undefined && { calendarEndHour: body.calendarEndHour }),
       },
     });
     return NextResponse.json(res);

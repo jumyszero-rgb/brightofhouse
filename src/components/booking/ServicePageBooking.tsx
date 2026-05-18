@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
-type FoldItem = { id: string; title: string; price: number; durationMin: number; durationMax: number; comment?: string };
+type FoldItem = { id: string; title: string; price: number; durationMin: number; durationMax: number; comment?: string; cautionNote?: string };
 
 type OptionItem = {
   id: string; title: string; price: number; durationMin: number; durationMax: number;
@@ -22,7 +22,6 @@ type MainService = {
   setDiscount?: SetDiscount;
 };
 
-// 旧型オプション（後方互換）
 type LegacyOptionService = {
   id: string; title: string; price: number; durationMin: number; durationMax: number;
   maxQty?: number; foldTitle?: string; foldItems?: FoldItem[];
@@ -55,6 +54,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethod: "お電話"
   });
 
+  const [nightWork, setNightWork] = useState(false);
+  const [calendarStartHour, setCalendarStartHour] = useState(5);
+  const [calendarEndHour, setCalendarEndHour] = useState(22);
+  const [openCautions, setOpenCautions] = useState<Record<string, boolean>>({});
+  const toggleCaution = (id: string) => setOpenCautions(prev => ({ ...prev, [id]: !prev[id] }));
+
   const mains: MainService[] = bookingData?.mains
     ? bookingData.mains
     : bookingData?.main
@@ -66,7 +71,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         }]
       : [];
 
-  // 旧型オプション（後方互換）
   const legacyOptions = (bookingData?.options || []).map(o => ({
     ...o,
     durationMin: o.durationMin || (o as any).duration || 0,
@@ -85,7 +89,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     setSelectedFoldItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  // ===== セット値引き計算 =====
+  // セット値引き計算
   const calcSetDiscount = (main: MainService): number => {
     if (!main.setDiscount?.enabled || !main.foldItems) return 0;
     const selectedCount = main.foldItems.filter(fi => selectedFoldItemIds.includes(fi.id)).length;
@@ -98,7 +102,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     if (main.setDiscount.type === "amount") {
       return matchedRule.value;
     } else {
-      // パーセント値引き：このメインの選択されたfoldItemsの合計に対して
       const subtotal = main.foldItems
         .filter(fi => selectedFoldItemIds.includes(fi.id))
         .reduce((sum, fi) => sum + (fi.price || 0), 0);
@@ -107,21 +110,15 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   };
 
   const totalSetDiscount = mains.reduce((sum, m) => sum + calcSetDiscount(m), 0);
-  // ===== 合計計算 =====
-  // メインサービス（折り畳みなし）
+
+  // 合計計算
   const mainNoFoldPrice = mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0);
-  // メインサービス（折り畳みあり：foldItems）
   const mainFoldPrice = mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.price || 0), 0);
-  // メイン配下オプション（新形式）
   const mainOptionPrice = mains.flatMap(m => (m.options || []).filter(o => getQty(o.id) > 0)).reduce((sum, o) => sum + o.price * getQty(o.id), 0);
-  // 旧オプション（折り畳みなし）
   const legacyNoFoldPrice = legacyOptions.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.price * getQty(o.id), 0);
-  // 旧オプション（折り畳みあり：foldItems）
   const legacyFoldPrice = legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.price * getQty(fi.id), 0);
-
   const totalPrice = mainNoFoldPrice + mainFoldPrice + mainOptionPrice + legacyNoFoldPrice + legacyFoldPrice - totalSetDiscount;
-
-  // ===== 合計時間計算 =====
+  // 合計時間計算
   const mainNoFoldMinMin = mains.filter((m, idx) => !m.foldTitle && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0), 0);
   const mainFoldMinMin = mains.flatMap(m => (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))).reduce((sum, fi) => sum + (fi.durationMin || 0), 0);
   const mainOptionMinMin = mains.flatMap(m => (m.options || []).filter(o => getQty(o.id) > 0)).reduce((sum, o) => sum + o.durationMin * getQty(o.id), 0);
@@ -143,12 +140,18 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resB, resO] = await Promise.all([
+        const [resB, resO, resS] = await Promise.all([
           fetch("/api/booking"),
-          fetch("/api/admin/calendar")
+          fetch("/api/admin/calendar"),
+          fetch("/api/settings"),
         ]);
         if (resB.ok) setBookedSlots(await resB.json());
         if (resO.ok) setOverrides(await resO.json());
+        if (resS.ok) {
+          const settings = await resS.json();
+          setCalendarStartHour(settings.calendarStartHour ?? 5);
+          setCalendarEndHour(settings.calendarEndHour ?? 22);
+        }
       } catch (e) { console.error("Fetch error", e); }
     };
     fetchData();
@@ -189,7 +192,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       return;
     }
 
-    // セット値引き情報をメモに追加
     const discountNotes = mains.map(m => {
       const disc = calcSetDiscount(m);
       if (disc > 0) {
@@ -213,7 +215,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           zip: customer.zip,
           address: customer.address,
           contactMethod: customer.contactMethod,
-          notes: discountNotes ? `${discountNotes}\n${customer.notes}` : customer.notes,
+          notes: [
+            nightWork ? "【深夜帯作業希望】" : "",
+            discountNotes,
+            customer.notes,
+          ].filter(Boolean).join("\n"),
           startTime: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
           endTime: format(new Date(selectedDate.getTime() + totalMinutesMax * 60000), "yyyy-MM-dd'T'HH:mm:ss"),
           items: itemsText,
@@ -238,20 +244,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfDay(new Date()));
   const days = [...Array(7)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
-    start: setHours(startOfDay(new Date()), 0),
-    end: setHours(startOfDay(new Date()), 23),
+    start: setHours(startOfDay(new Date()), calendarStartHour),
+    end: setHours(startOfDay(new Date()), calendarEndHour - 1),
   });
 
   const calendarRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = calendarRef.current;
-    if (el) {
-      const rows = el.querySelectorAll("tbody tr");
-      if (rows.length > 8) {
-        el.scrollTop = (rows[8] as HTMLElement).offsetTop - el.offsetTop;
-      }
-    }
-  }, [currentWeekStart]);
 
   const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
   const prevWeek = () => {
@@ -341,6 +338,20 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                                 <span className="font-bold text-blue-600 text-sm">¥{fi.price.toLocaleString()}</span>
                               </label>
                               {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
+
+                              {/* 注意事項（折り畳み） */}
+                              {fi.cautionNote && (
+                                <div className="ml-8 mt-1">
+                                  <button type="button" onClick={() => toggleCaution(fi.id)} className="text-[10px] font-bold text-red-600 hover:underline">
+                                    {openCautions[fi.id] ? "▲ 注意事項を閉じる" : "⚠️ 注意事項を確認"}
+                                  </button>
+                                  {openCautions[fi.id] && (
+                                    <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 whitespace-pre-wrap">
+                                      {fi.cautionNote}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
                               {/* このfoldItemに紐づくオプション（チェック時のみ表示） */}
                               {checked && fiOptions.length > 0 && (
@@ -580,6 +591,29 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </p>
             </div>
           )}
+
+          {/* 深夜帯・時間外案内 */}
+          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-600 text-center mb-2">
+              上記カレンダーは {calendarStartHour}:00〜{calendarEndHour}:00 の時間帯を表示しています。<br />
+              それ以外のお時間帯をご希望の場合はお気軽にご相談ください。
+            </p>
+            <label className="flex items-center justify-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={nightWork}
+                onChange={() => setNightWork(!nightWork)}
+                className="w-4 h-4 accent-purple-600"
+              />
+              <span className="text-sm font-bold text-purple-700">深夜帯作業のお問い合わせをする</span>
+            </label>
+            {nightWork && (
+              <p className="text-xs text-purple-600 text-center mt-2 font-bold">
+                ※深夜帯の作業をご希望の場合は、備考欄にご希望の時間帯をご記入ください。<br />
+                担当者より折り返しご連絡いたします。
+              </p>
+            )}
+          </div>
         </section>
 
         {/* 3. お客様情報 */}

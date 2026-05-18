@@ -14,6 +14,7 @@ type FoldItem = {
   durationMin: number;
   durationMax: number;
   comment: string;
+  cautionNote: string;
 };
 
 type OptionItem = {
@@ -63,8 +64,9 @@ type LegacyOptionService = {
 };
 
 function newFoldItem(): FoldItem {
-  return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, comment: "" };
+  return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, comment: "", cautionNote: "" };
 }
+
 
 function newOptionItem(parentFoldItemId?: string): OptionItem {
   return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1, comment: "", parentFoldItemId };
@@ -388,6 +390,18 @@ function EditForm() {
         <label className="block text-[10px] font-bold text-amber-600 mb-1">コメント（任意）</label>
         <input placeholder="例: 6回分チケット購入が必要" value={fi.comment || ""} onChange={e => updateMainFoldItem(mainId, fi.id, "comment", e.target.value)} className="w-full p-2 border rounded text-sm bg-white" />
       </div>
+      {/* 折り畳み注意事項 */}
+      <div>
+        <label className="block text-[10px] font-bold text-red-600 mb-1">⚠️ 注意事項（折り畳み表示・任意）</label>
+        <textarea
+          placeholder="例: ※当サービスは詰まり解消作業には対応しておりません。詰まりの場合は専門業者へご依頼ください。"
+          value={fi.cautionNote || ""}
+          onChange={e => updateMainFoldItem(mainId, fi.id, "cautionNote", e.target.value)}
+          rows={3}
+          className="w-full p-2 border rounded text-sm bg-red-50 border-red-200"
+        />
+      </div>
+
 
       {/* このメニューに紐づくオプション */}
       <div className="mt-2 pl-4 border-l-4 border-indigo-200 space-y-2">

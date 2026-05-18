@@ -203,11 +203,14 @@ model IndexNowLog {
 }
 
 model SiteSettings {
-  id            String   @id @default("main")
-  robotsTxt     String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
-  reviewIpBlock Boolean  @default(true)
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default("main")
+  robotsTxt         String   @default("User-agent: *\nAllow: /\nDisallow: /admin/")
+  reviewIpBlock     Boolean  @default(true)
+  calendarStartHour Int      @default(5)
+  calendarEndHour   Int      @default(22)
+  updatedAt         DateTime @updatedAt
 }
+
 
 
 model Booking {
