@@ -1,5 +1,5 @@
 // @/src/app/service/[slug]/page.tsx
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -54,7 +54,13 @@ export default async function ServiceDetailPage({ params, searchParams }: Props)
 
   if (!page) notFound();
 
+  // 303リダイレクト
+  if (page.redirectUrl && !isPreview) {
+    redirect(page.redirectUrl);
+  }
+
   const phoneNumber = "0120-792-684";
+
 
   return (
     <main className="min-h-screen bg-white pb-20 text-black">

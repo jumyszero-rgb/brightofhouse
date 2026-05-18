@@ -96,7 +96,7 @@ function EditForm() {
 
   const [formData, setFormData] = useState({
     slug: "", title: "", linkTitle: "", status: "DRAFT",
-    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, canonicalUrl: ""
+    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, canonicalUrl: "", redirectUrl: ""
   });
 
   const [bookingData, setBookingData] = useState<{ mains: MainService[]; legacyOptions?: LegacyOptionService[] }>({
@@ -115,7 +115,8 @@ function EditForm() {
         status: data.status || "DRAFT", serviceItemId: data.serviceItemId || "",
         catchphrase: data.catchphrase || "", content: data.content || "",
         metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "",
-        noIndex: data.noIndex || false, canonicalUrl: data.canonicalUrl || ""
+                noIndex: data.noIndex || false, canonicalUrl: data.canonicalUrl || "", redirectUrl: data.redirectUrl || ""
+
       });
       if (data.heroImage) setPreviewImage(data.heroImage);
 
@@ -346,6 +347,8 @@ function EditForm() {
       form.set("metaDescription", formData.metaDescription);
       form.set("noIndex", String(formData.noIndex));
       form.set("canonicalUrl", formData.canonicalUrl);
+      form.set("redirectUrl", formData.redirectUrl);
+
 
       // 保存時は legacyOptions を options として含める（後方互換）
       const saveData: any = { mains: bookingData.mains };
@@ -693,6 +696,12 @@ function EditForm() {
         <input placeholder="メタキーワード" value={formData.metaKeywords} onChange={e => setFormData(prev => ({ ...prev, metaKeywords: e.target.value }))} className="w-full p-2 border rounded text-sm" />
         <textarea placeholder="メタディスクリプション" value={formData.metaDescription} onChange={e => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))} rows={2} className="w-full p-2 border rounded text-sm" />
         <input placeholder="canonical URL" value={formData.canonicalUrl} onChange={e => setFormData(prev => ({ ...prev, canonicalUrl: e.target.value }))} className="w-full p-2 border rounded text-sm" />
+                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+          <label className="block text-xs font-bold text-red-700 mb-1">⚡ 303リダイレクト先URL（設定するとこのページにアクセス時に転送されます）</label>
+          <input placeholder="例: https://brightofhouse.jp/service/other-page" value={formData.redirectUrl} onChange={e => setFormData(prev => ({ ...prev, redirectUrl: e.target.value }))} className="w-full p-2 border border-red-300 rounded text-sm" />
+          {formData.redirectUrl && <p className="text-[10px] text-red-600 mt-1 font-bold">⚠️ このURLが設定されている間、このページは表示されず転送されます</p>}
+        </div>
+
       </div>
 
       {/* Actions */}

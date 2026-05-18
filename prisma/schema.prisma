@@ -255,6 +255,8 @@ model ServicePage {
   bookingData     Json?
   noIndex         Boolean  @default(false)
   canonicalUrl    String?
+  redirectUrl   String?
+
 
 
 }

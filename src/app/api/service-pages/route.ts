@@ -111,8 +111,7 @@ export async function POST(request: NextRequest) {
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
         canonicalUrl: formData.get("canonicalUrl") as string || null,
-
-
+        redirectUrl: formData.get("redirectUrl") as string || null,
 
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
@@ -160,6 +159,7 @@ export async function PUT(request: NextRequest) {
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
         canonicalUrl: formData.get("canonicalUrl") as string || null,
+        redirectUrl: formData.get("redirectUrl") as string || null,
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
