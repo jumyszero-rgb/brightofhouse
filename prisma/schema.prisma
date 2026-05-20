@@ -168,6 +168,49 @@ model LandingPage {
 
 }
 
+model CtaBlock {
+  id              String   @id @default(uuid())
+  name            String
+  bgType          String   @default("solid")
+  bgColor1        String   @default("#eff6ff")
+  bgColor2        String?
+  borderColor     String   @default("#bfdbfe")
+  borderRadius    Int      @default(16)
+  paddingY        Int      @default(32)
+  paddingX        Int      @default(32)
+  headingText     String?
+  headingColor    String   @default("#1e293b")
+  headingSize     Int      @default(20)
+  headingWeight   String   @default("700")
+  descText        String?
+  descColor       String   @default("#475569")
+  descSize        Int      @default(14)
+  descWeight      String   @default("400")
+  linkText        String?
+  linkUrl         String?
+  linkColor       String   @default("#2563eb")
+  linkSize        Int      @default(14)
+  linkWeight      String   @default("700")
+  btnText         String?
+  btnUrl          String?
+  btnBgColor      String   @default("#2563eb")
+  btnTextColor    String   @default("#ffffff")
+  btnSize         Int      @default(16)
+  btnWeight       String   @default("700")
+  btnRadius       Int      @default(9999)
+  btnPaddingY     Int      @default(14)
+  btnPaddingX     Int      @default(40)
+  btn2Text        String?
+  btn2Url         String?
+  btn2BgColor     String?
+  btn2TextColor   String?
+  btn2Size        Int      @default(14)
+  btn2Weight      String   @default("700")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+
 model BlogCategory {
   id        String     @id @default(uuid())
   name      String     @unique

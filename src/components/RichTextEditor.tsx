@@ -232,6 +232,8 @@ export default function RichTextEditor({ value, onChange }: Props) {
   const [htmlMode, setHtmlMode] = useState(false);
   const [showOutline, setShowOutline] = useState(false);
   const [headings, setHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
+  const [showCtaModal, setShowCtaModal] = useState(false);
+  const [ctaBlocks, setCtaBlocks] = useState<any[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -458,23 +460,30 @@ export default function RichTextEditor({ value, onChange }: Props) {
     }
   }, [editor]);
 
-  const insertCtaButton = useCallback(() => {
-    const text = prompt("ボタンのテキストを入力", "無料お見積りはこちら");
-    if (!text) return;
-    const url = prompt("リンク先URLを入力", "/contact");
-    if (!url) return;
-    const align = prompt("配置（left / center / right）", "center") || "center";
-    const color = prompt("ボタン色（red / blue / green / orange）", "red") || "red";
-    const colorMap: Record<string, { bg: string; shadow: string }> = {
-      red: { bg: "linear-gradient(135deg,#ef4444,#dc2626)", shadow: "0 6px 20px rgba(220,38,38,0.4)" },
-      blue: { bg: "linear-gradient(135deg,#3b82f6,#2563eb)", shadow: "0 6px 20px rgba(37,99,235,0.4)" },
-      green: { bg: "linear-gradient(135deg,#22c55e,#16a34a)", shadow: "0 6px 20px rgba(22,163,74,0.4)" },
-      orange: { bg: "linear-gradient(135deg,#f97316,#ea580c)", shadow: "0 6px 20px rgba(234,88,12,0.4)" },
-    };
-    const c = colorMap[color] || colorMap.red;
-    const html = `<div style="text-align:${align};margin:32px 0;"><a href="${url}" style="background:${c.bg};color:#fff;font-weight:900;font-size:1.15em;padding:18px 48px;border-radius:9999px;text-decoration:none;display:inline-block;box-shadow:${c.shadow};letter-spacing:0.05em;">🔥 ${text}</a></div>`;
+  const openCtaModal = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cta-blocks");
+      if (res.ok) setCtaBlocks(await res.json());
+    } catch {}
+    setShowCtaModal(true);
+  }, []);
+
+  const insertCtaHtml = useCallback((block: any) => {
+    const bg = block.bgType === "gradient" && block.bgColor2
+      ? `background:linear-gradient(135deg,${block.bgColor1},${block.bgColor2})`
+      : `background-color:${block.bgColor1}`;
+    let html = `<div style="${bg};border:1px solid ${block.borderColor};border-radius:${block.borderRadius}px;padding:${block.paddingY}px ${block.paddingX}px;text-align:center;margin:32px 0;">`;
+    if (block.headingText) html += `<div style="color:${block.headingColor};font-size:${block.headingSize}px;font-weight:${block.headingWeight};margin-bottom:12px;">${block.headingText}</div>`;
+    if (block.descText) html += `<div style="color:${block.descColor};font-size:${block.descSize}px;font-weight:${block.descWeight};margin-bottom:16px;white-space:pre-line;line-height:1.8;">${block.descText}</div>`;
+    if (block.linkText && block.linkUrl) html += `<div style="margin-bottom:16px;"><a href="${block.linkUrl}" style="color:${block.linkColor};font-size:${block.linkSize}px;font-weight:${block.linkWeight};text-decoration:underline;">${block.linkText}</a></div>`;
+    html += `<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">`;
+    if (block.btnText && block.btnUrl) html += `<a href="${block.btnUrl}" style="background:${block.btnBgColor};color:${block.btnTextColor};font-size:${block.btnSize}px;font-weight:${block.btnWeight};padding:${block.btnPaddingY}px ${block.btnPaddingX}px;border-radius:${block.btnRadius}px;display:inline-block;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.15);">${block.btnText}</a>`;
+    if (block.btn2Text && block.btn2Url) html += `<a href="${block.btn2Url}" style="background:${block.btn2BgColor || '#e2e8f0'};color:${block.btn2TextColor || '#334155'};font-size:${block.btn2Size}px;font-weight:${block.btn2Weight};padding:${block.btnPaddingY}px ${block.btnPaddingX}px;border-radius:${block.btnRadius}px;display:inline-block;text-decoration:none;">${block.btn2Text}</a>`;
+    html += `</div></div>`;
     editor?.chain().focus().insertContent(html).run();
+    setShowCtaModal(false);
   }, [editor]);
+
 
   const insertBox = useCallback((boxType: string) => {
     editor?.chain().focus().insertContent({
@@ -633,7 +642,8 @@ export default function RichTextEditor({ value, onChange }: Props) {
         <button type="button" onClick={insertBalloon} className="px-2 py-1 text-xs rounded bg-sky-500 text-white font-bold hover:bg-sky-600">💬 吹出</button>
         <button type="button" onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
         <button type="button" onClick={removeDetails} className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 border border-amber-300 font-bold">▼ 解除</button>
-        <button type="button" onClick={insertCtaButton} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
+        <button type="button" onClick={openCtaModal} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
+
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
@@ -706,6 +716,53 @@ export default function RichTextEditor({ value, onChange }: Props) {
         .tiptap div[data-balloon] { display: flex; gap: 12px; margin: 16px 0; align-items: flex-start; }
         .tiptap div[data-balloon] img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
       `}</style>
+
+      {/* CTAブロック選択モーダル */}
+      {showCtaModal && (
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={() => setShowCtaModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <h2 className="font-bold text-lg">🔥 CTAブロックを挿入</h2>
+              <button onClick={() => setShowCtaModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div className="p-4 space-y-4">
+              {ctaBlocks.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <p className="mb-3">CTAブロックがまだありません</p>
+                  <a href="/admin/cta-blocks" target="_blank" className="text-blue-600 underline font-bold">CTA管理画面で作成する →</a>
+                </div>
+              )}
+              {ctaBlocks.map((block: any) => (
+                <div key={block.id} className="border rounded-xl overflow-hidden hover:shadow-md transition-all cursor-pointer" onClick={() => insertCtaHtml(block)}>
+                  <div className="px-4 py-2 bg-slate-50 border-b flex justify-between items-center">
+                    <span className="text-sm font-bold">{block.name}</span>
+                    <span className="text-xs text-blue-600 font-bold">クリックで挿入 →</span>
+                  </div>
+                  <div style={{
+                    ...(block.bgType === "gradient" && block.bgColor2
+                      ? { background: `linear-gradient(135deg,${block.bgColor1},${block.bgColor2})` }
+                      : { backgroundColor: block.bgColor1 }),
+                    border: `1px solid ${block.borderColor}`,
+                    borderRadius: `${block.borderRadius}px`,
+                    padding: `${block.paddingY}px ${block.paddingX}px`,
+                    textAlign: "center" as const,
+                    margin: "12px",
+                  }}>
+                    {block.headingText && <div style={{ color: block.headingColor, fontSize: `${block.headingSize}px`, fontWeight: block.headingWeight, marginBottom: "8px" }}>{block.headingText}</div>}
+                    {block.descText && <div style={{ color: block.descColor, fontSize: `${block.descSize}px`, fontWeight: block.descWeight, marginBottom: "12px", whiteSpace: "pre-line" as const, lineHeight: "1.6" }}>{block.descText}</div>}
+                    {block.linkText && <div style={{ marginBottom: "12px" }}><span style={{ color: block.linkColor, fontSize: `${block.linkSize}px`, fontWeight: block.linkWeight, textDecoration: "underline" }}>{block.linkText}</span></div>}
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" as const }}>
+                      {block.btnText && <span style={{ background: block.btnBgColor, color: block.btnTextColor, fontSize: `${block.btnSize}px`, fontWeight: block.btnWeight, padding: `${block.btnPaddingY}px ${block.btnPaddingX}px`, borderRadius: `${block.btnRadius}px`, display: "inline-block" }}>{block.btnText}</span>}
+                      {block.btn2Text && <span style={{ background: block.btn2BgColor || "#e2e8f0", color: block.btn2TextColor || "#334155", fontSize: `${block.btn2Size}px`, fontWeight: block.btn2Weight, padding: `${block.btnPaddingY}px ${block.btnPaddingX}px`, borderRadius: `${block.btnRadius}px`, display: "inline-block" }}>{block.btn2Text}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
