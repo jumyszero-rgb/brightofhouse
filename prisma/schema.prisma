@@ -182,33 +182,51 @@ model CtaBlock {
   headingColor    String   @default("#1e293b")
   headingSize     Int      @default(20)
   headingWeight   String   @default("700")
-  descText        String?
-  descColor       String   @default("#475569")
-  descSize        Int      @default(14)
-  descWeight      String   @default("400")
+  desc1Text       String?
+  desc1Color      String   @default("#475569")
+  desc1Size       Int      @default(14)
+  desc1Weight     String   @default("400")
   linkText        String?
   linkUrl         String?
   linkColor       String   @default("#2563eb")
   linkSize        Int      @default(14)
   linkWeight      String   @default("700")
-  btnText         String?
-  btnUrl          String?
-  btnBgColor      String   @default("#2563eb")
-  btnTextColor    String   @default("#ffffff")
-  btnSize         Int      @default(16)
-  btnWeight       String   @default("700")
-  btnRadius       Int      @default(9999)
-  btnPaddingY     Int      @default(14)
-  btnPaddingX     Int      @default(40)
+  desc2Text       String?
+  desc2Color      String   @default("#475569")
+  desc2Size       Int      @default(14)
+  desc2Weight     String   @default("400")
+  btn1Text        String?
+  btn1Url         String?
+  btn1BgColor     String   @default("#2563eb")
+  btn1TextColor   String   @default("#ffffff")
+  btn1Size        Int      @default(16)
+  btn1Weight      String   @default("700")
+  btn1Radius      Int      @default(9999)
+  btn1PaddingY    Int      @default(14)
+  btn1PaddingX    Int      @default(40)
+  desc3Text       String?
+  desc3Color      String   @default("#475569")
+  desc3Size       Int      @default(14)
+  desc3Weight     String   @default("400")
   btn2Text        String?
   btn2Url         String?
-  btn2BgColor     String?
-  btn2TextColor   String?
+  btn2BgColor     String   @default("#e2e8f0")
+  btn2TextColor   String   @default("#334155")
   btn2Size        Int      @default(14)
   btn2Weight      String   @default("700")
+  desc4Text       String?
+  desc4Color      String   @default("#475569")
+  desc4Size       Int      @default(14)
+  desc4Weight     String   @default("400")
+  telText         String?
+  telNumber       String?
+  telColor        String   @default("#2563eb")
+  telSize         Int      @default(20)
+  telWeight       String   @default("700")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
 
 
 model BlogCategory {

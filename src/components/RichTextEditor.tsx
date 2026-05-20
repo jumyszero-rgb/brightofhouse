@@ -474,15 +474,19 @@ export default function RichTextEditor({ value, onChange }: Props) {
       : `background-color:${block.bgColor1}`;
     let html = `<div style="${bg};border:1px solid ${block.borderColor};border-radius:${block.borderRadius}px;padding:${block.paddingY}px ${block.paddingX}px;text-align:center;margin:32px 0;">`;
     if (block.headingText) html += `<div style="color:${block.headingColor};font-size:${block.headingSize}px;font-weight:${block.headingWeight};margin-bottom:12px;">${block.headingText}</div>`;
-    if (block.descText) html += `<div style="color:${block.descColor};font-size:${block.descSize}px;font-weight:${block.descWeight};margin-bottom:16px;white-space:pre-line;line-height:1.8;">${block.descText}</div>`;
-    if (block.linkText && block.linkUrl) html += `<div style="margin-bottom:16px;"><a href="${block.linkUrl}" style="color:${block.linkColor};font-size:${block.linkSize}px;font-weight:${block.linkWeight};text-decoration:underline;">${block.linkText}</a></div>`;
-    html += `<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">`;
-    if (block.btnText && block.btnUrl) html += `<a href="${block.btnUrl}" style="background:${block.btnBgColor};color:${block.btnTextColor};font-size:${block.btnSize}px;font-weight:${block.btnWeight};padding:${block.btnPaddingY}px ${block.btnPaddingX}px;border-radius:${block.btnRadius}px;display:inline-block;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.15);">${block.btnText}</a>`;
-    if (block.btn2Text && block.btn2Url) html += `<a href="${block.btn2Url}" style="background:${block.btn2BgColor || '#e2e8f0'};color:${block.btn2TextColor || '#334155'};font-size:${block.btn2Size}px;font-weight:${block.btn2Weight};padding:${block.btnPaddingY}px ${block.btnPaddingX}px;border-radius:${block.btnRadius}px;display:inline-block;text-decoration:none;">${block.btn2Text}</a>`;
-    html += `</div></div>`;
+    if (block.desc1Text) html += `<div style="color:${block.desc1Color};font-size:${block.desc1Size}px;font-weight:${block.desc1Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc1Text}</div>`;
+    if (block.linkText && block.linkUrl) html += `<div style="margin-bottom:12px;"><a href="${block.linkUrl}" style="color:${block.linkColor};font-size:${block.linkSize}px;font-weight:${block.linkWeight};text-decoration:underline;">${block.linkText}</a></div>`;
+    if (block.desc2Text) html += `<div style="color:${block.desc2Color};font-size:${block.desc2Size}px;font-weight:${block.desc2Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc2Text}</div>`;
+    if (block.btn1Text && block.btn1Url) html += `<div style="margin-bottom:12px;"><a href="${block.btn1Url}" style="background:${block.btn1BgColor};color:${block.btn1TextColor};font-size:${block.btn1Size}px;font-weight:${block.btn1Weight};padding:${block.btn1PaddingY}px ${block.btn1PaddingX}px;border-radius:${block.btn1Radius}px;display:inline-block;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.15);">${block.btn1Text}</a></div>`;
+    if (block.desc3Text) html += `<div style="color:${block.desc3Color};font-size:${block.desc3Size}px;font-weight:${block.desc3Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc3Text}</div>`;
+    if (block.btn2Text && block.btn2Url) html += `<div style="margin-bottom:12px;"><a href="${block.btn2Url}" style="background:${block.btn2BgColor};color:${block.btn2TextColor};font-size:${block.btn2Size}px;font-weight:${block.btn2Weight};padding:${block.btn1PaddingY}px ${block.btn1PaddingX}px;border-radius:${block.btn1Radius}px;display:inline-block;text-decoration:none;">${block.btn2Text}</a></div>`;
+    if (block.desc4Text) html += `<div style="color:${block.desc4Color};font-size:${block.desc4Size}px;font-weight:${block.desc4Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc4Text}</div>`;
+    if (block.telText && block.telNumber) html += `<div><a href="tel:${block.telNumber}" style="color:${block.telColor};font-size:${block.telSize}px;font-weight:${block.telWeight};text-decoration:none;">📞 ${block.telText}</a></div>`;
+    html += `</div>`;
     editor?.chain().focus().insertContent(html).run();
     setShowCtaModal(false);
   }, [editor]);
+
 
 
   const insertBox = useCallback((boxType: string) => {
