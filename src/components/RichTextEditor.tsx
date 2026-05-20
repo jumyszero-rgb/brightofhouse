@@ -482,10 +482,41 @@ export default function RichTextEditor({ value, onChange }: Props) {
     if (block.btn2Text && block.btn2Url) html += `<div style="margin-bottom:12px;"><a href="${block.btn2Url}" style="background:${block.btn2BgColor};color:${block.btn2TextColor};font-size:${block.btn2Size}px;font-weight:${block.btn2Weight};padding:${block.btn1PaddingY}px ${block.btn1PaddingX}px;border-radius:${block.btn1Radius}px;display:inline-block;text-decoration:none;">${block.btn2Text}</a></div>`;
     if (block.desc4Text) html += `<div style="color:${block.desc4Color};font-size:${block.desc4Size}px;font-weight:${block.desc4Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc4Text}</div>`;
     if (block.telText && block.telNumber) html += `<div><a href="tel:${block.telNumber}" style="color:${block.telColor};font-size:${block.telSize}px;font-weight:${block.telWeight};text-decoration:none;">📞 ${block.telText}</a></div>`;
-    html += `</div>`;
-    editor?.chain().focus().insertContent(html).run();
+       html += `</div>`;
+    if (editor) {
+      const { state, view } = editor;
+      const { from } = state.selection;
+      const node = state.schema.nodes.paragraph.create(
+        null,
+        state.schema.text(" ")
+      );
+      view.dispatch(
+        state.tr.replaceSelectionWith(node).scrollIntoView()
+      );
+      // DOM直接操作でstyle属性を保持
+      setTimeout(() => {
+        const editorEl = view.dom;
+        const cursorNode = view.domAtPos(from).node;
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = html;
+        const ctaEl = wrapper.firstElementChild as HTMLElement;
+        if (ctaEl) {
+          ctaEl.setAttribute("contenteditable", "false");
+          ctaEl.setAttribute("data-cta-block", "true");
+          if (cursorNode && cursorNode.parentNode) {
+            cursorNode.parentNode.insertBefore(ctaEl, cursorNode);
+          } else {
+            editorEl.appendChild(ctaEl);
+          }
+          // エディタの内容を同期
+          const newHtml = editorEl.innerHTML;
+          editor.commands.setContent(newHtml, false);
+        }
+      }, 50);
+    }
     setShowCtaModal(false);
   }, [editor]);
+
 
 
 
