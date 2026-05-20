@@ -222,6 +222,38 @@ const BalloonBlock = Node.create({
     ];
   },
 });
+const RawHtmlBlock = Node.create({
+  name: "rawHtmlBlock",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      content: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "div[data-raw-html]", getAttrs: (el: any) => ({ content: el.innerHTML }) }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-raw-html", "true");
+    wrapper.setAttribute("contenteditable", "false");
+    wrapper.style.cssText = "margin:32px 0;";
+    wrapper.innerHTML = HTMLAttributes.content || "";
+    return { dom: wrapper };
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div");
+      dom.setAttribute("data-raw-html", "true");
+      dom.setAttribute("contenteditable", "false");
+      dom.style.cssText = "margin:32px 0;cursor:pointer;";
+      dom.innerHTML = node.attrs.content || "";
+      dom.addEventListener("click", () => { dom.style.outline = "2px solid #3b82f6"; setTimeout(() => { dom.style.outline = ""; }, 1500); });
+      return { dom };
+    };
+  },
+});
 
 type Props = {
   value: string;
@@ -262,7 +294,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
       DetailsContent,
       BoxBlock,
       BalloonBlock,
+      RawHtmlBlock,
     ],
+
     content: value || "",
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -483,39 +517,13 @@ export default function RichTextEditor({ value, onChange }: Props) {
     if (block.desc4Text) html += `<div style="color:${block.desc4Color};font-size:${block.desc4Size}px;font-weight:${block.desc4Weight};margin-bottom:12px;white-space:pre-line;line-height:1.8;">${block.desc4Text}</div>`;
     if (block.telText && block.telNumber) html += `<div><a href="tel:${block.telNumber}" style="color:${block.telColor};font-size:${block.telSize}px;font-weight:${block.telWeight};text-decoration:none;">📞 ${block.telText}</a></div>`;
        html += `</div>`;
-    if (editor) {
-      const { state, view } = editor;
-      const { from } = state.selection;
-      const node = state.schema.nodes.paragraph.create(
-        null,
-        state.schema.text(" ")
-      );
-      view.dispatch(
-        state.tr.replaceSelectionWith(node).scrollIntoView()
-      );
-      // DOM直接操作でstyle属性を保持
-      setTimeout(() => {
-        const editorEl = view.dom;
-        const cursorNode = view.domAtPos(from).node;
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = html;
-        const ctaEl = wrapper.firstElementChild as HTMLElement;
-        if (ctaEl) {
-          ctaEl.setAttribute("contenteditable", "false");
-          ctaEl.setAttribute("data-cta-block", "true");
-          if (cursorNode && cursorNode.parentNode) {
-            cursorNode.parentNode.insertBefore(ctaEl, cursorNode);
-          } else {
-            editorEl.appendChild(ctaEl);
-          }
-          // エディタの内容を同期
-          const newHtml = editorEl.innerHTML;
-          editor.commands.setContent(newHtml, false);
-        }
-      }, 50);
-    }
+    editor?.chain().focus().insertContent({
+      type: "rawHtmlBlock",
+      attrs: { content: html },
+    }).run();
     setShowCtaModal(false);
   }, [editor]);
+
 
 
 
