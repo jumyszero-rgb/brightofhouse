@@ -1,21 +1,42 @@
 // @/src/app/blog/page.tsx
-"use client"; // クライアントコンポーネント
+"use client";
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+
+type BlogCategory = { id: string; name: string; slug: string; _count?: { posts: number } };
 
 export default function BlogListPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [activeCategory, setActiveCategory] = useState("");
 
-  const fetchPosts = async (query = "") => {
+  // カテゴリ取得
+  useEffect(() => {
+    fetch("/api/blog/categories")
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(() => {});
+  }, []);
+
+  // URLのcategoryパラメータを読み取り
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get("category") || "";
+    if (cat) setActiveCategory(cat);
+  }, []);
+
+  const fetchPosts = async (query = "", category = "") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/blog?query=${encodeURIComponent(query)}`);
+      let url = `/api/blog?query=${encodeURIComponent(query)}`;
+      if (category) url += `&category=${encodeURIComponent(category)}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setPosts(data.filter((post: any) => post.status === "PUBLISHED")); // 公開中の記事のみ
+        setPosts(data.filter((post: any) => post.status === "PUBLISHED"));
       }
     } catch (error) {
       console.error("Failed to fetch blog posts:", error);
@@ -26,13 +47,18 @@ export default function BlogListPage() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      fetchPosts(searchTerm);
+      fetchPosts(searchTerm, activeCategory);
     }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm, activeCategory]);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
+  const handleCategoryClick = (slug: string) => {
+    const newCat = activeCategory === slug ? "" : slug;
+    setActiveCategory(newCat);
+    // URLも更新（履歴に残す）
+    const url = newCat ? `?category=${newCat}` : "/blog";
+    window.history.pushState({}, "", url);
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 py-16 px-4 text-black">
@@ -41,6 +67,36 @@ export default function BlogListPage() {
           <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">ブログ</h1>
           <p className="text-slate-600">プロが教えるお掃除の知恵袋</p>
         </div>
+
+        {/* カテゴリフィルター */}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <button
+              onClick={() => handleCategoryClick("")}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                activeCategory === ""
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              すべて
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryClick(cat.slug)}
+                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  activeCategory === cat.slug
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {cat.name}
+                {cat._count && <span className="ml-1 text-xs opacity-70">({cat._count.posts})</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 検索ボックス */}
         <div className="max-w-md mx-auto mb-12 relative">
@@ -70,14 +126,21 @@ export default function BlogListPage() {
             {posts.map((post) => (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
                 <div className="p-6">
-                  <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded mb-4 inline-block">
-                    {new Date(post.createdAt).toLocaleDateString()}
-                  </span>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">
+                      {new Date(post.createdAt).toLocaleDateString()}
+                    </span>
+                    {post.category && (
+                      <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                        {post.category.name}
+                      </span>
+                    )}
+                  </div>
                   <h2 className="text-xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-3">
                     {post.title}
                   </h2>
-                  <div className="text-slate-500 text-sm line-clamp-3 mb-4 opacity-80" 
-                    dangerouslySetInnerHTML={{ __html: post.content.replace(/<[^>]*>?/gm, '').substring(0, 100) }} 
+                  <div className="text-slate-500 text-sm line-clamp-3 mb-4 opacity-80"
+                    dangerouslySetInnerHTML={{ __html: post.content.replace(/<[^>]*>?/gm, '').substring(0, 100) }}
                   />
                   <span className="text-blue-600 text-sm font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
                     続きを読む <span>→</span>

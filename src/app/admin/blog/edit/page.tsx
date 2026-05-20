@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import RichTextEditor from "@/components/RichTextEditor";
 import Link from "next/link";
 
+type BlogCategory = { id: string; name: string; slug: string; order: number; _count?: { posts: number } };
+
 function BlogEditForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -15,6 +17,10 @@ function BlogEditForm() {
   const [aiLoading, setAiLoading] = useState(false);
   const [loadingSeo, setLoadingSeo] = useState(false);
   const [targetKeywords, setTargetKeywords] = useState("");
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatSlug, setNewCatSlug] = useState("");
 
   const [formData, setFormData] = useState({
     slug: "",
@@ -27,7 +33,18 @@ function BlogEditForm() {
     metaKeywords: "",
     metaDescription: "",
     noIndex: false,
+    categoryId: "",
   });
+
+  // カテゴリ取得
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/blog/categories");
+      if (res.ok) setCategories(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { fetchCategories(); }, []);
 
   useEffect(() => {
     if (!editId) return;
@@ -45,6 +62,7 @@ function BlogEditForm() {
           metaKeywords: data.metaKeywords || "",
           metaDescription: data.metaDescription || "",
           noIndex: data.noIndex || false,
+          categoryId: data.categoryId || "",
         });
       });
   }, [editId]);
@@ -99,10 +117,13 @@ function BlogEditForm() {
 
   const handleSave = async () => {
     setLoading(true);
+    const payload = editId ? { ...formData, id: editId } : formData;
+    // categoryId が空文字なら null にする
+    if (!payload.categoryId) (payload as any).categoryId = null;
     const res = await fetch("/api/blog", {
       method: editId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editId ? { ...formData, id: editId } : formData),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       alert("保存しました");
@@ -117,6 +138,33 @@ function BlogEditForm() {
       ...prev,
       [name]: type === "checkbox" ? checked : value
     }));
+  };
+
+  // カテゴリ追加
+  const handleAddCategory = async () => {
+    if (!newCatName) return;
+    const slug = newCatSlug || newCatName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const res = await fetch("/api/blog/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCatName, slug, order: categories.length }),
+    });
+    if (res.ok) {
+      const cat = await res.json();
+      await fetchCategories();
+      setFormData(prev => ({ ...prev, categoryId: cat.id }));
+      setNewCatName("");
+      setNewCatSlug("");
+      setShowCategoryModal(false);
+    }
+  };
+
+  // カテゴリ削除
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("このカテゴリを削除しますか？（記事のカテゴリは未設定になります）")) return;
+    await fetch(`/api/blog/categories?id=${id}`, { method: "DELETE" });
+    await fetchCategories();
+    if (formData.categoryId === id) setFormData(prev => ({ ...prev, categoryId: "" }));
   };
 
   return (
@@ -148,6 +196,30 @@ function BlogEditForm() {
           <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
             <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full p-2 border rounded text-lg font-bold" placeholder="タイトル" />
             <input type="text" name="slug" value={formData.slug} onChange={handleChange} className="w-full p-2 border rounded text-sm font-mono" placeholder="url-slug" />
+
+            {/* カテゴリ選択 */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-bold text-slate-600 whitespace-nowrap">カテゴリ</label>
+              <select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleChange}
+                className="flex-1 p-2 border rounded text-sm"
+              >
+                <option value="">未分類</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(true)}
+                className="bg-indigo-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap"
+              >
+                ＋ カテゴリ管理
+              </button>
+            </div>
+
             <RichTextEditor value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
           </div>
 
@@ -196,6 +268,66 @@ function BlogEditForm() {
           </div>
         </div>
       </div>
+
+      {/* カテゴリ管理モーダル */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCategoryModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold">カテゴリ管理</h2>
+
+            {/* 既存カテゴリ一覧 */}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {categories.length === 0 && <p className="text-sm text-slate-500">カテゴリがありません</p>}
+              {categories.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                  <div>
+                    <span className="font-bold text-sm">{cat.name}</span>
+                    <span className="text-xs text-slate-500 ml-2">/{cat.slug}</span>
+                    {cat._count && <span className="text-xs text-blue-600 ml-2">({cat._count.posts}件)</span>}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteCategory(cat.id)}
+                    className="text-red-500 text-xs font-bold hover:text-red-700"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 新規追加 */}
+            <div className="border-t pt-4 space-y-2">
+              <h3 className="text-sm font-bold">新しいカテゴリ</h3>
+              <input
+                placeholder="カテゴリ名（例：お掃除のコツ）"
+                value={newCatName}
+                onChange={e => setNewCatName(e.target.value)}
+                className="w-full p-2 border rounded text-sm"
+              />
+              <input
+                placeholder="スラッグ（例：cleaning-tips）※空欄で自動生成"
+                value={newCatSlug}
+                onChange={e => setNewCatSlug(e.target.value)}
+                className="w-full p-2 border rounded text-sm font-mono"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddCategory}
+                  className="flex-1 bg-indigo-600 text-white py-2 rounded font-bold text-sm hover:bg-indigo-700"
+                >
+                  追加
+                </button>
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="flex-1 bg-slate-200 text-slate-700 py-2 rounded font-bold text-sm hover:bg-slate-300"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

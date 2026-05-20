@@ -168,23 +168,34 @@ model LandingPage {
 
 }
 
+model BlogCategory {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
+  order     Int        @default(0)
+  posts     BlogPost[]
+  createdAt DateTime   @default(now())
+}
+
 model BlogPost {
-  id              String   @id @default(uuid())
-  slug            String   @unique
+  id              String        @id @default(uuid())
+  slug            String        @unique
   title           String
   content         String
   instaContent    String?
   xContent        String?
   googleContent   String?
   thumbnail       String?
-  status          String   @default("DRAFT")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status          String        @default("DRAFT")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   metaDescription String?
   metaKeywords    String?
-  noIndex         Boolean  @default(false)
-
+  noIndex         Boolean       @default(false)
+  categoryId      String?
+  category        BlogCategory? @relation(fields: [categoryId], references: [id])
 }
+
 
 model BlogSettings {
   id            String   @id @default("main")
