@@ -108,30 +108,6 @@ export default async function BlogPostPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
-        {/* CTA */}
-        <div className="mt-20 p-8 bg-blue-50 rounded-2xl border border-blue-100 text-center shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-4">
-            お困りごとはプロにご相談ください
-          </h3>
-          <p className="text-slate-600 mb-8 text-sm leading-relaxed">
-            北海道ブライトオブハウスでは、お見積り無料で迅速に駆けつけます。<br />
-            まずは24時間受付中のメールまたはLINEより、お気軽にお問い合わせください。
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/contact"
-              className="inline-block bg-blue-600 text-white font-bold py-3 px-10 rounded-full hover:bg-blue-700 transition-all shadow-md"
-            >
-              無料相談・お問い合わせ
-            </Link>
-            <Link
-              href="/service"
-              className="inline-block bg-white text-blue-600 border border-blue-200 font-bold py-3 px-10 rounded-full hover:bg-slate-50 transition-all"
-            >
-              料金表を確認する
-            </Link>
-          </div>
-        </div>
 
         {/* 関連記事 */}
         {relatedPosts.length > 0 && (
