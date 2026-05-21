@@ -47,6 +47,11 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">執筆時に自動挿入するキーワードや定型文を管理します。</p>
           </Link>
 
+          <Link href="/admin/cta-blocks" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-red-500">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">🔥 CTAブロック管理</h2>
+            <p className="text-gray-600 text-sm">記事に挿入するCTAブロックのデザインを作成・編集します。</p>
+          </Link>
+
           <Link href="/admin/lp" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-pink-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">LP・地域ページ作成</h2>
             <p className="text-gray-600 text-sm">キャンペーン広告や地域別専用ページを作成します。</p>
