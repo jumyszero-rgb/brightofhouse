@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
+        showOnHome: formData.get("showOnHome") === "true",  // ← 追加
         canonicalUrl: formData.get("canonicalUrl") as string || null,
         redirectUrl: formData.get("redirectUrl") as string || null,
 
@@ -158,6 +159,7 @@ export async function PUT(request: NextRequest) {
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
         metaKeywords: formData.get("metaKeywords") as string,
         noIndex: formData.get("noIndex") === "true",
+        showOnHome: formData.get("showOnHome") === "true",  // ← 追加
         canonicalUrl: formData.get("canonicalUrl") as string || null,
         redirectUrl: formData.get("redirectUrl") as string || null,
         metaDescription: formData.get("metaDescription") as string,

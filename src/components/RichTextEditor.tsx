@@ -269,6 +269,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,  // ← この行を追加
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
       Underline,

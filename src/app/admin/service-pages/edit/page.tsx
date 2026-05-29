@@ -96,7 +96,7 @@ function EditForm() {
 
   const [formData, setFormData] = useState({
     slug: "", title: "", linkTitle: "", status: "DRAFT",
-    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, canonicalUrl: "", redirectUrl: ""
+    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, showOnHome: false, canonicalUrl: "", redirectUrl: ""
   });
 
   const [bookingData, setBookingData] = useState<{ mains: MainService[]; legacyOptions?: LegacyOptionService[] }>({
@@ -115,7 +115,7 @@ function EditForm() {
         status: data.status || "DRAFT", serviceItemId: data.serviceItemId || "",
         catchphrase: data.catchphrase || "", content: data.content || "",
         metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "",
-                noIndex: data.noIndex || false, canonicalUrl: data.canonicalUrl || "", redirectUrl: data.redirectUrl || ""
+                noIndex: data.noIndex || false, showOnHome: data.showOnHome || false, canonicalUrl: data.canonicalUrl || "", redirectUrl: data.redirectUrl || ""
 
       });
       if (data.heroImage) setPreviewImage(data.heroImage);
@@ -346,6 +346,7 @@ function EditForm() {
       form.set("metaKeywords", formData.metaKeywords);
       form.set("metaDescription", formData.metaDescription);
       form.set("noIndex", String(formData.noIndex));
+      form.set("showOnHome", String(formData.showOnHome));  // ← 追加
       form.set("canonicalUrl", formData.canonicalUrl);
       form.set("redirectUrl", formData.redirectUrl);
 
@@ -545,6 +546,10 @@ function EditForm() {
           <label className="flex items-center gap-2 text-sm font-bold text-red-700 cursor-pointer mt-3">
             <input type="checkbox" checked={formData.noIndex} onChange={() => setFormData(prev => ({ ...prev, noIndex: !prev.noIndex }))} className="w-5 h-5 accent-red-600" />
             インデックスしない（noindex）
+          </label>
+          <label className="flex items-center gap-2 text-sm font-bold text-blue-700 cursor-pointer mt-3">
+            <input type="checkbox" checked={formData.showOnHome} onChange={() => setFormData(prev => ({ ...prev, showOnHome: !prev.showOnHome }))} className="w-5 h-5 accent-blue-600" />
+            トップページに表示する
           </label>
         </div>
       </div>

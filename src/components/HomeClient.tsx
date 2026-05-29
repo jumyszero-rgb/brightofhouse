@@ -62,15 +62,15 @@ export default function HomeClient({ settings, videos, children }: Props) {
             </span>
           </div>
 
-          {/* タイトル & サブタイトル */}
-          <div className="w-full">
-            <h1 className="font-bold tracking-wider drop-shadow-md mb-2 leading-tight whitespace-nowrap text-[min(6vw,3rem)] md:text-5xl">
+          {/* ★ 変更: H1にサブタイトルも含める（見た目は変わらない） */}
+          <h1 className="w-full">
+            <span className="block font-bold tracking-wider drop-shadow-md mb-2 leading-tight whitespace-nowrap text-[min(6vw,3rem)] md:text-5xl">
               {settings.title}
-            </h1>
-            <p className="font-medium opacity-90 leading-relaxed whitespace-nowrap text-[min(3.5vw,1.125rem)] md:text-lg">
+            </span>
+            <span className="block font-medium opacity-90 leading-relaxed whitespace-nowrap text-[min(3.5vw,1.125rem)] md:text-lg">
               {settings.subtitle}
-            </p>
-          </div>
+            </span>
+          </h1>
 
           {/* アクションボタン */}
           <div className="flex flex-wrap justify-center gap-4 mt-4">
@@ -100,10 +100,10 @@ export default function HomeClient({ settings, videos, children }: Props) {
         </div>
       </div>
 
-      {/* --- children（選ばれる理由、料金、BA、口コミ、キャンペーン、ブログ、CTA、エリア、地域リンク） --- */}
+      {/* --- children --- */}
       {children}
 
-      {/* --- 動画ギャラリー（最下部に移動） --- */}
+      {/* --- 動画ギャラリー --- */}
       {(pcVideos.length > 0 || mobileVideos.length > 0) && (
         <div className="py-12 px-4 bg-white border-t border-slate-200">
           <div className="max-w-6xl mx-auto">

@@ -15,8 +15,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/before-after`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
     { url: `${baseUrl}/company`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.5 },
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.5 },
-    // ▼ 追加: RSSフィードをサイトマップに含める
-    { url: `${baseUrl}/rss.xml`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.7 },
   ];
 
   try {
