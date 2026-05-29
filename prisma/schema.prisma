@@ -328,9 +328,7 @@ model ServicePage {
   noIndex         Boolean  @default(false)
   canonicalUrl    String?
   redirectUrl   String?
-  showOnHome  Boolean @default(false)  // ← 追加
-
-
+  showOnHome      Boolean  @default(false)
 
 }
 
