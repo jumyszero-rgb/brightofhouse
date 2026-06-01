@@ -44,12 +44,14 @@ export async function sendBookingNotification(bookingData: any) {
     items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes
   } = bookingData;
 
-  const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
-    year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
-  });
-  const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
-    hour: "2-digit", minute: "2-digit"
-  });
+const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
+  timeZone: "Asia/Tokyo",  // ← 追加
+  year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
+});
+const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
+  timeZone: "Asia/Tokyo",  // ← 追加
+  hour: "2-digit", minute: "2-digit"
+});
 
   await transporter.sendMail({
     from: `"Bright House Booking" <${SMTP_FROM}>`,
@@ -97,12 +99,14 @@ export async function sendBookingConfirmationToUser(bookingData: any) {
     items, totalPrice, category, totalMinutesDisplay
   } = bookingData;
 
-  const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
-    year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
-  });
-  const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
-    hour: "2-digit", minute: "2-digit"
-  });
+const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
+  timeZone: "Asia/Tokyo",  // ← 追加
+  year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
+});
+const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
+  timeZone: "Asia/Tokyo",  // ← 追加
+  hour: "2-digit", minute: "2-digit"
+});
 
   await transporter.sendMail({
     from: `"北海道ブライトオブハウス" <${SMTP_FROM}>`,
