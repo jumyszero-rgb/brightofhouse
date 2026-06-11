@@ -24,12 +24,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { slug: true, updatedAt: true, category: true, linkTitle: true, title: true },
     });
 
-    const lpPaths = lps.map((lp) => ({
-      url: `${baseUrl}/${lp.category === "AREA" ? "area" : "lp"}/${lp.slug}`,
-      lastModified: lp.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }));
+    const lpPaths = lps
+      .filter((lp) => lp.category === "AREA") // /lp/* は除外（noindex運用）。/area のみ掲載
+      .map((lp) => ({
+        url: `${baseUrl}/area/${lp.slug}`,
+        lastModified: lp.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
 
     // データベースから公開済みのブログ記事をすべて取得
     const blogPosts = await prisma.blogPost.findMany({

@@ -1,5 +1,6 @@
 // @/src/app/thank-you/page.tsx
 import type { Metadata } from "next";
+import ConversionTracker from "@/components/ConversionTracker";
 
 export const metadata: Metadata = {
   title: "お申し込みありがとうございます | 北海道ブライトオブハウス",
@@ -9,6 +10,9 @@ export const metadata: Metadata = {
 export default function ThankYouPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex items-center justify-center px-4 text-black">
+      {/* ★追加：既存の予約・問い合わせフォーム送信を generate_lead として計測 */}
+      <ConversionTracker formType="booking" />
+
       <div className="w-full max-w-lg text-center">
         <div className="bg-white rounded-3xl shadow-xl p-10 border border-slate-200">
           <p className="text-6xl mb-6">🎉</p>
@@ -21,7 +25,7 @@ export default function ThankYouPage() {
             少々お待ちくださいませ。
           </p>
           <div className="bg-sky-50 rounded-xl p-4 mb-6 border border-sky-200">
-            <p className="text-xs text-slate-500 font-bold mb-1">お急ぎの場合はお電話ください</p>
+            <p className="text-xs text-slate-500 font-bold mb-1">お急ぎの場合は お電話ください</p>
             <a href="tel:0120792684" className="text-2xl font-black text-sky-700 tracking-widest font-mono">
               0120-792-684
             </a>
@@ -38,4 +42,3 @@ export default function ThankYouPage() {
     </main>
   );
 }
-

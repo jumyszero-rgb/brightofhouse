@@ -273,23 +273,40 @@ function EditForm() {
     setCopyPages(pages.filter((p: any) => p.id !== editId));
     setShowCopyModal(true);
   };
+
   const copyFrom = (page: any) => {
-    if (!page.bookingData) return alert("この記事には予約メニューがありません");
-    const bd = page.bookingData;
-    const copiedMains = (bd.mains || []).map((m: any) => ({
-      ...m, id: crypto.randomUUID(),
+  if (!page.bookingData) return alert("この記事には予約メニューがありません");
+  const bd = page.bookingData;
+  const copiedMains = (bd.mains || []).map((m: any) => {
+    // foldItemのID変換マップを作成
+    const idMap = new Map<string, string>();
+    const newFoldItems = (m.foldItems || []).map((fi: any) => {
+      const newId = crypto.randomUUID();
+      idMap.set(fi.id, newId);
+      return { ...fi, id: newId };
+    });
+    // optionsのparentFoldItemIdを新しいIDに変換
+    const newOptions = (m.options || []).map((o: any) => ({
+      ...o,
+      id: crypto.randomUUID(),
+      parentFoldItemId: o.parentFoldItemId ? idMap.get(o.parentFoldItemId) || o.parentFoldItemId : undefined,
+    }));
+    return {
+      ...m,
+      id: crypto.randomUUID(),
       foldTitle: m.foldTitle || "",
-      foldItems: (m.foldItems || []).map((fi: any) => ({ ...fi, id: crypto.randomUUID() })),
-      options: (m.options || []).map((o: any) => ({ ...o, id: crypto.randomUUID() })),
+      foldItems: newFoldItems,
+      options: newOptions,
       setDiscount: m.setDiscount || newSetDiscount(),
-    }));
-    setBookingData(prev => ({
-      ...prev,
-      mains: [...prev.mains, ...copiedMains],
-    }));
-    setShowCopyModal(false);
-    setMessage("コピーしました");
-  };
+    };
+  });
+  setBookingData(prev => ({
+    ...prev,
+    mains: [...prev.mains, ...copiedMains],
+  }));
+  setShowCopyModal(false);
+  setMessage("コピーしました");
+};
   // AI generate
   const handleAIGenerate = async () => {
     if (!aiKeywords.trim()) return alert("キーワードを入力してください");

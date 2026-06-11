@@ -45,7 +45,7 @@ export default async function LPPage({ params }: Props) {
   if (!lp || lp.status === "DRAFT") notFound();
 
   const phoneNumber = "0120-792-684";
-  const lineUrl = "https://line.me/R/ti/p/@your_id";
+  const lineUrl = "https://line.me/ti/p/RBwKccvQ1O";
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
