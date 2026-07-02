@@ -24,20 +24,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!lp || lp.status === "DRAFT") return { title: "ページが見つかりません" };
 
   return {
-  title: lp.title,
-  description: lp.metaDescription || lp.catchphrase || `${lp.title}。お見積り無料、迅速対応。`,
+    title: lp.title,
+    description: lp.metaDescription || lp.catchphrase || `${lp.title}。お見積り無料、迅速対応。`,
     ...(lp.noIndex && { robots: { index: false, follow: true } }),
     alternates: { canonical: lp.canonicalUrl || `/area/${lp.slug}` },
-
-
-    ...(lp.noIndex && { robots: { index: false, follow: true } }),
     openGraph: {
       title: lp.title,
       description: lp.catchphrase || "",
       images: lp.heroImage ? [lp.heroImage] : [],
     },
   };
-
 }
 
 export default async function AreaPage({ params }: Props) {
@@ -51,11 +47,58 @@ export default async function AreaPage({ params }: Props) {
 
   if (!lp || lp.status === "DRAFT") notFound();
 
+  // 内部リンク強化: このエリアからサービス詳細ページへのリンク
+  const servicePages = await prisma.servicePage.findMany({
+    where: { status: "PUBLISHED", noIndex: false, showOnHome: true },
+    select: { slug: true, title: true, linkTitle: true, catchphrase: true },
+    orderBy: { createdAt: "asc" },
+    take: 8,
+  });
+
   const phoneNumber = "0120-792-684";
   const lineUrl = "https://line.me/R/ti/p/@your_id"; // ★LINE公式アカウントのURLに変更してください
+  const areaName = (lp.linkTitle || lp.title).replace(/のハウスクリーニング.*$/, "").trim();
+
+  // 構造化データ: LocalBusiness（対応エリアを明示）
+  const localBusinessJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: "北海道ブライトオブハウス",
+    url: `https://brightofhouse.jp/area/${lp.slug}`,
+    telephone: phoneNumber,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "札幌市白石区",
+      addressRegion: "北海道",
+      addressCountry: "JP",
+    },
+    areaServed: {
+      "@type": "City",
+      name: areaName || lp.title,
+    },
+  };
+
+  // 構造化データ: パンくずリスト
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "トップ", item: "https://brightofhouse.jp" },
+      { "@type": "ListItem", position: 2, name: "地域別サービス一覧", item: "https://brightofhouse.jp/area" },
+      { "@type": "ListItem", position: 3, name: lp.title, item: `https://brightofhouse.jp/area/${lp.slug}` },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-[100] border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/area" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
@@ -108,6 +151,32 @@ export default async function AreaPage({ params }: Props) {
               無料お見積りはこちら
             </Link>
           </div>
+
+          {servicePages.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-xl font-black text-slate-800 mb-6">
+                {areaName || lp.title}で人気のサービス
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                {servicePages.map((sp) => (
+                  <Link
+                    key={sp.slug}
+                    href={`/service/${sp.slug}`}
+                    className="group bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl p-4 transition-all"
+                  >
+                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm leading-snug transition-colors">
+                      {sp.linkTitle || sp.title}
+                    </h3>
+                    {sp.catchphrase && (
+                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
+                        {sp.catchphrase}
+                      </p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </main>

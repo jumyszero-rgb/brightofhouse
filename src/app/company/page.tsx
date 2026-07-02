@@ -4,8 +4,10 @@ import prisma from "@/lib/prisma"; // ← 追加
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "会社概要 | 北海道ブライトオブハウス",
-  description: "北海道ブライトハウスの会社概要・アクセス情報です。",
+  title: "会社概要",
+  description:
+    "北海道ブライトオブハウスの会社概要・所在地・営業時間などの基本情報です。札幌市を中心に水回りクリーニング・ハウスクリーニングを提供しています。",
+  alternates: { canonical: "/company" },
 };
 
 export const dynamic = "force-dynamic";
@@ -29,8 +31,25 @@ export default async function CompanyPage() {
     mapCode: null,
   };
 
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: data.name,
+    url: "https://brightofhouse.jp",
+    telephone: data.tel,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: typeof data.address === "string" ? data.address : undefined,
+      addressCountry: "JP",
+    },
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 py-20 px-4 sm:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-4">

@@ -3,8 +3,10 @@ import ContactForm from "@/components/ContactForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "お問い合わせ | 北海道ブライトオブハウス",
-  description: "清掃のご依頼、お見積り相談はこちらから。",
+  title: "お問い合わせ",
+  description:
+    "札幌の水回りクリーニング・ハウスクリーニングのお見積り・ご相談はこちらから。通常24時間以内に担当者よりご連絡いたします。",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

@@ -46,8 +46,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     }));
 
+    // データベースから公開済みのサービス詳細ページをすべて取得（リダイレクト設定済みは除外）
+    const servicePages = await prisma.servicePage.findMany({
+      where: { status: "PUBLISHED", noIndex: false, redirectUrl: null },
+      select: { slug: true, updatedAt: true },
+    });
+
+    const servicePaths = servicePages.map((sp) => ({
+      url: `${baseUrl}/service/${sp.slug}`,
+      lastModified: sp.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+
     // すべてを統合して返却
-    return [...staticPaths, ...lpPaths, ...blogPaths] as MetadataRoute.Sitemap;
+    return [...staticPaths, ...lpPaths, ...blogPaths, ...servicePaths] as MetadataRoute.Sitemap;
   } catch (error) {
     // テーブルがない場合などのフォールバック
     console.error("Error generating sitemap:", error);

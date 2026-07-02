@@ -1,6 +1,14 @@
 // @/src/app/booking/page.tsx
 import BookingIntegrated from "@/components/booking/BookingIntegrated";
 import prisma from "@/lib/prisma";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "お見積り・仮予約",
+  description:
+    "札幌の水回りクリーニング・ハウスクリーニングをネットから簡単仮予約。メニューを選ぶだけでその場で概算お見積りができます。24時間受付。",
+  alternates: { canonical: "/booking" },
+};
 
 export const dynamic = "force-dynamic";
 

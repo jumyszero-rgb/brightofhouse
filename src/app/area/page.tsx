@@ -4,8 +4,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "地域別サービス一覧 | 北海道ブライトオブハウス",
-  description: "札幌市・千歳・苫小牧・恵庭など、各地域のハウスクリーニング・清掃サービス内容をご確認いただけます。",
+  title: "地域別サービス一覧",
+  description:
+    "札幌市全10区・江別市・北広島市・恵庭市・千歳市・石狩市・小樽市・苫小牧市など、各地域のハウスクリーニング・水回りクリーニングの対応エリアをご確認いただけます。",
+  alternates: { canonical: "/area" },
 };
 
 export const dynamic = "force-dynamic";

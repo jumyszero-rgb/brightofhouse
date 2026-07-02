@@ -74,8 +74,37 @@ export default async function BlogPostPage({ params }: Props) {
     relatedPosts = [...relatedPosts, ...more];
   }
 
+  // 構造化データ: BlogPosting
+  const blogPostingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    datePublished: post.createdAt,
+    dateModified: post.updatedAt,
+    author: {
+      "@type": "Organization",
+      name: "北海道ブライトオブハウス",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "北海道ブライトオブハウス",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://brightofhouse.jp/icon.png",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://brightofhouse.jp/blog/${post.slug}`,
+    },
+  };
+
   return (
     <main className="min-h-screen bg-white pb-20 text-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }}
+      />
       {/* ナビゲーション */}
       <div className="bg-slate-50 border-b border-slate-200 pt-10 pb-16 px-4">
         <div className="max-w-3xl mx-auto">

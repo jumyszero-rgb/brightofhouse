@@ -1,15 +1,10 @@
-// @/src/components/ConversionTracker.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * サンキューページのマウント時に GA4 イベント `generate_lead` を発火する。
- * このイベントを GA4 で「キーイベント」に設定し、Google広告にインポートすると
- * フォーム送信がコンバージョンとして計測される（＝今まで抜けていたフォームCVを拾う）。
- *
- * - 発火はサンキューページ表示時に固定（リダイレクトを跨いでも確実に1回）
- * - formType でフォーム種別を区別（GA4パラメータとして送信）
+ * gtag が未ロードでも、用意できるまで待ってから確実に1回だけ発火する。
  */
 export default function ConversionTracker({
   formType = "lead",
@@ -18,8 +13,10 @@ export default function ConversionTracker({
   formType?: string;
   value?: number;
 }) {
+  const firedRef = useRef(false);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || firedRef.current) return;
 
     const params: Record<string, any> = {
       form_type: formType,
@@ -27,14 +24,26 @@ export default function ConversionTracker({
     };
     if (typeof value === "number") params.value = value;
 
-    const w = window as any;
-    if (typeof w.gtag === "function") {
+    const fire = (): boolean => {
+      const w = window as any;
+      if (typeof w.gtag !== "function") return false; // 窓口がまだなら待つ
+      firedRef.current = true;
       w.gtag("event", "generate_lead", params);
-    } else {
-      // gtag 未ロード時のフォールバック
-      w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push(["event", "generate_lead", params]);
-    }
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[ConversionTracker] generate_lead 発火", params);
+      }
+      return true;
+    };
+
+    // 用意できていれば即発火。まだなら 0.1秒ごとに最大5秒待ってから発火。
+    if (fire()) return;
+    let tries = 0;
+    const id = setInterval(() => {
+      tries += 1;
+      if (fire() || tries >= 50) clearInterval(id);
+    }, 100);
+
+    return () => clearInterval(id);
   }, [formType, value]);
 
   return null;

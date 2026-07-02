@@ -1,7 +1,15 @@
 // @/src/app/before-after/page.tsx
 // import { PrismaClient } from "@prisma/client"; // ← 削除
 import prisma from "@/lib/prisma"; // ← 追加
+import type { Metadata } from "next";
 import BeforeAfterList from "@/components/BeforeAfterList";
+
+export const metadata: Metadata = {
+  title: "清掃実績（ビフォーアフター）",
+  description:
+    "札幌の水回りクリーニング・ハウスクリーニングのビフォーアフター実績集。キッチン・浴室・トイレ・床ワックス・壁紙再生など、実際の清掃事例をスライダーで比較してご覧いただけます。",
+  alternates: { canonical: "/before-after" },
+};
 
 export const dynamic = "force-dynamic";
 
