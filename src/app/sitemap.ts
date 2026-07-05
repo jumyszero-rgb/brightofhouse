@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     // データベースから公開済みのLPをすべて取得
     const lps = await prisma.landingPage.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", noIndex: false },
       select: { slug: true, updatedAt: true, category: true, linkTitle: true, title: true },
     });
 
@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // データベースから公開済みのブログ記事をすべて取得
     const blogPosts = await prisma.blogPost.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", noIndex: false },
       select: { slug: true, updatedAt: true },
     });
 

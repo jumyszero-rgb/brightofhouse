@@ -119,6 +119,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               <li>
                 <Link
                   href="/admin"
+                  rel="nofollow"
                   className="text-slate-600 hover:text-slate-400 transition-colors mt-4 block"
                 >
                   管理者ログイン

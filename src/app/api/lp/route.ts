@@ -66,7 +66,19 @@ export async function GET(request: NextRequest) {
 
   try {
     if (id) {
-      const lp = await prisma.landingPage.findUnique({ where: { id } });
+      const subMenusInclude = {
+        subMenus: {
+          include: { options: { orderBy: { order: "asc" as const } } },
+          orderBy: { order: "asc" as const },
+        },
+      };
+      const lp = await prisma.landingPage.findUnique({
+        where: { id },
+        include: {
+          bookingMenus: { include: subMenusInclude },
+          bookingCategories: { include: { menus: { include: subMenusInclude } } },
+        },
+      });
       return NextResponse.json(lp);
     }
     // slugで検索する場合、categoryを限定せず、一致するものを返すように修正
@@ -85,12 +97,17 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
-    
+
     let heroImageUrl = null;
     const imageFile = formData.get("heroImage") as File | null;
     if (imageFile && imageFile.size > 0) {
       heroImageUrl = await uploadToR2(imageFile);
     }
+
+    const bookingMenuIdsRaw = formData.get("bookingMenuIds") as string | null;
+    const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
+    const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
+    const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -112,7 +129,12 @@ export async function POST(request: NextRequest) {
         showBottomCta: formData.get("showBottomCta") !== "false",
         noIndex: formData.get("noIndex") === "true",
         canonicalUrl: formData.get("canonicalUrl") as string || null,
-
+        bookingMenus: { connect: bookingMenuIds.map((id) => ({ id })) },
+        bookingCategories: { connect: bookingCategoryIds.map((id) => ({ id })) },
+        bookingData: (() => {
+          const raw = formData.get("bookingData") as string;
+          return raw ? JSON.parse(raw) : null;
+        })(),
 
 
       }
@@ -139,6 +161,11 @@ export async function PUT(request: NextRequest) {
       heroImageUrl = await uploadToR2(imageFile);
     }
 
+    const bookingMenuIdsRaw = formData.get("bookingMenuIds") as string | null;
+    const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
+    const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
+    const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
+
     const updatedLp = await prisma.landingPage.update({
       where: { id },
       data: {
@@ -160,6 +187,12 @@ export async function PUT(request: NextRequest) {
         showBottomCta: formData.get("showBottomCta") !== "false",
         noIndex: formData.get("noIndex") === "true",
         canonicalUrl: formData.get("canonicalUrl") as string || null,
+        bookingMenus: { set: bookingMenuIds.map((id) => ({ id })) },
+        bookingCategories: { set: bookingCategoryIds.map((id) => ({ id })) },
+        bookingData: (() => {
+          const raw = formData.get("bookingData") as string;
+          return raw ? JSON.parse(raw) : null;
+        })(),
       }
     });
     if (updatedLp.status === "PUBLISHED") {

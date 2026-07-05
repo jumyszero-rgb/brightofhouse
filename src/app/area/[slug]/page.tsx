@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { cheapestBookingMenu } from "@/lib/bookingMenuToBookingData";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,7 +51,11 @@ export default async function AreaPage({ params }: Props) {
   // 内部リンク強化: このエリアからサービス詳細ページへのリンク
   const servicePages = await prisma.servicePage.findMany({
     where: { status: "PUBLISHED", noIndex: false, showOnHome: true },
-    select: { slug: true, title: true, linkTitle: true, catchphrase: true },
+    select: {
+      slug: true, title: true, catchphrase: true, cardIcon: true,
+      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } },
+      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } } } },
+    },
     orderBy: { createdAt: "asc" },
     take: 8,
   });
@@ -158,22 +163,45 @@ export default async function AreaPage({ params }: Props) {
                 {areaName || lp.title}で人気のサービス
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                {servicePages.map((sp) => (
+                {servicePages.map((sp) => {
+                  const cheapest = cheapestBookingMenu([...sp.bookingMenus, ...sp.bookingCategories.flatMap((c) => c.menus)]);
+                  return (
                   <Link
                     key={sp.slug}
                     href={`/service/${sp.slug}`}
                     className="group bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl p-4 transition-all"
                   >
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm leading-snug transition-colors">
-                      {sp.linkTitle || sp.title}
-                    </h3>
-                    {sp.catchphrase && (
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                        {sp.catchphrase}
-                      </p>
-                    )}
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg leading-none flex-shrink-0" aria-hidden>
+                        {sp.cardIcon || "🧹"}
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm leading-snug transition-colors">
+                          {sp.title}
+                        </h3>
+                        {sp.catchphrase && (
+                          <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">
+                            {sp.catchphrase}
+                          </p>
+                        )}
+                        {cheapest && (
+                          <p className="text-[10px] font-bold text-blue-600 mt-1">
+                            {cheapest.priceNote && <span className="mr-0.5">{cheapest.priceNote}</span>}
+                            {cheapest.discountPercent ? (
+                              <>
+                                <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
+                                <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
+                              </>
+                            ) : (
+                              <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}

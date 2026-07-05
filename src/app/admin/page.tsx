@@ -32,6 +32,11 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">詳細な料金表（アコーディオン形式）を編集します。</p>
           </Link>
 
+          <Link href="/admin/booking-master" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-emerald-600">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">予約マスター管理</h2>
+            <p className="text-gray-600 text-sm">予約メニューの価格・所要時間を一元管理します。サービス詳細ページ・LPの予約フォームと連携します。</p>
+          </Link>
+
           <Link href="/admin/before-after" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-blue-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">実績(Before/After)</h2>
             <p className="text-gray-600 text-sm">清掃実績の登録・編集・削除を行います。</p>

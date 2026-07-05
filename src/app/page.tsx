@@ -1,13 +1,13 @@
 // @/src/app/page.tsx
 import prisma from "@/lib/prisma";
+import { cheapestBookingMenu } from "@/lib/bookingMenuToBookingData";
 import type { Metadata } from "next";
 import HomeClient from "@/components/HomeClient";
 import AfterImageMarquee from "@/components/AfterImageMarquee";
+import PromotionVideoGallery from "@/components/PromotionVideoGallery";
 import TopPriceSection from "@/components/TopPriceSection";
 import ServiceArea from "@/components/ServiceArea";
-import RegionalLinks from "@/components/RegionalLinks";
 import Link from "next/link";
-import TopPriceAppeal from "@/components/TopPriceAppeal";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -83,7 +83,11 @@ export default async function Home() {
   // ★ 追加: サービスカテゴリを取得（サービスリンクセクション用）
   const servicePages = await prisma.servicePage.findMany({
     where: { status: "PUBLISHED", noIndex: false, showOnHome: true },
-    select: { slug: true, title: true, linkTitle: true, catchphrase: true },
+    select: {
+      slug: true, title: true, catchphrase: true, cardIcon: true,
+      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } },
+      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } } } },
+    },
     orderBy: { createdAt: "asc" },
     take: 12,
   });
@@ -172,10 +176,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <HomeClient settings={settings || defaultSettings} videos={videos}>
-        {/* 価格アピール */}
-        <TopPriceAppeal />
-
+      <HomeClient settings={settings || defaultSettings}>
         {/* 2. 選ばれる3つの理由 */}
         <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
           <div className="max-w-6xl mx-auto">
@@ -235,22 +236,45 @@ export default async function Home() {
                 </p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {servicePages.map((sp) => (
+                {servicePages.map((sp) => {
+                  const cheapest = cheapestBookingMenu([...sp.bookingMenus, ...sp.bookingCategories.flatMap((c) => c.menus)]);
+                  return (
                   <Link
                     key={sp.slug}
                     href={`/service/${sp.slug}`}
                     className="group bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl p-4 md:p-5 transition-all"
                   >
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm md:text-base leading-snug transition-colors">
-                      {sp.linkTitle || sp.title}
-                    </h3>
-                    {sp.catchphrase && (
-                      <p className="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-1">
-                        {sp.catchphrase}
-                      </p>
-                    )}
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl md:text-2xl leading-none flex-shrink-0" aria-hidden>
+                        {sp.cardIcon || "🧹"}
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm md:text-base leading-snug transition-colors">
+                          {sp.title}
+                        </h3>
+                        {sp.catchphrase && (
+                          <p className="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-2">
+                            {sp.catchphrase}
+                          </p>
+                        )}
+                        {cheapest && (
+                          <p className="text-[10px] md:text-xs font-bold text-blue-600 mt-1">
+                            {cheapest.priceNote && <span className="mr-0.5">{cheapest.priceNote}</span>}
+                            {cheapest.discountPercent ? (
+                              <>
+                                <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
+                                <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
+                              </>
+                            ) : (
+                              <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
               <div className="text-center mt-6">
                 <Link
@@ -266,6 +290,9 @@ export default async function Home() {
 
         {/* 4. ビフォーアフター */}
         {afterImages.length > 0 && <AfterImageMarquee images={afterImages} />}
+
+        {/* プロモーション動画 */}
+        <PromotionVideoGallery videos={videos} />
 
         {/* 5. 口コミ実績バナー */}
         <section className="bg-gradient-to-r from-slate-800 to-slate-900 py-12 px-4 text-white">
@@ -437,10 +464,9 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 9-11. 動画・エリア・地域リンク */}
-        <ServiceArea />
-        <RegionalLinks
-          items={regionalLPs.map((lp) => ({
+        {/* 対応エリア（テキスト案内＋地域リンクを統合） */}
+        <ServiceArea
+          regionalLinks={regionalLPs.map((lp) => ({
             id: lp.id,
             slug: lp.slug,
             title: lp.linkTitle || lp.title,

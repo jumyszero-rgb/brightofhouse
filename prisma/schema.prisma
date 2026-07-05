@@ -102,6 +102,7 @@ model ServiceItem {
   details          ServiceDetail[]
   category         ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   options          ServiceOption[]
+  servicePages     ServicePage[]
 }
 
 model ServiceDetail {
@@ -144,90 +145,90 @@ model ServiceArea {
 }
 
 model LandingPage {
-  id              String   @id @default(uuid())
-  slug            String   @unique
-  title           String
-  status          String   @default("DRAFT")
-  heroImage       String?
-  catchphrase     String?
-  subCopy         String?
-  content         String?
-  ctaText         String?  @default("無料お見積りはこちら")
-  ctaLink         String?  @default("/contact")
-  blocks          Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  showOnHome      Boolean  @default(false)
-  category        String   @default("CAMPAIGN")
-  linkTitle       String?
-  metaDescription String?
-  metaKeywords    String?
-  noIndex         Boolean  @default(false)
-  canonicalUrl    String?
-  showBottomCta   Boolean  @default(true)
-
+  id                String            @id @default(uuid())
+  slug              String            @unique
+  title             String
+  status            String            @default("DRAFT")
+  heroImage         String?
+  catchphrase       String?
+  subCopy           String?
+  content           String?
+  ctaText           String?           @default("無料お見積りはこちら")
+  ctaLink           String?           @default("/contact")
+  blocks            Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  showOnHome        Boolean           @default(false)
+  category          String            @default("CAMPAIGN")
+  linkTitle         String?
+  metaDescription   String?
+  metaKeywords      String?
+  noIndex           Boolean           @default(false)
+  canonicalUrl      String?
+  showBottomCta     Boolean           @default(true)
+  bookingData       Json?
+  bookingMenus      BookingMenu[]
+  bookingCategories BookingCategory[]
 }
 
 model CtaBlock {
-  id              String   @id @default(uuid())
-  name            String
-  bgType          String   @default("solid")
-  bgColor1        String   @default("#eff6ff")
-  bgColor2        String?
-  borderColor     String   @default("#bfdbfe")
-  borderRadius    Int      @default(16)
-  paddingY        Int      @default(32)
-  paddingX        Int      @default(32)
-  headingText     String?
-  headingColor    String   @default("#1e293b")
-  headingSize     Int      @default(20)
-  headingWeight   String   @default("700")
-  desc1Text       String?
-  desc1Color      String   @default("#475569")
-  desc1Size       Int      @default(14)
-  desc1Weight     String   @default("400")
-  linkText        String?
-  linkUrl         String?
-  linkColor       String   @default("#2563eb")
-  linkSize        Int      @default(14)
-  linkWeight      String   @default("700")
-  desc2Text       String?
-  desc2Color      String   @default("#475569")
-  desc2Size       Int      @default(14)
-  desc2Weight     String   @default("400")
-  btn1Text        String?
-  btn1Url         String?
-  btn1BgColor     String   @default("#2563eb")
-  btn1TextColor   String   @default("#ffffff")
-  btn1Size        Int      @default(16)
-  btn1Weight      String   @default("700")
-  btn1Radius      Int      @default(9999)
-  btn1PaddingY    Int      @default(14)
-  btn1PaddingX    Int      @default(40)
-  desc3Text       String?
-  desc3Color      String   @default("#475569")
-  desc3Size       Int      @default(14)
-  desc3Weight     String   @default("400")
-  btn2Text        String?
-  btn2Url         String?
-  btn2BgColor     String   @default("#e2e8f0")
-  btn2TextColor   String   @default("#334155")
-  btn2Size        Int      @default(14)
-  btn2Weight      String   @default("700")
-  desc4Text       String?
-  desc4Color      String   @default("#475569")
-  desc4Size       Int      @default(14)
-  desc4Weight     String   @default("400")
-  telText         String?
-  telNumber       String?
-  telColor        String   @default("#2563eb")
-  telSize         Int      @default(20)
-  telWeight       String   @default("700")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  bgType        String   @default("solid")
+  bgColor1      String   @default("#eff6ff")
+  bgColor2      String?
+  borderColor   String   @default("#bfdbfe")
+  borderRadius  Int      @default(16)
+  paddingY      Int      @default(32)
+  paddingX      Int      @default(32)
+  headingText   String?
+  headingColor  String   @default("#1e293b")
+  headingSize   Int      @default(20)
+  headingWeight String   @default("700")
+  desc1Text     String?
+  desc1Color    String   @default("#475569")
+  desc1Size     Int      @default(14)
+  desc1Weight   String   @default("400")
+  linkText      String?
+  linkUrl       String?
+  linkColor     String   @default("#2563eb")
+  linkSize      Int      @default(14)
+  linkWeight    String   @default("700")
+  desc2Text     String?
+  desc2Color    String   @default("#475569")
+  desc2Size     Int      @default(14)
+  desc2Weight   String   @default("400")
+  btn1Text      String?
+  btn1Url       String?
+  btn1BgColor   String   @default("#2563eb")
+  btn1TextColor String   @default("#ffffff")
+  btn1Size      Int      @default(16)
+  btn1Weight    String   @default("700")
+  btn1Radius    Int      @default(9999)
+  btn1PaddingY  Int      @default(14)
+  btn1PaddingX  Int      @default(40)
+  desc3Text     String?
+  desc3Color    String   @default("#475569")
+  desc3Size     Int      @default(14)
+  desc3Weight   String   @default("400")
+  btn2Text      String?
+  btn2Url       String?
+  btn2BgColor   String   @default("#e2e8f0")
+  btn2TextColor String   @default("#334155")
+  btn2Size      Int      @default(14)
+  btn2Weight    String   @default("700")
+  desc4Text     String?
+  desc4Color    String   @default("#475569")
+  desc4Size     Int      @default(14)
+  desc4Weight   String   @default("400")
+  telText       String?
+  telNumber     String?
+  telColor      String   @default("#2563eb")
+  telSize       Int      @default(20)
+  telWeight     String   @default("700")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
-
-
 
 model BlogCategory {
   id        String     @id @default(uuid())
@@ -257,7 +258,6 @@ model BlogPost {
   category        BlogCategory? @relation(fields: [categoryId], references: [id])
 }
 
-
 model BlogSettings {
   id            String   @id @default("main")
   fixedKeywords String   @default("")
@@ -282,8 +282,6 @@ model SiteSettings {
   calendarEndHour   Int      @default(22)
   updatedAt         DateTime @updatedAt
 }
-
-
 
 model Booking {
   id           String   @id @default(uuid())
@@ -311,69 +309,124 @@ model CalendarOverride {
 }
 
 model ServicePage {
-  id              String   @id @default(uuid())
-  slug            String   @unique
-  title           String
-  linkTitle       String?
-  heroImage       String?
-  catchphrase     String?
-  content         String?
-  status          String   @default("DRAFT")
-  metaKeywords    String?
-  metaDescription String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  serviceItemId   String?
-  bookingData     Json?
-  noIndex         Boolean  @default(false)
-  canonicalUrl    String?
-  redirectUrl   String?
-  showOnHome      Boolean  @default(false)
+  id                String            @id @default(uuid())
+  slug              String            @unique
+  title             String
+  linkTitle         String?
+  heroImage         String?
+  catchphrase       String?
+  content           String?
+  status            String            @default("DRAFT")
+  metaKeywords      String?
+  metaDescription   String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  serviceItemId     String?
+  serviceItem       ServiceItem?      @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+  bookingData       Json?
+  noIndex           Boolean           @default(false)
+  canonicalUrl      String?
+  redirectUrl       String?
+  showOnHome        Boolean           @default(false)
+  cardIcon          String?
+  faqs              ServiceFaq[]
+  testimonials      Testimonial[]
+  bookingMenus      BookingMenu[]
+  bookingCategories BookingCategory[]
+  displayMenuIds    String[]          @default([])
+}
 
+model ServiceFaq {
+  id            String      @id @default(uuid())
+  servicePageId String
+  question      String
+  answer        String
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  servicePage   ServicePage @relation(fields: [servicePageId], references: [id], onDelete: Cascade)
+}
+
+model Testimonial {
+  id            String       @id @default(uuid())
+  servicePageId String?
+  authorLabel   String
+  rating        Int?
+  body          String
+  order         Int          @default(0)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  servicePage   ServicePage? @relation(fields: [servicePageId], references: [id], onDelete: SetNull)
 }
 
 model BookingCategory {
-  id        String        @id @default(uuid())
-  title     String
-  order     Int           @default(0)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  menus     BookingMenu[]
+  id               String        @id @default(uuid())
+  title            String
+  order            Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  setDiscountRules Json?
+  menus            BookingMenu[]
+  servicePages     ServicePage[]
+  landingPages     LandingPage[]
 }
 
 model BookingMenu {
-  id          String           @id @default(uuid())
-  title       String
-  basePrice   Int              @default(0)
-  durationMin Int              @default(0)
-  order       Int              @default(0)
-  categoryId  String
-  basicItems  String?
-  notes       String?
-  priceNote   String?
-  category    BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  subMenus    BookingSubMenu[]
+  id               String           @id @default(uuid())
+  title            String
+  basePrice        Int              @default(0)
+  durationMin      Int              @default(0)
+  durationMax      Int?
+  order            Int              @default(0)
+  categoryId       String
+  workContent      String?
+  cautionNote      String?
+  recommendPoint   String?
+  onSiteEstimate   String           @default("NONE")
+  priceNote        String?
+  setDiscountRules Json?
+  discountPercent  Float?
+  discountRounding String           @default("NONE")
+  category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subMenus         BookingSubMenu[]
+  servicePages     ServicePage[]
+  landingPages     LandingPage[]
 }
 
 model BookingSubMenu {
-  id          String          @id @default(uuid())
-  title       String
-  price       Int             @default(0)
-  durationMin Int             @default(0)
-  order       Int             @default(0)
-  menuId      String
-  options     BookingOption[]
-  menu        BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  id               String          @id @default(uuid())
+  title            String
+  price            Int             @default(0)
+  durationMin      Int             @default(0)
+  durationMax      Int?
+  order            Int             @default(0)
+  menuId           String
+  workContent      String?
+  cautionNote      String?
+  recommendPoint   String?
+  onSiteEstimate   String          @default("NONE")
+  discountPercent  Float?
+  discountRounding String          @default("NONE")
+  options          BookingOption[]
+  menu             BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
 model BookingOption {
-  id          String         @id @default(uuid())
-  title       String
-  price       Int            @default(0)
-  durationMin Int            @default(0)
-  order       Int            @default(0)
-  subMenuId   String
-  subMenu     BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  title            String
+  price            Int            @default(0)
+  durationMin      Int            @default(0)
+  durationMax      Int?
+  order            Int            @default(0)
+  workContent      String?
+  cautionNote      String?
+  recommendPoint   String?
+  onSiteEstimate   String         @default("NONE")
+  maxQty           Int?
+  discountPercent  Float?
+  discountRounding String         @default("NONE")
+  qtyDiscountRules Json?
+  subMenuId        String
+  subMenu          BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
 }
 
 model TopPriceItem {
@@ -395,4 +448,3 @@ model ReviewLog {
 
   @@index([ip, createdAt])
 }
-

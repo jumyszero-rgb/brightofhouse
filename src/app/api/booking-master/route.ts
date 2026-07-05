@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
 
     if (body.type === "category") {
       return NextResponse.json(await prisma.bookingCategory.create({
-        data: { title: body.title, order: body.order },
+        data: {
+          title: body.title,
+          order: body.order,
+          setDiscountRules: body.setDiscountRules ?? undefined,
+        },
       }));
     }
 
@@ -64,9 +68,15 @@ export async function POST(request: NextRequest) {
           title: body.title,
           basePrice: Number(body.basePrice) || 0,
           priceNote: body.priceNote,
-          basicItems: body.basicItems,
-          notes: body.notes,
+          workContent: body.workContent,
+          cautionNote: body.cautionNote,
+          recommendPoint: body.recommendPoint,
+          onSiteEstimate: body.onSiteEstimate || "NONE",
           durationMin: Number(body.durationMin) || 0,
+          durationMax: body.durationMax != null ? Number(body.durationMax) : undefined,
+          setDiscountRules: body.setDiscountRules ?? undefined,
+          discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
+          discountRounding: body.discountRounding || "NONE",
           order: body.order,
           categoryId: body.categoryId,
         },
@@ -79,6 +89,13 @@ export async function POST(request: NextRequest) {
           title: body.title,
           price: Number(body.price) || 0,
           durationMin: Number(body.durationMin) || 0,
+          durationMax: body.durationMax != null ? Number(body.durationMax) : undefined,
+          workContent: body.workContent,
+          cautionNote: body.cautionNote,
+          recommendPoint: body.recommendPoint,
+          onSiteEstimate: body.onSiteEstimate || "NONE",
+          discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
+          discountRounding: body.discountRounding || "NONE",
           order: body.order,
           menuId: body.menuId,
         },
@@ -91,6 +108,15 @@ export async function POST(request: NextRequest) {
           title: body.title,
           price: Number(body.price) || 0,
           durationMin: Number(body.durationMin) || 0,
+          durationMax: body.durationMax != null ? Number(body.durationMax) : undefined,
+          workContent: body.workContent,
+          cautionNote: body.cautionNote,
+          recommendPoint: body.recommendPoint,
+          onSiteEstimate: body.onSiteEstimate || "NONE",
+          maxQty: body.maxQty != null && body.maxQty !== "" ? Number(body.maxQty) : null,
+          discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
+          discountRounding: body.discountRounding || "NONE",
+          qtyDiscountRules: body.qtyDiscountRules ?? undefined,
           order: body.order,
           subMenuId: body.subMenuId,
         },
@@ -114,7 +140,11 @@ export async function PUT(request: NextRequest) {
     if (type === "category") {
       return NextResponse.json(await prisma.bookingCategory.update({
         where: { id },
-        data: { title: data.title, order: data.order },
+        data: {
+          title: data.title,
+          order: data.order,
+          setDiscountRules: data.setDiscountRules ?? undefined,
+        },
       }));
     }
 
@@ -125,9 +155,15 @@ export async function PUT(request: NextRequest) {
           title: data.title,
           basePrice: Number(data.basePrice),
           priceNote: data.priceNote,
-          basicItems: data.basicItems,
-          notes: data.notes,
+          workContent: data.workContent,
+          cautionNote: data.cautionNote,
+          recommendPoint: data.recommendPoint,
+          onSiteEstimate: data.onSiteEstimate || "NONE",
           durationMin: Number(data.durationMin),
+          durationMax: data.durationMax != null ? Number(data.durationMax) : undefined,
+          setDiscountRules: data.setDiscountRules ?? undefined,
+          discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
+          discountRounding: data.discountRounding || "NONE",
           order: data.order,
         },
       }));
@@ -140,6 +176,13 @@ export async function PUT(request: NextRequest) {
           title: data.title,
           price: Number(data.price),
           durationMin: Number(data.durationMin),
+          durationMax: data.durationMax != null ? Number(data.durationMax) : undefined,
+          workContent: data.workContent,
+          cautionNote: data.cautionNote,
+          recommendPoint: data.recommendPoint,
+          onSiteEstimate: data.onSiteEstimate || "NONE",
+          discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
+          discountRounding: data.discountRounding || "NONE",
           order: data.order,
         },
       }));
@@ -152,6 +195,15 @@ export async function PUT(request: NextRequest) {
           title: data.title,
           price: Number(data.price),
           durationMin: Number(data.durationMin),
+          durationMax: data.durationMax != null ? Number(data.durationMax) : undefined,
+          workContent: data.workContent,
+          cautionNote: data.cautionNote,
+          recommendPoint: data.recommendPoint,
+          onSiteEstimate: data.onSiteEstimate || "NONE",
+          maxQty: data.maxQty != null && data.maxQty !== "" ? Number(data.maxQty) : null,
+          discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
+          discountRounding: data.discountRounding || "NONE",
+          qtyDiscountRules: data.qtyDiscountRules ?? undefined,
           order: data.order,
         },
       }));

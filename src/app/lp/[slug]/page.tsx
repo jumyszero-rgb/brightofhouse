@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,14 +40,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LPPage({ params }: Props) {
   const { slug } = await params;
+  const subMenusInclude = {
+    subMenus: {
+      include: { options: { orderBy: { order: "asc" as const } } },
+      orderBy: { order: "asc" as const },
+    },
+  } as const;
+
   const lp = await prisma.landingPage.findUnique({
-    where: { slug, category: "CAMPAIGN" }
+    where: { slug, category: "CAMPAIGN" },
+    include: {
+      bookingMenus: { include: subMenusInclude },
+      bookingCategories: { include: { menus: { include: subMenusInclude } } },
+    },
   });
 
   if (!lp || lp.status === "DRAFT") notFound();
 
   const phoneNumber = "0120-792-684";
   const lineUrl = "https://line.me/ti/p/RBwKccvQ1O";
+
+  // 予約マスター(BookingMenu/BookingCategory)にリンクされている場合は常にそちらを正とする（価格ズレ防止）
+  const effectiveBookingData = (lp.bookingMenus.length > 0 || lp.bookingCategories.length > 0)
+    ? bookingSelectionToBookingData(lp.bookingCategories, lp.bookingMenus)
+    : (lp.bookingData as any);
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
@@ -95,6 +113,13 @@ export default async function LPPage({ params }: Props) {
               className="ql-content prose prose-slate prose-base md:prose-xl max-w-none text-slate-700 mb-16 leading-loose"
               dangerouslySetInnerHTML={{ __html: lp.content }}
             />
+          )}
+
+          {/* 予約・お見積りフォーム（予約メニュー設定時のみ表示） */}
+          {effectiveBookingData && (
+            <div id="booking" className="mb-16 scroll-mt-20">
+              <ServicePageBooking pageTitle={lp.title} bookingData={effectiveBookingData} />
+            </div>
           )}
 
           {/* 下部CTA（ON/OFF制御） */}

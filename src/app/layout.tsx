@@ -1,11 +1,20 @@
 // @/src/app/layout.tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
-const inter = Inter({ subsets: ["latin"] });
+const mPlusRounded = M_PLUS_Rounded_1c({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "800", "900"],
+  display: "swap",
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://brightofhouse.jp"),
@@ -52,7 +61,7 @@ export default function RootLayout({
           href="/rss.xml"
         />
       </head>
-      <body className={`${inter.className} text-slate-800 pb-16 md:pb-0`}>
+      <body className={`${mPlusRounded.className} text-slate-800 pb-16 md:pb-0`}>
         {/* chrome（Header/footer等）は SiteShell が pathname で出し分ける */}
         <SiteShell>{children}</SiteShell>
 

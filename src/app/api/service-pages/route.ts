@@ -65,13 +65,67 @@ const deleteFromR2 = async (url: string) => {
   } catch (e) { console.error("R2 Delete Error:", e); }
 };
 
+// FAQ・お客様の声を全置き換えで同期する（保存フォームの1回の送信で完結させるため）
+async function syncFaqsAndTestimonials(servicePageId: string, formData: FormData) {
+  const faqsRaw = formData.get("faqs") as string | null;
+  if (faqsRaw !== null) {
+    const faqs = JSON.parse(faqsRaw) as { question: string; answer: string }[];
+    await prisma.serviceFaq.deleteMany({ where: { servicePageId } });
+    if (faqs.length > 0) {
+      await prisma.serviceFaq.createMany({
+        data: faqs.map((f, i) => ({
+          servicePageId,
+          question: f.question,
+          answer: f.answer,
+          order: i,
+        })),
+      });
+    }
+  }
+
+  const testimonialsRaw = formData.get("testimonials") as string | null;
+  if (testimonialsRaw !== null) {
+    const testimonials = JSON.parse(testimonialsRaw) as {
+      authorLabel: string; rating: number | null; body: string; isActive: boolean;
+    }[];
+    await prisma.testimonial.deleteMany({ where: { servicePageId } });
+    if (testimonials.length > 0) {
+      await prisma.testimonial.createMany({
+        data: testimonials.map((t, i) => ({
+          servicePageId,
+          authorLabel: t.authorLabel,
+          rating: t.rating ?? null,
+          body: t.body,
+          isActive: t.isActive,
+          order: i,
+        })),
+      });
+    }
+  }
+}
+
+const bookingMenuWithSubMenusInclude = {
+  subMenus: {
+    include: { options: { orderBy: { order: "asc" as const } } },
+    orderBy: { order: "asc" as const },
+  },
+};
+
+const bookingMenuInclude = {
+  bookingMenus: { include: bookingMenuWithSubMenusInclude },
+  bookingCategories: { include: { menus: { include: bookingMenuWithSubMenusInclude } } },
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   const slug = searchParams.get("slug");
   try {
     if (id) {
-      return NextResponse.json(await prisma.servicePage.findUnique({ where: { id } }));
+      return NextResponse.json(await prisma.servicePage.findUnique({
+        where: { id },
+        include: { faqs: { orderBy: { order: "asc" } }, testimonials: { orderBy: { order: "asc" } }, ...bookingMenuInclude },
+      }));
     }
     if (slug) {
       return NextResponse.json(await prisma.servicePage.findUnique({ where: { slug } }));
@@ -98,13 +152,22 @@ export async function POST(request: NextRequest) {
     }
 
     const bookingDataRaw = formData.get("bookingData") as string;
+    const bookingMenuIdsRaw = formData.get("bookingMenuIds") as string | null;
+    const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
+    const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
+    const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
+    const displayMenuIdsRaw = formData.get("displayMenuIds") as string | null;
+    const displayMenuIds: string[] = displayMenuIdsRaw ? JSON.parse(displayMenuIdsRaw) : [];
 
     const newPage = await prisma.servicePage.create({
       data: {
         slug: formData.get("slug") as string,
         title: formData.get("title") as string,
         linkTitle: formData.get("linkTitle") as string,
-        serviceItemId: formData.get("serviceItemId") as string,
+        serviceItemId: (formData.get("serviceItemId") as string) || null,
+        bookingMenus: { connect: bookingMenuIds.map((id) => ({ id })) },
+        bookingCategories: { connect: bookingCategoryIds.map((id) => ({ id })) },
+        displayMenuIds,
         status: formData.get("status") as string,
         catchphrase: formData.get("catchphrase") as string,
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
@@ -113,12 +176,15 @@ export async function POST(request: NextRequest) {
         showOnHome: formData.get("showOnHome") === "true",  // ← 追加
         canonicalUrl: formData.get("canonicalUrl") as string || null,
         redirectUrl: formData.get("redirectUrl") as string || null,
+        cardIcon: formData.get("cardIcon") as string || null,
 
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
       }
     });
+
+    await syncFaqsAndTestimonials(newPage.id, formData);
 
     if (newPage.status === "PUBLISHED") {
       await notifyIndexNow([`/service/${newPage.slug}`]);
@@ -146,6 +212,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const bookingDataRaw = formData.get("bookingData") as string;
+    const bookingMenuIdsRaw = formData.get("bookingMenuIds") as string | null;
+    const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
+    const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
+    const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
+    const displayMenuIdsRaw = formData.get("displayMenuIds") as string | null;
+    const displayMenuIds: string[] = displayMenuIdsRaw ? JSON.parse(displayMenuIdsRaw) : [];
 
     const updated = await prisma.servicePage.update({
       where: { id },
@@ -153,7 +225,10 @@ export async function PUT(request: NextRequest) {
         slug: formData.get("slug") as string,
         title: formData.get("title") as string,
         linkTitle: formData.get("linkTitle") as string,
-        serviceItemId: formData.get("serviceItemId") as string,
+        serviceItemId: (formData.get("serviceItemId") as string) || null,
+        bookingMenus: { set: bookingMenuIds.map((id) => ({ id })) },
+        bookingCategories: { set: bookingCategoryIds.map((id) => ({ id })) },
+        displayMenuIds,
         status: formData.get("status") as string,
         catchphrase: formData.get("catchphrase") as string,
         content: ((formData.get("content") as string) || "").replace(/open="true"/g, ""),
@@ -162,11 +237,14 @@ export async function PUT(request: NextRequest) {
         showOnHome: formData.get("showOnHome") === "true",  // ← 追加
         canonicalUrl: formData.get("canonicalUrl") as string || null,
         redirectUrl: formData.get("redirectUrl") as string || null,
+        cardIcon: formData.get("cardIcon") as string || null,
         metaDescription: formData.get("metaDescription") as string,
         heroImage: heroImageUrl,
         bookingData: bookingDataRaw ? JSON.parse(bookingDataRaw) : null,
       }
     });
+
+    await syncFaqsAndTestimonials(updated.id, formData);
 
     if (updated.status === "PUBLISHED") {
       await notifyIndexNow([`/service/${updated.slug}`]);

@@ -17,14 +17,14 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       rules: {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/","/src/","/_next/static/media/"],
+        disallow: ["/admin","/admin/","/src/","/_next/static/media/"],
       },
       sitemap: `${baseUrl}/sitemap.xml`,
     };
   } catch (error) {
     // テーブルがない場合などのフォールバック
     return {
-      rules: { userAgent: "*", allow: "/", disallow: "/admin/" },
+      rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/admin/"] },
       sitemap: `${baseUrl}/sitemap.xml`,
     };
   }

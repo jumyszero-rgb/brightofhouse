@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import RichTextEditor from "@/components/RichTextEditor";
 import Link from "next/link";
+import BookingDataEditor, { newMain, newSetDiscount, type BookingFormData } from "@/components/admin/BookingDataEditor";
 
 function EditForm() {
   const router = useRouter();
@@ -36,6 +37,18 @@ function EditForm() {
     canonicalUrl: "",
   });
 
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [bookingData, setBookingData] = useState<BookingFormData>({ mains: [newMain()] });
+  const [bookingCategories, setBookingCategories] = useState<any[]>([]);
+  const [bookingMenuIds, setBookingMenuIds] = useState<string[]>([]);
+  const [menuToAdd, setMenuToAdd] = useState("");
+  const [bookingCategoryIds, setBookingCategoryIds] = useState<string[]>([]);
+  const [categoryToAdd, setCategoryToAdd] = useState("");
+
+  useEffect(() => {
+    fetch("/api/booking-master").then(r => r.json()).then(setBookingCategories).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!editId) return;
     fetch(`/api/lp?id=${editId}`)
@@ -61,6 +74,24 @@ function EditForm() {
 
         });
         if (data.heroImage) setPreviewImage(data.heroImage);
+
+        setBookingMenuIds((data.bookingMenus || []).map((m: any) => m.id));
+        setBookingCategoryIds((data.bookingCategories || []).map((c: any) => c.id));
+
+        const bd = data.bookingData;
+        if (bd && bd.mains) {
+          setBookingEnabled(true);
+          setBookingData({
+            mains: bd.mains.map((m: any) => ({
+              ...m,
+              id: m.id || crypto.randomUUID(),
+              foldTitle: m.foldTitle || "",
+              foldItems: (m.foldItems || []).map((fi: any) => ({ ...fi, id: fi.id || crypto.randomUUID(), comment: fi.comment || "" })),
+              options: (m.options || []).map((o: any) => ({ ...o, id: o.id || crypto.randomUUID(), comment: o.comment || "" })),
+              setDiscount: m.setDiscount || newSetDiscount(),
+            })),
+          });
+        }
       });
   }, [editId]);
 
@@ -106,6 +137,9 @@ function EditForm() {
     form.set("showBottomCta", String(formData.showBottomCta));
     form.set("noIndex", String(formData.noIndex));
     form.set("canonicalUrl", formData.canonicalUrl);
+    form.set("bookingMenuIds", JSON.stringify(bookingMenuIds));
+    form.set("bookingCategoryIds", JSON.stringify(bookingCategoryIds));
+    form.set("bookingData", (bookingMenuIds.length === 0 && bookingCategoryIds.length === 0 && bookingEnabled) ? JSON.stringify({ mains: bookingData.mains }) : "");
 
 
     try {
@@ -263,6 +297,98 @@ function EditForm() {
               className="w-full p-2 border border-indigo-200 rounded text-black text-sm font-mono"
             />
           </div>
+        </div>
+
+        {/* 予約フォーム（任意） */}
+        <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-emerald-800 mb-1">連動する大分類（予約マスター・複数追加可）</label>
+            <p className="text-xs text-emerald-600 mb-2">
+              大分類ごと追加すると、配下の中分類すべてが選択肢として並び、大分類側の「まとめ割引」がこのLPで有効になります。
+            </p>
+
+            {bookingCategoryIds.length > 0 && (
+              <ul className="space-y-1 mb-2">
+                {bookingCategoryIds.map((id) => {
+                  const cat = bookingCategories.find((c: any) => c.id === id);
+                  return (
+                    <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                      <span>{cat?.title || "（読み込み中...）"}</span>
+                      <button type="button" onClick={() => setBookingCategoryIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <div className="flex gap-2">
+              <select value={categoryToAdd} onChange={e => setCategoryToAdd(e.target.value)} className="flex-1 p-3 border rounded-lg">
+                <option value="">追加する大分類を選択</option>
+                {bookingCategories.filter((c: any) => !bookingCategoryIds.includes(c.id)).map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>{cat.title}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { if (categoryToAdd) { setBookingCategoryIds(prev => [...prev, categoryToAdd]); setCategoryToAdd(""); } }}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+              >
+                ＋ 追加
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-emerald-800 mb-1">連動する中分類（予約マスター・複数追加可）</label>
+
+            {bookingMenuIds.length > 0 && (
+              <ul className="space-y-1 mb-2">
+                {bookingMenuIds.map((id) => {
+                  const menu = bookingCategories.flatMap((c: any) => c.menus).find((m: any) => m.id === id);
+                  return (
+                    <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                      <span>{menu?.title || "（読み込み中...）"}</span>
+                      <button type="button" onClick={() => setBookingMenuIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <div className="flex gap-2">
+              <select value={menuToAdd} onChange={e => setMenuToAdd(e.target.value)} className="flex-1 p-3 border rounded-lg">
+                <option value="">追加する中分類を選択</option>
+                {bookingCategories.map((cat: any) => (
+                  <optgroup key={cat.id} label={cat.title}>
+                    {cat.menus.filter((m: any) => !bookingMenuIds.includes(m.id)).map((menu: any) => <option key={menu.id} value={menu.id}>{menu.title}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { if (menuToAdd) { setBookingMenuIds(prev => [...prev, menuToAdd]); setMenuToAdd(""); } }}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+              >
+                ＋ 追加
+              </button>
+            </div>
+
+            <p className="text-xs text-emerald-600 mt-2">
+              選ぶと、予約マスターの価格・所要時間・メニュー構成をもとに予約カレンダー付きフォームがこのLPに表示され、マスターの更新が即座に反映されます。
+            </p>
+          </div>
+
+          {bookingMenuIds.length === 0 && bookingCategoryIds.length === 0 && (
+            <>
+              <label className="flex items-center gap-2 text-sm font-bold text-emerald-800 cursor-pointer">
+                <input type="checkbox" checked={bookingEnabled} onChange={() => setBookingEnabled(v => !v)} className="w-5 h-5 accent-emerald-600" />
+                予約メニューを手入力してこのLPに予約カレンダー付きフォームを追加する
+              </label>
+              {bookingEnabled && (
+                <BookingDataEditor value={bookingData} onChange={setBookingData} title="このLPの予約メニュー設定" />
+              )}
+            </>
+          )}
         </div>
 
         {/* CTAボタン */}

@@ -6,79 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import RichTextEditor from "@/components/RichTextEditor";
 import Link from "next/link";
-
-type FoldItem = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  comment: string;
-  cautionNote: string;
-};
-
-type OptionItem = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  maxQty: number;
-  comment: string;
-  parentFoldItemId?: string; // どのfoldItemに紐づくか
-};
-
-type DiscountRule = {
-  count: number; // 2〜10
-  value: number; // 金額 or パーセント
-};
-
-type SetDiscount = {
-  enabled: boolean;
-  type: "amount" | "percent"; // 円引き or %引き
-  rules: DiscountRule[];
-};
-
-type MainService = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  foldTitle: string;
-  foldItems: FoldItem[];
-  options: OptionItem[];
-  setDiscount: SetDiscount;
-};
-
-// 旧型（後方互換用）
-type LegacyOptionService = {
-  id: string;
-  title: string;
-  price: number;
-  durationMin: number;
-  durationMax: number;
-  maxQty: number;
-  foldTitle: string;
-  foldItems: FoldItem[];
-};
-
-function newFoldItem(): FoldItem {
-  return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, comment: "", cautionNote: "" };
-}
-
-
-function newOptionItem(parentFoldItemId?: string): OptionItem {
-  return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1, comment: "", parentFoldItemId };
-}
-
-function newSetDiscount(): SetDiscount {
-  return { enabled: false, type: "amount", rules: [] };
-}
-
-function newMain(): MainService {
-  return { id: crypto.randomUUID(), title: "", price: 0, durationMin: 60, durationMax: 60, foldTitle: "", foldItems: [], options: [], setDiscount: newSetDiscount() };
-}
+import BookingDataEditor, {
+  newMain,
+  newSetDiscount,
+  type MainService,
+  type LegacyOptionService,
+  type BookingFormData,
+} from "@/components/admin/BookingDataEditor";
 
 function EditForm() {
   const router = useRouter();
@@ -93,19 +27,69 @@ function EditForm() {
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copyPages, setCopyPages] = useState<any[]>([]);
   const [serviceItems, setServiceItems] = useState<any[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const [showNewItemForm, setShowNewItemForm] = useState(false);
+  const [newItem, setNewItem] = useState({ categoryId: "", title: "", basePrice: "", estimatedMinutes: "60" });
+  const [creatingItem, setCreatingItem] = useState(false);
+  const [bookingCategories, setBookingCategories] = useState<any[]>([]);
+  const [bookingMenuIds, setBookingMenuIds] = useState<string[]>([]);
+  const [menuToAdd, setMenuToAdd] = useState("");
+  const [bookingCategoryIds, setBookingCategoryIds] = useState<string[]>([]);
+  const [categoryToAdd, setCategoryToAdd] = useState("");
+  const [displayMenuIds, setDisplayMenuIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     slug: "", title: "", linkTitle: "", status: "DRAFT",
-    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, showOnHome: false, canonicalUrl: "", redirectUrl: ""
+    serviceItemId: "", catchphrase: "", content: "", metaKeywords: "", metaDescription: "", noIndex: false, showOnHome: false, canonicalUrl: "", redirectUrl: "", cardIcon: ""
   });
 
-  const [bookingData, setBookingData] = useState<{ mains: MainService[]; legacyOptions?: LegacyOptionService[] }>({
+  // 一覧カード（トップページ・エリアページ・関連サービス欄）で使うアイコンの候補
+  const CARD_ICON_OPTIONS = ["🧹", "🚿", "🍳", "🚽", "🪟", "🛋️", "🏠", "🧺", "🧽", "🌀", "🗑️", "✨"];
+
+  const [bookingData, setBookingData] = useState<BookingFormData>({
     mains: [newMain()],
   });
 
+  const [faqs, setFaqs] = useState<{ id: string; question: string; answer: string }[]>([]);
+  const [testimonials, setTestimonials] = useState<{ id: string; authorLabel: string; rating: number | null; body: string; isActive: boolean }[]>([]);
+
   useEffect(() => {
     fetch("/api/service-items").then(r => r.json()).then(setServiceItems).catch(() => {});
+    fetch("/api/services").then(r => r.json()).then(setServiceCategories).catch(() => {});
+    fetch("/api/booking-master").then(r => r.json()).then(setBookingCategories).catch(() => {});
   }, []);
+
+  const handleCreateServiceItem = async () => {
+    if (!newItem.categoryId || !newItem.title) {
+      alert("カテゴリと項目名を入力してください");
+      return;
+    }
+    setCreatingItem(true);
+    try {
+      const res = await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "item",
+          categoryId: newItem.categoryId,
+          title: newItem.title,
+          basePrice: Number(newItem.basePrice) || 0,
+          estimatedMinutes: Number(newItem.estimatedMinutes) || 60,
+          order: 0,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const created = await res.json();
+      setServiceItems(prev => [...prev, { id: created.id, title: created.title, subTitle: created.subTitle }]);
+      setFormData(prev => ({ ...prev, serviceItemId: created.id }));
+      setNewItem({ categoryId: "", title: "", basePrice: "", estimatedMinutes: "60" });
+      setShowNewItemForm(false);
+    } catch {
+      alert("作成に失敗しました");
+    } finally {
+      setCreatingItem(false);
+    }
+  };
 
   useEffect(() => {
     if (!editId) return;
@@ -115,10 +99,16 @@ function EditForm() {
         status: data.status || "DRAFT", serviceItemId: data.serviceItemId || "",
         catchphrase: data.catchphrase || "", content: data.content || "",
         metaKeywords: data.metaKeywords || "", metaDescription: data.metaDescription || "",
-                noIndex: data.noIndex || false, showOnHome: data.showOnHome || false, canonicalUrl: data.canonicalUrl || "", redirectUrl: data.redirectUrl || ""
+                noIndex: data.noIndex || false, showOnHome: data.showOnHome || false, canonicalUrl: data.canonicalUrl || "", redirectUrl: data.redirectUrl || "", cardIcon: data.cardIcon || ""
 
       });
       if (data.heroImage) setPreviewImage(data.heroImage);
+
+      setBookingMenuIds((data.bookingMenus || []).map((m: any) => m.id));
+      setBookingCategoryIds((data.bookingCategories || []).map((c: any) => c.id));
+      setDisplayMenuIds(data.displayMenuIds || []);
+      setFaqs((data.faqs || []).map((f: any) => ({ id: f.id || crypto.randomUUID(), question: f.question, answer: f.answer })));
+      setTestimonials((data.testimonials || []).map((t: any) => ({ id: t.id || crypto.randomUUID(), authorLabel: t.authorLabel, rating: t.rating ?? null, body: t.body, isActive: t.isActive })));
 
       const bd = data.bookingData;
       if (!bd) return;
@@ -170,101 +160,6 @@ function EditForm() {
     });
   }, [editId]);
 
-  // ===== Main CRUD =====
-  const moveMain = (idx: number, dir: number) => setBookingData(prev => {
-    const arr = [...prev.mains]; const t = arr[idx]; arr[idx] = arr[idx + dir]; arr[idx + dir] = t;
-    return { ...prev, mains: arr };
-  });
-  const addMain = () => setBookingData(prev => ({ ...prev, mains: [...prev.mains, newMain()] }));
-  const removeMain = (id: string) => setBookingData(prev => ({ ...prev, mains: prev.mains.filter(m => m.id !== id) }));
-  const updateMain = (id: string, field: string, value: any) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === id ? { ...m, [field]: value } : m)
-  }));
-
-  // ===== FoldItem CRUD =====
-  const addMainFoldItem = (mainId: string) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? { ...m, foldItems: [...m.foldItems, newFoldItem()] } : m)
-  }));
-  const removeMainFoldItem = (mainId: string, fiId: string) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? {
-      ...m,
-      foldItems: m.foldItems.filter(fi => fi.id !== fiId),
-      options: m.options.filter(o => o.parentFoldItemId !== fiId), // 紐づくオプションも削除
-    } : m)
-  }));
-  const updateMainFoldItem = (mainId: string, fiId: string, field: string, value: any) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? {
-      ...m, foldItems: m.foldItems.map(fi => fi.id === fiId ? { ...fi, [field]: value } : fi)
-    } : m)
-  }));
-
-  // ===== Option CRUD (メイン配下) =====
-  const addMainOption = (mainId: string, parentFoldItemId?: string) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? { ...m, options: [...m.options, newOptionItem(parentFoldItemId)] } : m)
-  }));
-  const removeMainOption = (mainId: string, optId: string) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? { ...m, options: m.options.filter(o => o.id !== optId) } : m)
-  }));
-  const updateMainOption = (mainId: string, optId: string, field: string, value: any) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? {
-      ...m, options: m.options.map(o => o.id === optId ? { ...o, [field]: value } : o)
-    } : m)
-  }));
-
-  // ===== SetDiscount =====
-  const updateSetDiscount = (mainId: string, discount: SetDiscount) => setBookingData(prev => ({
-    ...prev, mains: prev.mains.map(m => m.id === mainId ? { ...m, setDiscount: discount } : m)
-  }));
-  const addDiscountRule = (mainId: string) => {
-    const main = bookingData.mains.find(m => m.id === mainId);
-    if (!main) return;
-    const nextCount = main.setDiscount.rules.length > 0
-      ? Math.min(10, Math.max(...main.setDiscount.rules.map(r => r.count)) + 1)
-      : 2;
-    if (nextCount > 10) return;
-    updateSetDiscount(mainId, {
-      ...main.setDiscount,
-      rules: [...main.setDiscount.rules, { count: nextCount, value: 0 }]
-    });
-  };
-  const removeDiscountRule = (mainId: string, count: number) => {
-    const main = bookingData.mains.find(m => m.id === mainId);
-    if (!main) return;
-    updateSetDiscount(mainId, {
-      ...main.setDiscount,
-      rules: main.setDiscount.rules.filter(r => r.count !== count)
-    });
-  };
-  const updateDiscountRule = (mainId: string, count: number, value: number) => {
-    const main = bookingData.mains.find(m => m.id === mainId);
-    if (!main) return;
-    updateSetDiscount(mainId, {
-      ...main.setDiscount,
-      rules: main.setDiscount.rules.map(r => r.count === count ? { ...r, value } : r)
-    });
-  };
-
-  // ===== Legacy Options CRUD（後方互換） =====
-  const addLegacyOption = () => setBookingData(prev => ({
-    ...prev, legacyOptions: [...(prev.legacyOptions || []), { id: crypto.randomUUID(), title: "", price: 0, durationMin: 0, durationMax: 0, maxQty: 1, foldTitle: "", foldItems: [] }]
-  }));
-  const removeLegacyOption = (id: string) => setBookingData(prev => ({
-    ...prev, legacyOptions: (prev.legacyOptions || []).filter(o => o.id !== id)
-  }));
-  const updateLegacyOption = (id: string, field: string, value: any) => setBookingData(prev => ({
-    ...prev, legacyOptions: (prev.legacyOptions || []).map(o => o.id === id ? { ...o, [field]: value } : o)
-  }));
-  const addLegacyOptionFoldItem = (optId: string) => setBookingData(prev => ({
-    ...prev, legacyOptions: (prev.legacyOptions || []).map(o => o.id === optId ? { ...o, foldItems: [...o.foldItems, newFoldItem()] } : o)
-  }));
-  const removeLegacyOptionFoldItem = (optId: string, fiId: string) => setBookingData(prev => ({
-    ...prev, legacyOptions: (prev.legacyOptions || []).map(o => o.id === optId ? { ...o, foldItems: o.foldItems.filter(fi => fi.id !== fiId) } : o)
-  }));
-  const updateLegacyOptionFoldItem = (optId: string, fiId: string, field: string, value: any) => setBookingData(prev => ({
-    ...prev, legacyOptions: (prev.legacyOptions || []).map(o => o.id === optId ? {
-      ...o, foldItems: o.foldItems.map(fi => fi.id === fiId ? { ...fi, [field]: value } : fi)
-    } : o)
-  }));
 
   // ===== Copy from other page =====
   const openCopyModal = async () => {
@@ -358,6 +253,9 @@ function EditForm() {
       form.set("linkTitle", formData.linkTitle);
       form.set("status", formData.status);
       form.set("serviceItemId", formData.serviceItemId);
+      form.set("bookingMenuIds", JSON.stringify(bookingMenuIds));
+      form.set("bookingCategoryIds", JSON.stringify(bookingCategoryIds));
+      form.set("displayMenuIds", JSON.stringify(displayMenuIds));
       form.set("catchphrase", formData.catchphrase);
       form.set("content", formData.content);
       form.set("metaKeywords", formData.metaKeywords);
@@ -366,6 +264,9 @@ function EditForm() {
       form.set("showOnHome", String(formData.showOnHome));  // ← 追加
       form.set("canonicalUrl", formData.canonicalUrl);
       form.set("redirectUrl", formData.redirectUrl);
+      form.set("cardIcon", formData.cardIcon);
+      form.set("faqs", JSON.stringify(faqs.filter(f => f.question.trim() || f.answer.trim()).map(({ question, answer }) => ({ question, answer }))));
+      form.set("testimonials", JSON.stringify(testimonials.filter(t => t.authorLabel.trim() || t.body.trim()).map(({ authorLabel, rating, body, isActive }) => ({ authorLabel, rating, body, isActive }))));
 
 
       // 保存時は legacyOptions を options として含める（後方互換）
@@ -381,144 +282,6 @@ function EditForm() {
       router.push("/admin/service-pages");
     } catch (e: any) { setMessage(e.message); } finally { setLoading(false); }
   };
-
-  // ===== Render helpers =====
-  const renderFoldItemRow = (fi: FoldItem, mainId: string, idx: number) => (
-    <div key={fi.id} className="bg-amber-50 p-3 rounded border border-amber-200 space-y-2">
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] font-bold text-amber-700">メニュー {idx + 1}</span>
-        <button type="button" onClick={() => removeMainFoldItem(mainId, fi.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-        <div className="md:col-span-4">
-          <label className="block text-[10px] font-bold text-amber-600 mb-1">メニュー名</label>
-          <input placeholder="例: キッチンクリーニング" value={fi.title} onChange={e => updateMainFoldItem(mainId, fi.id, "title", e.target.value)} className="w-full p-2 border rounded text-sm" />
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-[10px] font-bold text-amber-600 mb-1">価格(円)</label>
-          <input type="number" value={fi.price || ""} onChange={e => updateMainFoldItem(mainId, fi.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-        <div className="md:col-span-3">
-          <label className="block text-[10px] font-bold text-amber-600 mb-1">最短(分)</label>
-          <input type="number" value={fi.durationMin || ""} onChange={e => updateMainFoldItem(mainId, fi.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-        <div className="md:col-span-3">
-          <label className="block text-[10px] font-bold text-amber-600 mb-1">最長(分)</label>
-          <input type="number" value={fi.durationMax || ""} onChange={e => updateMainFoldItem(mainId, fi.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-      </div>
-      <div>
-        <label className="block text-[10px] font-bold text-amber-600 mb-1">コメント（任意）</label>
-        <input placeholder="例: 6回分チケット購入が必要" value={fi.comment || ""} onChange={e => updateMainFoldItem(mainId, fi.id, "comment", e.target.value)} className="w-full p-2 border rounded text-sm bg-white" />
-      </div>
-      {/* 折り畳み注意事項 */}
-      <div>
-        <label className="block text-[10px] font-bold text-red-600 mb-1">⚠️ 注意事項（折り畳み表示・任意）</label>
-        <textarea
-          placeholder="例: ※当サービスは詰まり解消作業には対応しておりません。詰まりの場合は専門業者へご依頼ください。"
-          value={fi.cautionNote || ""}
-          onChange={e => updateMainFoldItem(mainId, fi.id, "cautionNote", e.target.value)}
-          rows={3}
-          className="w-full p-2 border rounded text-sm bg-red-50 border-red-200"
-        />
-      </div>
-
-
-      {/* このメニューに紐づくオプション */}
-      <div className="mt-2 pl-4 border-l-4 border-indigo-200 space-y-2">
-        <p className="text-[10px] font-bold text-indigo-600">┗ オプション（{fi.title || "このメニュー"}に紐づく）</p>
-        {bookingData.mains.find(m => m.id === mainId)?.options.filter(o => o.parentFoldItemId === fi.id).map((opt, oIdx) => (
-          <div key={opt.id} className="bg-indigo-50 p-2 rounded border border-indigo-200 space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-indigo-500">オプション {oIdx + 1}</span>
-              <button type="button" onClick={() => removeMainOption(mainId, opt.id)} className="text-red-500 text-[10px] font-bold hover:underline">削除</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-1 items-end">
-              <div className="md:col-span-3">
-                <input placeholder="オプション名" value={opt.title} onChange={e => updateMainOption(mainId, opt.id, "title", e.target.value)} className="w-full p-1.5 border rounded text-xs" />
-              </div>
-              <div className="md:col-span-2">
-                <input type="number" placeholder="価格" value={opt.price || ""} onChange={e => updateMainOption(mainId, opt.id, "price", Number(e.target.value))} className="w-full p-1.5 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              <div className="md:col-span-2">
-                <input type="number" placeholder="最短(分)" value={opt.durationMin || ""} onChange={e => updateMainOption(mainId, opt.id, "durationMin", Number(e.target.value))} className="w-full p-1.5 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              <div className="md:col-span-2">
-                <input type="number" placeholder="最長(分)" value={opt.durationMax || ""} onChange={e => updateMainOption(mainId, opt.id, "durationMax", Number(e.target.value))} className="w-full p-1.5 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              <div className="md:col-span-1">
-                <input type="number" placeholder="最大数" min={1} value={opt.maxQty || 1} onChange={e => updateMainOption(mainId, opt.id, "maxQty", Math.max(1, Number(e.target.value)))} className="w-full p-1.5 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              <div className="md:col-span-2">
-                <input placeholder="コメント" value={opt.comment || ""} onChange={e => updateMainOption(mainId, opt.id, "comment", e.target.value)} className="w-full p-1.5 border rounded text-xs" />
-              </div>
-            </div>
-          </div>
-        ))}
-        <button type="button" onClick={() => addMainOption(mainId, fi.id)} className="text-[10px] bg-indigo-500 text-white px-2 py-1 rounded-full font-bold hover:bg-indigo-600">＋ オプション追加</button>
-      </div>
-    </div>
-  );
-
-  const renderSetDiscountUI = (main: MainService) => (
-    <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={main.setDiscount.enabled} onChange={() => updateSetDiscount(main.id, { ...main.setDiscount, enabled: !main.setDiscount.enabled })} className="w-4 h-4 accent-green-600" />
-          <span className="text-sm font-bold text-green-800">セット値引きを有効にする</span>
-        </label>
-      </div>
-      {main.setDiscount.enabled && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-green-700">値引き方式：</label>
-            <select value={main.setDiscount.type} onChange={e => updateSetDiscount(main.id, { ...main.setDiscount, type: e.target.value as "amount" | "percent" })} className="p-1 border rounded text-xs">
-              <option value="amount">円引き（合計から○円引き）</option>
-              <option value="percent">%引き（合計から○%引き）</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            {main.setDiscount.rules.sort((a, b) => a.count - b.count).map(rule => (
-              <div key={rule.count} className="flex items-center gap-2">
-                <span className="text-xs font-bold text-green-700 w-16">{rule.count}点選択：</span>
-                <input type="number" value={rule.value || ""} onChange={e => updateDiscountRule(main.id, rule.count, Number(e.target.value))} className="w-24 p-1 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                <span className="text-xs text-green-600">{main.setDiscount.type === "amount" ? "円引き" : "%引き"}</span>
-                <button type="button" onClick={() => removeDiscountRule(main.id, rule.count)} className="text-red-500 text-[10px] font-bold hover:underline">削除</button>
-              </div>
-            ))}
-          </div>
-          {main.setDiscount.rules.length < 9 && (
-            <button type="button" onClick={() => addDiscountRule(main.id)} className="text-[10px] bg-green-600 text-white px-2 py-1 rounded-full font-bold hover:bg-green-700">＋ 値引きルール追加</button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  // ===== Legacy option render =====
-  const renderLegacyFoldItemRow = (fi: FoldItem, optId: string, idx: number) => (
-    <div key={fi.id} className="bg-amber-50 p-3 rounded border border-amber-200 space-y-2">
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] font-bold text-amber-700">プラン {idx + 1}</span>
-        <button type="button" onClick={() => removeLegacyOptionFoldItem(optId, fi.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-        <div className="md:col-span-4">
-          <input placeholder="プラン名" value={fi.title} onChange={e => updateLegacyOptionFoldItem(optId, fi.id, "title", e.target.value)} className="w-full p-2 border rounded text-sm" />
-        </div>
-        <div className="md:col-span-2">
-          <input type="number" placeholder="価格" value={fi.price || ""} onChange={e => updateLegacyOptionFoldItem(optId, fi.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-        <div className="md:col-span-3">
-          <input type="number" placeholder="最短(分)" value={fi.durationMin || ""} onChange={e => updateLegacyOptionFoldItem(optId, fi.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-        <div className="md:col-span-3">
-          <input type="number" placeholder="最長(分)" value={fi.durationMax || ""} onChange={e => updateLegacyOptionFoldItem(optId, fi.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-      </div>
-      <input placeholder="コメント" value={fi.comment || ""} onChange={e => updateLegacyOptionFoldItem(optId, fi.id, "comment", e.target.value)} className="w-full p-2 border rounded text-sm bg-white" />
-    </div>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 text-black bg-white min-h-screen">
@@ -539,16 +302,182 @@ function EditForm() {
           <label className="block text-sm font-bold mb-1">ページタイトル(H1)</label>
           <input value={formData.title} onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))} className="w-full p-3 border rounded-lg text-lg" />
         </div>
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-emerald-800 mb-1">連動する大分類（予約マスター・複数追加可）</label>
+            <p className="text-xs text-emerald-600 mb-2">
+              大分類ごと追加すると、配下の中分類すべてが選択肢として並び、大分類側の「まとめ割引」がこのページで有効になります。
+            </p>
+
+            {bookingCategoryIds.length > 0 && (
+              <ul className="space-y-1 mb-2">
+                {bookingCategoryIds.map((id) => {
+                  const cat = bookingCategories.find((c: any) => c.id === id);
+                  return (
+                    <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                      <span>{cat?.title || "（読み込み中...）"}</span>
+                      <button type="button" onClick={() => setBookingCategoryIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <div className="flex gap-2">
+              <select value={categoryToAdd} onChange={e => setCategoryToAdd(e.target.value)} className="flex-1 p-3 border rounded-lg">
+                <option value="">追加する大分類を選択</option>
+                {bookingCategories.filter((c: any) => !bookingCategoryIds.includes(c.id)).map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>{cat.title}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { if (categoryToAdd) { setBookingCategoryIds(prev => [...prev, categoryToAdd]); setCategoryToAdd(""); } }}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+              >
+                ＋ 追加
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-emerald-800 mb-1">連動する中分類（予約マスター・複数追加可）</label>
+
+            {bookingMenuIds.length > 0 && (
+              <ul className="space-y-1 mb-2">
+                {bookingMenuIds.map((id) => {
+                  const menu = bookingCategories.flatMap((c: any) => c.menus).find((m: any) => m.id === id);
+                  return (
+                    <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                      <span>{menu?.title || "（読み込み中...）"}</span>
+                      <button type="button" onClick={() => setBookingMenuIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <div className="flex gap-2">
+              <select value={menuToAdd} onChange={e => setMenuToAdd(e.target.value)} className="flex-1 p-3 border rounded-lg">
+                <option value="">追加する中分類を選択</option>
+                {bookingCategories.map((cat: any) => (
+                  <optgroup key={cat.id} label={cat.title}>
+                    {cat.menus.filter((m: any) => !bookingMenuIds.includes(m.id)).map((menu: any) => <option key={menu.id} value={menu.id}>{menu.title}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { if (menuToAdd) { setBookingMenuIds(prev => [...prev, menuToAdd]); setMenuToAdd(""); } }}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+              >
+                ＋ 追加
+              </button>
+            </div>
+
+            <p className="text-xs text-emerald-600 mt-2">
+              選ぶと、予約マスターの価格・所要時間・メニュー構成が予約フォームに自動反映され、マスターの更新が即座にこのページへ反映されます（価格ズレ防止）。
+            </p>
+          </div>
+
+          {(bookingMenuIds.length > 0 || bookingCategoryIds.length > 0) && (
+            <p className="text-xs text-slate-500">
+              ※このページの予約メニューはマスター連動中のため、下部の手入力エディタは無効です。内容の編集は<Link href="/admin/booking-master" className="text-blue-600 underline">予約マスター管理画面</Link>で行ってください。
+            </p>
+          )}
+        </div>
+
+        {(() => {
+          const poolMenus = [
+            ...bookingMenuIds.map((id) => bookingCategories.flatMap((c: any) => c.menus).find((m: any) => m.id === id)),
+            ...bookingCategoryIds.flatMap((cid) => bookingCategories.find((c: any) => c.id === cid)?.menus || []),
+          ].filter(Boolean);
+          const uniquePoolMenus = Array.from(new Map(poolMenus.map((m: any) => [m.id, m])).values());
+          if (uniquePoolMenus.length === 0) return null;
+
+          const isDisplayed = (id: string) => displayMenuIds.length === 0 || displayMenuIds.includes(id);
+          const toggleDisplay = (id: string) => {
+            setDisplayMenuIds(prev => {
+              const base = prev.length === 0 ? uniquePoolMenus.map((m: any) => m.id) : prev;
+              return base.includes(id) ? base.filter((x: string) => x !== id) : [...base, id];
+            });
+          };
+
+          return (
+            <div className="p-4 bg-sky-50 border border-sky-200 rounded-lg">
+              <label className="block text-sm font-bold text-sky-800 mb-1">本文（現在の料金欄）に表示する項目</label>
+              <p className="text-xs text-sky-600 mb-2">
+                予約フォームには上で連動したメニューがすべて表示されますが、ページ本文の「現在の料金」欄にはここでチェックした項目のみ表示されます（未チェックがあっても予約自体は可能です）。
+              </p>
+              <div className="space-y-1">
+                {uniquePoolMenus.map((m: any) => (
+                  <label key={m.id} className="flex items-center gap-2 bg-white border border-sky-100 rounded-lg px-3 py-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={isDisplayed(m.id)} onChange={() => toggleDisplay(m.id)} className="w-4 h-4 accent-sky-600" />
+                    {m.title}
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         <div>
-          <label className="block text-sm font-bold mb-1">連動するサービス項目</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-bold">連動するサービス項目（旧・料金表）</label>
+            <button type="button" onClick={() => setShowNewItemForm(v => !v)} className="text-xs text-blue-600 font-bold hover:underline">
+              {showNewItemForm ? "閉じる" : "＋ 新規作成"}
+            </button>
+          </div>
           <select value={formData.serviceItemId} onChange={e => setFormData(prev => ({ ...prev, serviceItemId: e.target.value }))} className="w-full p-3 border rounded-lg">
             <option value="">（選択しない）</option>
             {serviceItems.map((item: any) => <option key={item.id} value={item.id}>{item.title}</option>)}
           </select>
+          <p className="text-xs text-slate-400 mt-1">上の予約メニューが未選択の場合のみ使われます。選ぶと、料金表と同じ価格・所要時間がこのページに自動反映されます。</p>
+
+          {showNewItemForm && (
+            <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+              <p className="text-xs font-bold text-slate-600">新しいサービス項目（料金表の1行）を作成してすぐ連携</p>
+              <select value={newItem.categoryId} onChange={e => setNewItem(prev => ({ ...prev, categoryId: e.target.value }))} className="w-full p-2 border rounded text-sm">
+                <option value="">カテゴリを選択</option>
+                {serviceCategories.map((cat: any) => <option key={cat.id} value={cat.id}>{cat.title}</option>)}
+              </select>
+              <input value={newItem.title} onChange={e => setNewItem(prev => ({ ...prev, title: e.target.value }))} placeholder="項目名（例：キッチンクリーニング）" className="w-full p-2 border rounded text-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" value={newItem.basePrice} onChange={e => setNewItem(prev => ({ ...prev, basePrice: e.target.value }))} placeholder="基本価格（円）" className="w-full p-2 border rounded text-sm" />
+                <input type="number" value={newItem.estimatedMinutes} onChange={e => setNewItem(prev => ({ ...prev, estimatedMinutes: e.target.value }))} placeholder="所要時間（分）" className="w-full p-2 border rounded text-sm" />
+              </div>
+              <button type="button" onClick={handleCreateServiceItem} disabled={creatingItem} className="w-full bg-blue-600 text-white py-2 rounded font-bold text-sm hover:bg-blue-700 disabled:opacity-50">
+                {creatingItem ? "作成中..." : "作成して連携する"}
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-bold mb-1">一覧ページのボタン表示名</label>
           <input value={formData.linkTitle} onChange={e => setFormData(prev => ({ ...prev, linkTitle: e.target.value }))} placeholder="例: 浴室クリーニング（空欄時はタイトルを使用）" className="w-full p-3 border rounded-lg" />
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1">一覧カードのアイコン</label>
+          <p className="text-xs text-slate-400 mb-2">トップページ・エリアページ・関連サービス欄のカードに表示されます</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, cardIcon: "" }))}
+              className={`w-10 h-10 rounded-lg border flex items-center justify-center text-xs ${formData.cardIcon === "" ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}
+            >
+              なし
+            </button>
+            {CARD_ICON_OPTIONS.map(icon => (
+              <button
+                type="button"
+                key={icon}
+                onClick={() => setFormData(prev => ({ ...prev, cardIcon: icon }))}
+                className={`w-10 h-10 rounded-lg border flex items-center justify-center text-xl ${formData.cardIcon === icon ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-bold mb-1">URL (slug)</label>
@@ -571,128 +500,16 @@ function EditForm() {
         </div>
       </div>
 
-      {/* ===== Booking data ===== */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-bold text-emerald-800">📅 このページの予約メニュー設定</h2>
-          <button type="button" onClick={openCopyModal} className="text-xs bg-blue-500 text-white px-3 py-1 rounded-full font-bold hover:bg-blue-600">📋 他ページからコピー</button>
-        </div>
-
-        {/* メインサービス */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm font-bold text-emerald-700 border-b pb-2">メインサービスの設定</p>
-            <button type="button" onClick={addMain} className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-emerald-700">＋ メインサービスを追加</button>
-          </div>
-          {bookingData.mains.map((main, idx) => (
-            <div key={main.id} className="bg-white p-4 rounded-lg border border-emerald-200 shadow-sm space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => moveMain(idx, -1)} disabled={idx === 0} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▲</button>
-                  <button type="button" onClick={() => moveMain(idx, 1)} disabled={idx === bookingData.mains.length - 1} className="text-xs px-2 py-1 bg-slate-200 rounded disabled:opacity-30 font-bold">▼</button>
-                  <p className="text-xs font-bold text-emerald-600">メインサービス {idx + 1}</p>
-                </div>
-                {bookingData.mains.length > 1 && (
-                  <button type="button" onClick={() => removeMain(main.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
-                )}
-              </div>
-
-              {/* 折り畳みタイトル */}
-              <div>
-                <label className="block text-[10px] font-bold text-amber-600 mb-1">▼ 折り畳みタイトル（入力すると折り畳みグループになります）</label>
-                <input placeholder="例: 水回りクリーニング（空欄 = 折り畳みなし）" value={main.foldTitle} onChange={e => updateMain(main.id, "foldTitle", e.target.value)} className="w-full p-2 border rounded text-sm bg-amber-50" />
-              </div>
-
-              {/* 折り畳みなし → 通常の単体表示 */}
-              {!main.foldTitle && (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                  <div className="md:col-span-4">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1">サービス名</label>
-                    <input placeholder="例: 浴室全体清掃" value={main.title} onChange={e => updateMain(main.id, "title", e.target.value)} className="w-full p-2 border rounded text-sm bg-slate-50" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1">価格(円)</label>
-                    <input type="number" value={main.price || ""} onChange={e => updateMain(main.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                  </div>
-                  <div className="md:col-span-3">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1">最短(分)</label>
-                    <input type="number" value={main.durationMin || ""} onChange={e => updateMain(main.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                  </div>
-                  <div className="md:col-span-3">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1">最長(分)</label>
-                    <input type="number" value={main.durationMax || ""} onChange={e => updateMain(main.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                  </div>
-                </div>
-              )}
-
-              {/* 折り畳みあり → 中にメニュー + オプション + セット値引き */}
-              {main.foldTitle && (
-                <div className="space-y-3 pl-4 border-l-4 border-amber-300">
-                  {main.foldItems.map((fi, fiIdx) => renderFoldItemRow(fi, main.id, fiIdx))}
-                  <button type="button" onClick={() => addMainFoldItem(main.id)} className="text-xs bg-amber-500 text-white px-3 py-1 rounded-full font-bold hover:bg-amber-600">＋ メニューを追加</button>
-
-                  {/* セット値引き設定 */}
-                  {main.foldItems.length >= 2 && renderSetDiscountUI(main)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* 旧オプション（後方互換：既存データがある場合のみ表示） */}
-        {bookingData.legacyOptions && bookingData.legacyOptions.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-bold text-orange-700">追加オプション（旧形式）</p>
-                <p className="text-[10px] text-orange-500">※新しいメインサービスのオプションに移行することを推奨します</p>
-              </div>
-              <button type="button" onClick={addLegacyOption} className="text-xs bg-orange-500 text-white px-3 py-1 rounded-full font-bold hover:bg-orange-600">＋ 旧オプション追加</button>
-            </div>
-            {bookingData.legacyOptions.map((opt, idx) => (
-              <div key={opt.id} className="bg-white p-3 rounded-lg border border-orange-200 shadow-sm space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-orange-600 font-bold">旧オプション {idx + 1}</span>
-                  <button type="button" onClick={() => removeLegacyOption(opt.id)} className="text-red-500 text-xs font-bold hover:underline">削除</button>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-amber-600 mb-1">▼ 折り畳みタイトル</label>
-                  <input placeholder="例: キッチンのオプション" value={opt.foldTitle} onChange={e => updateLegacyOption(opt.id, "foldTitle", e.target.value)} className="w-full p-2 border rounded text-xs bg-amber-50" />
-                </div>
-                {!opt.foldTitle && (
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="md:col-span-3">
-                      <input placeholder="オプション名" value={opt.title} onChange={e => updateLegacyOption(opt.id, "title", e.target.value)} className="w-full p-2 border rounded text-xs" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <input type="number" placeholder="価格" value={opt.price || ""} onChange={e => updateLegacyOption(opt.id, "price", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <input type="number" placeholder="最短(分)" value={opt.durationMin || ""} onChange={e => updateLegacyOption(opt.id, "durationMin", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <input type="number" placeholder="最長(分)" value={opt.durationMax || ""} onChange={e => updateLegacyOption(opt.id, "durationMax", Number(e.target.value))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <input type="number" placeholder="最大数" min={1} value={opt.maxQty || 1} onChange={e => updateLegacyOption(opt.id, "maxQty", Math.max(1, Number(e.target.value)))} className="w-full p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </div>
-                  </div>
-                )}
-                {opt.foldTitle && (
-                  <div className="space-y-3 pl-4 border-l-4 border-amber-300">
-                    <div className="mb-2">
-                      <label className="block text-[10px] font-bold text-gray-300 mb-1">最大個数（グループ全体）</label>
-                      <input type="number" min={1} value={opt.maxQty || 1} onChange={e => updateLegacyOption(opt.id, "maxQty", Math.max(1, Number(e.target.value)))} className="w-24 p-2 border rounded text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </div>
-                    {opt.foldItems.map((fi, fiIdx) => renderLegacyFoldItemRow(fi, opt.id, fiIdx))}
-                    <button type="button" onClick={() => addLegacyOptionFoldItem(opt.id)} className="text-xs bg-amber-500 text-white px-3 py-1 rounded-full font-bold hover:bg-amber-600">＋ プランを追加</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {bookingMenuIds.length === 0 && bookingCategoryIds.length === 0 && (
+        <BookingDataEditor
+          value={bookingData}
+          onChange={setBookingData}
+          title="このページの予約メニュー設定"
+          headerExtra={
+            <button type="button" onClick={openCopyModal} className="text-xs bg-blue-500 text-white px-3 py-1 rounded-full font-bold hover:bg-blue-600">📋 他ページからコピー</button>
+          }
+        />
+      )}
 
       {/* Image / Catch / Content */}
       <div>
@@ -707,6 +524,101 @@ function EditForm() {
       <div>
         <label className="block text-sm font-bold mb-1">詳細説明</label>
         <RichTextEditor value={formData.content} onChange={val => setFormData(prev => ({ ...prev, content: val }))} />
+      </div>
+
+      {/* FAQ */}
+      <div className="bg-sky-50 p-6 rounded-xl border border-sky-200 space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold text-sky-800">❓ このページのFAQ</h2>
+          <button
+            type="button"
+            onClick={() => setFaqs(prev => [...prev, { id: crypto.randomUUID(), question: "", answer: "" }])}
+            className="text-xs bg-sky-600 text-white px-3 py-1 rounded-full font-bold hover:bg-sky-700"
+          >
+            ＋ FAQを追加
+          </button>
+        </div>
+        {faqs.length === 0 && <p className="text-xs text-slate-400">FAQはまだありません。</p>}
+        {faqs.map((faq, idx) => (
+          <div key={faq.id} className="bg-white p-4 rounded-lg border border-sky-100 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-400">Q{idx + 1}</span>
+              <button
+                type="button"
+                onClick={() => setFaqs(prev => prev.filter(f => f.id !== faq.id))}
+                className="text-xs text-red-500 hover:underline"
+              >
+                削除
+              </button>
+            </div>
+            <input
+              value={faq.question}
+              onChange={e => setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, question: e.target.value } : f))}
+              placeholder="質問"
+              className="w-full p-2 border rounded text-sm"
+            />
+            <textarea
+              value={faq.answer}
+              onChange={e => setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, answer: e.target.value } : f))}
+              placeholder="回答"
+              rows={2}
+              className="w-full p-2 border rounded text-sm"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* お客様の声 */}
+      <div className="bg-amber-50 p-6 rounded-xl border border-amber-200 space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold text-amber-800">💬 お客様の声</h2>
+          <button
+            type="button"
+            onClick={() => setTestimonials(prev => [...prev, { id: crypto.randomUUID(), authorLabel: "", rating: 5, body: "", isActive: true }])}
+            className="text-xs bg-amber-600 text-white px-3 py-1 rounded-full font-bold hover:bg-amber-700"
+          >
+            ＋ お客様の声を追加
+          </button>
+        </div>
+        {testimonials.length === 0 && <p className="text-xs text-slate-400">お客様の声はまだありません。</p>}
+        {testimonials.map((t) => (
+          <div key={t.id} className="bg-white p-4 rounded-lg border border-amber-100 space-y-2">
+            <div className="flex justify-between items-center gap-2">
+              <input
+                value={t.authorLabel}
+                onChange={e => setTestimonials(prev => prev.map(x => x.id === t.id ? { ...x, authorLabel: e.target.value } : x))}
+                placeholder="お客様の表示名（例：札幌市 K様）"
+                className="flex-1 p-2 border rounded text-sm"
+              />
+              <select
+                value={t.rating ?? ""}
+                onChange={e => setTestimonials(prev => prev.map(x => x.id === t.id ? { ...x, rating: e.target.value ? Number(e.target.value) : null } : x))}
+                className="p-2 border rounded text-sm"
+              >
+                <option value="">評価なし</option>
+                {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>★{n}</option>)}
+              </select>
+              <label className="flex items-center gap-1 text-xs font-bold text-amber-700 whitespace-nowrap">
+                <input type="checkbox" checked={t.isActive} onChange={() => setTestimonials(prev => prev.map(x => x.id === t.id ? { ...x, isActive: !x.isActive } : x))} className="w-4 h-4 accent-amber-600" />
+                表示
+              </label>
+              <button
+                type="button"
+                onClick={() => setTestimonials(prev => prev.filter(x => x.id !== t.id))}
+                className="text-xs text-red-500 hover:underline"
+              >
+                削除
+              </button>
+            </div>
+            <textarea
+              value={t.body}
+              onChange={e => setTestimonials(prev => prev.map(x => x.id === t.id ? { ...x, body: e.target.value } : x))}
+              placeholder="お客様の声の本文"
+              rows={2}
+              className="w-full p-2 border rounded text-sm"
+            />
+          </div>
+        ))}
       </div>
 
       {/* SEO */}
