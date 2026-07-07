@@ -31,7 +31,8 @@ export async function GET() {
                 options: { orderBy: { order: "asc" } }
               },
               orderBy: { order: "asc" },
-            }
+            },
+            options: { orderBy: { order: "asc" } },
           },
           orderBy: { order: "asc" },
         },
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
           setDiscountRules: body.setDiscountRules ?? undefined,
           discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
           discountRounding: body.discountRounding || "NONE",
+          webSpecialPrice: body.webSpecialPrice != null && body.webSpecialPrice !== "" ? Number(body.webSpecialPrice) : null,
           order: body.order,
           categoryId: body.categoryId,
         },
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
           onSiteEstimate: body.onSiteEstimate || "NONE",
           discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
           discountRounding: body.discountRounding || "NONE",
+          webSpecialPrice: body.webSpecialPrice != null && body.webSpecialPrice !== "" ? Number(body.webSpecialPrice) : null,
           order: body.order,
           menuId: body.menuId,
         },
@@ -118,7 +121,8 @@ export async function POST(request: NextRequest) {
           discountRounding: body.discountRounding || "NONE",
           qtyDiscountRules: body.qtyDiscountRules ?? undefined,
           order: body.order,
-          subMenuId: body.subMenuId,
+          subMenuId: body.subMenuId || null,
+          menuId: body.menuId || null,
         },
       }));
     }
@@ -164,6 +168,7 @@ export async function PUT(request: NextRequest) {
           setDiscountRules: data.setDiscountRules ?? undefined,
           discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
           discountRounding: data.discountRounding || "NONE",
+          webSpecialPrice: data.webSpecialPrice != null && data.webSpecialPrice !== "" ? Number(data.webSpecialPrice) : null,
           order: data.order,
         },
       }));
@@ -183,6 +188,7 @@ export async function PUT(request: NextRequest) {
           onSiteEstimate: data.onSiteEstimate || "NONE",
           discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
           discountRounding: data.discountRounding || "NONE",
+          webSpecialPrice: data.webSpecialPrice != null && data.webSpecialPrice !== "" ? Number(data.webSpecialPrice) : null,
           order: data.order,
         },
       }));

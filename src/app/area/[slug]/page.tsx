@@ -53,8 +53,8 @@ export default async function AreaPage({ params }: Props) {
     where: { status: "PUBLISHED", noIndex: false, showOnHome: true },
     select: {
       slug: true, title: true, catchphrase: true, cardIcon: true,
-      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } },
-      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } } } },
+      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } },
+      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } } } },
     },
     orderBy: { createdAt: "asc" },
     take: 8,
@@ -184,16 +184,18 @@ export default async function AreaPage({ params }: Props) {
                             {sp.catchphrase}
                           </p>
                         )}
-                        {cheapest && (
+                        {cheapest && (cheapest.basePrice > 0 || cheapest.priceNote) && (
                           <p className="text-[10px] font-bold text-blue-600 mt-1">
                             {cheapest.priceNote && <span className="mr-0.5">{cheapest.priceNote}</span>}
-                            {cheapest.discountPercent ? (
-                              <>
-                                <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
-                                <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
-                              </>
-                            ) : (
-                              <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                            {cheapest.basePrice > 0 && (
+                              (cheapest.discountPercent || cheapest.webSpecialPrice != null) ? (
+                                <>
+                                  <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
+                                  <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
+                                </>
+                              ) : (
+                                <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                              )
                             )}
                           </p>
                         )}

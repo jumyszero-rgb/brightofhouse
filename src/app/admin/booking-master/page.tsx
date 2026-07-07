@@ -74,9 +74,9 @@ function QtyDiscountEditor({ value, onChange }: { value: QtyDiscountRules; onCha
   );
 }
 
-type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; subMenuId: string };
-type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; order: number; menuId: string; options: BookingOption[] };
-type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; order: number; categoryId: string; subMenus: BookingSubMenu[] };
+type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; subMenuId: string | null; menuId: string | null };
+type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; menuId: string; options: BookingOption[] };
+type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
 type BookingCategory = { id: string; title: string; order: number; setDiscountRules: SetDiscountRules; menus: BookingMenu[] };
 
 function newSetDiscountRules(): NonNullable<SetDiscountRules> {
@@ -138,9 +138,9 @@ export default function AdminBookingMasterPage() {
 
   // 新規追加用ステート
   const [newCatTitle, setNewCatTitle] = useState("");
-  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE" });
-  const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE" });
-  const[newOption, setNewOption] = useState<{ subMenuId: string; title: string; price: number; durationMin: number; durationMax: number; workContent: string; cautionNote: string; recommendPoint: string; onSiteEstimate: string; maxQty: string; discountPercent: string; discountRounding: string; qtyDiscountRules: QtyDiscountRules }>({ subMenuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null });
+  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" });
+  const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" });
+  const[newOption, setNewOption] = useState<{ subMenuId: string; menuId: string; title: string; price: number; durationMin: number; durationMax: number; workContent: string; cautionNote: string; recommendPoint: string; onSiteEstimate: string; maxQty: string; discountPercent: string; discountRounding: string; qtyDiscountRules: QtyDiscountRules }>({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null });
 
   // 編集用ステート
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,45 +150,150 @@ export default function AdminBookingMasterPage() {
   const [duplicating, setDuplicating] = useState<{ type: "menu" | "submenu" | "option"; source: any } | null>(null);
   const [duplicateTargetId, setDuplicateTargetId] = useState("");
 
+  // 折りたたみ用ステート（価格入力時、全部展開されていると見づらいため大分類・中分類を個別に折りたためるようにする）
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  const [collapsedMenus, setCollapsedMenus] = useState<Set<string>>(new Set());
+  const toggleCatCollapse = (id: string) => setCollapsedCats(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleMenuCollapse = (id: string) => setCollapsedMenus(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
   const startDuplicate = (source: any, type: "menu" | "submenu" | "option") => {
     setDuplicating({ type, source });
-    setDuplicateTargetId(type === "menu" ? source.categoryId : type === "submenu" ? source.menuId : source.subMenuId);
+    setDuplicateTargetId(type === "menu" ? source.categoryId : type === "submenu" ? source.menuId : (source.subMenuId || source.menuId));
+  };
+
+  const postJson = async (body: any) => {
+    const res = await fetch("/api/booking-master", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error("API Error");
+    return res.json();
+  };
+
+  const duplicateOption = (opt: any, parent: { subMenuId?: string; menuId?: string }, order: number) => postJson({
+    type: "option",
+    subMenuId: parent.subMenuId ?? null,
+    menuId: parent.menuId ?? null,
+    title: opt.title,
+    price: opt.price, durationMin: opt.durationMin, durationMax: opt.durationMax,
+    workContent: opt.workContent, cautionNote: opt.cautionNote, recommendPoint: opt.recommendPoint,
+    onSiteEstimate: opt.onSiteEstimate, maxQty: opt.maxQty, discountPercent: opt.discountPercent,
+    discountRounding: opt.discountRounding, qtyDiscountRules: opt.qtyDiscountRules ?? undefined,
+    order,
+  });
+
+  // 小分類を複製し、紐づくオプションもすべて丸ごとコピーする（個別にやり直す手間を無くす）。
+  const duplicateSubMenu = async (sm: any, menuId: string, order: number) => {
+    const newSubMenu = await postJson({
+      type: "submenu", menuId, title: sm.title,
+      price: sm.price, durationMin: sm.durationMin, durationMax: sm.durationMax,
+      workContent: sm.workContent, cautionNote: sm.cautionNote, recommendPoint: sm.recommendPoint,
+      onSiteEstimate: sm.onSiteEstimate, discountPercent: sm.discountPercent, discountRounding: sm.discountRounding,
+      webSpecialPrice: sm.webSpecialPrice,
+      order,
+    });
+    for (let i = 0; i < sm.options.length; i++) {
+      await duplicateOption(sm.options[i], { subMenuId: newSubMenu.id }, i);
+    }
+  };
+
+  // 大分類を複製する。配下の中分類・小分類・オプションもすべて丸ごとコピーする。
+  // 大分類には「コピー先」の概念が無い（常に一覧の末尾に追加）ため、他の複製と違いピッカーを介さず即実行する。
+  const duplicateCategory = async (cat: BookingCategory) => {
+    if (!window.confirm(`「${cat.title}」を、配下の中分類・小分類・オプションごとすべて複製しますか？`)) return;
+    setLoading(true);
+    try {
+      const newCat = await postJson({ type: "category", title: cat.title, order: categories.length, setDiscountRules: cat.setDiscountRules ?? undefined });
+      for (let i = 0; i < cat.menus.length; i++) {
+        const menu = cat.menus[i];
+        const newMenu = await postJson({
+          type: "menu", categoryId: newCat.id, title: menu.title,
+          basePrice: menu.basePrice, priceNote: menu.priceNote, workContent: menu.workContent,
+          cautionNote: menu.cautionNote, recommendPoint: menu.recommendPoint, onSiteEstimate: menu.onSiteEstimate,
+          durationMin: menu.durationMin, durationMax: menu.durationMax, setDiscountRules: menu.setDiscountRules ?? undefined,
+          discountPercent: menu.discountPercent, discountRounding: menu.discountRounding, webSpecialPrice: menu.webSpecialPrice,
+          order: i,
+        });
+        for (let j = 0; j < menu.subMenus.length; j++) {
+          await duplicateSubMenu(menu.subMenus[j], newMenu.id, j);
+        }
+        for (let k = 0; k < menu.options.length; k++) {
+          await duplicateOption(menu.options[k], { menuId: newMenu.id }, k);
+        }
+      }
+      await fetchData();
+    } catch (e) {
+      alert("複製に失敗しました");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const runDuplicate = async () => {
     if (!duplicating || !duplicateTargetId) return;
     const { type, source } = duplicating;
-    const title = `${source.title} (コピー)`;
-    if (type === "menu") {
-      const targetCat = categories.find(c => c.id === duplicateTargetId);
-      await handleAction("POST", {
-        type: "menu", categoryId: duplicateTargetId, title,
-        basePrice: source.basePrice, priceNote: source.priceNote, workContent: source.workContent,
-        cautionNote: source.cautionNote, recommendPoint: source.recommendPoint, onSiteEstimate: source.onSiteEstimate,
-        durationMin: source.durationMin, durationMax: source.durationMax, setDiscountRules: source.setDiscountRules ?? undefined,
-        discountPercent: source.discountPercent, discountRounding: source.discountRounding,
-        order: targetCat ? targetCat.menus.length : 0,
-      });
-    } else if (type === "submenu") {
-      const allMenus = categories.flatMap(c => c.menus);
-      const targetMenu = allMenus.find(m => m.id === duplicateTargetId);
-      await handleAction("POST", {
-        type: "submenu", menuId: duplicateTargetId, title,
-        price: source.price, durationMin: source.durationMin, durationMax: source.durationMax,
-        workContent: source.workContent, cautionNote: source.cautionNote, recommendPoint: source.recommendPoint,
-        onSiteEstimate: source.onSiteEstimate, discountPercent: source.discountPercent, discountRounding: source.discountRounding,
-        order: targetMenu ? targetMenu.subMenus.length : 0,
-      });
-    } else {
-      const allSubMenus = categories.flatMap(c => c.menus.flatMap(m => m.subMenus));
-      const targetSubMenu = allSubMenus.find(s => s.id === duplicateTargetId);
-      await handleAction("POST", {
-        type: "option", subMenuId: duplicateTargetId, title,
-        price: source.price, durationMin: source.durationMin, durationMax: source.durationMax,
-        onSiteEstimate: source.onSiteEstimate, maxQty: source.maxQty, discountPercent: source.discountPercent,
-        discountRounding: source.discountRounding, qtyDiscountRules: source.qtyDiscountRules ?? undefined,
-        order: targetSubMenu ? targetSubMenu.options.length : 0,
-      });
+    const title = source.title;
+    setLoading(true);
+    try {
+      if (type === "menu") {
+        const targetCat = categories.find(c => c.id === duplicateTargetId);
+        const newMenu = await postJson({
+          type: "menu", categoryId: duplicateTargetId, title,
+          basePrice: source.basePrice, priceNote: source.priceNote, workContent: source.workContent,
+          cautionNote: source.cautionNote, recommendPoint: source.recommendPoint, onSiteEstimate: source.onSiteEstimate,
+          durationMin: source.durationMin, durationMax: source.durationMax, setDiscountRules: source.setDiscountRules ?? undefined,
+          discountPercent: source.discountPercent, discountRounding: source.discountRounding, webSpecialPrice: source.webSpecialPrice,
+          order: targetCat ? targetCat.menus.length : 0,
+        });
+        // 小分類・小分類配下のオプション・中分類直下のオプションもすべて丸ごと複製する
+        for (let i = 0; i < source.subMenus.length; i++) {
+          await duplicateSubMenu(source.subMenus[i], newMenu.id, i);
+        }
+        for (let i = 0; i < source.options.length; i++) {
+          await duplicateOption(source.options[i], { menuId: newMenu.id }, i);
+        }
+      } else if (type === "submenu") {
+        const allMenus = categories.flatMap(c => c.menus);
+        const targetMenu = allMenus.find(m => m.id === duplicateTargetId);
+        const newSubMenu = await postJson({
+          type: "submenu", menuId: duplicateTargetId, title,
+          price: source.price, durationMin: source.durationMin, durationMax: source.durationMax,
+          workContent: source.workContent, cautionNote: source.cautionNote, recommendPoint: source.recommendPoint,
+          onSiteEstimate: source.onSiteEstimate, discountPercent: source.discountPercent, discountRounding: source.discountRounding,
+          webSpecialPrice: source.webSpecialPrice,
+          order: targetMenu ? targetMenu.subMenus.length : 0,
+        });
+        // 紐づくオプションもすべて丸ごと複製する
+        for (let i = 0; i < source.options.length; i++) {
+          await duplicateOption(source.options[i], { subMenuId: newSubMenu.id }, i);
+        }
+      } else {
+        const allSubMenus = categories.flatMap(c => c.menus.flatMap(m => m.subMenus));
+        const allMenus = categories.flatMap(c => c.menus);
+        const targetSubMenu = allSubMenus.find(s => s.id === duplicateTargetId);
+        const targetMenu = !targetSubMenu ? allMenus.find(m => m.id === duplicateTargetId) : undefined;
+        await postJson({
+          type: "option",
+          subMenuId: targetSubMenu ? duplicateTargetId : null,
+          menuId: targetMenu ? duplicateTargetId : null,
+          title,
+          price: source.price, durationMin: source.durationMin, durationMax: source.durationMax,
+          workContent: source.workContent, cautionNote: source.cautionNote, recommendPoint: source.recommendPoint,
+          onSiteEstimate: source.onSiteEstimate, maxQty: source.maxQty, discountPercent: source.discountPercent,
+          discountRounding: source.discountRounding, qtyDiscountRules: source.qtyDiscountRules ?? undefined,
+          order: targetSubMenu ? targetSubMenu.options.length : (targetMenu ? targetMenu.options.length : 0),
+        });
+      }
+      await fetchData();
+    } catch (e) {
+      alert("複製に失敗しました");
+    } finally {
+      setLoading(false);
     }
     setDuplicating(null);
     setDuplicateTargetId("");
@@ -253,6 +358,21 @@ export default function AdminBookingMasterPage() {
           <button onClick={() => { handleAction("POST", { type: "category", title: newCatTitle, order: categories.length }); setNewCatTitle(""); }} className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700">大分類追加</button>
         </div>
 
+        <div className="flex justify-end gap-2 mb-4">
+          <button
+            onClick={() => { setCollapsedCats(new Set(categories.map(c => c.id))); setCollapsedMenus(new Set(categories.flatMap(c => c.menus.map(m => m.id)))); }}
+            className="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded font-bold text-slate-600 hover:bg-slate-50"
+          >
+            すべて折りたたむ
+          </button>
+          <button
+            onClick={() => { setCollapsedCats(new Set()); setCollapsedMenus(new Set()); }}
+            className="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded font-bold text-slate-600 hover:bg-slate-50"
+          >
+            すべて展開
+          </button>
+        </div>
+
         <div className="space-y-12">
           {categories.map((cat, catIdx) => (
             <div key={cat.id} className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
@@ -269,15 +389,20 @@ export default function AdminBookingMasterPage() {
                   <div className="flex items-center gap-2 w-full">
                     <button onClick={() => handleMove(catIdx, "up", categories, "category")} className="px-2 bg-white/10 rounded hover:bg-white/20">↑</button>
                     <button onClick={() => handleMove(catIdx, "down", categories, "category")} className="px-2 bg-white/10 rounded hover:bg-white/20">↓</button>
-                    <h2 className="text-xl font-bold flex-1 ml-2">📂 大分類: {cat.title}</h2>
+                    <button onClick={() => toggleCatCollapse(cat.id)} className="px-2 bg-white/10 rounded hover:bg-white/20" title={collapsedCats.has(cat.id) ? "展開" : "折りたたむ"}>
+                      {collapsedCats.has(cat.id) ? "▶" : "▼"}
+                    </button>
+                    <h2 className="text-xl font-bold flex-1 ml-2 cursor-pointer" onClick={() => toggleCatCollapse(cat.id)}>📂 大分類: {cat.title}</h2>
                     <div className="flex gap-2">
                       <button onClick={() => startEdit(cat, "category")} className="text-blue-300 text-sm hover:underline">編集</button>
+                      <button onClick={() => duplicateCategory(cat)} className="text-purple-300 text-sm hover:underline">複製</button>
                       <button onClick={() => handleAction("DELETE", { id: cat.id, type: "category" })} className="text-red-400 text-sm hover:underline">削除</button>
                     </div>
                   </div>
                 )}
               </div>
 
+              {!collapsedCats.has(cat.id) && (
               <div className="p-6 space-y-8">
 
                 {/* --- 大分類のセット割引設定 --- */}
@@ -312,7 +437,8 @@ export default function AdminBookingMasterPage() {
                     <input type="number" min={0} max={99} step={0.1} placeholder="個別値引き% (任意・空欄で無し)" className="w-56 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.discountPercent : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, discountPercent: e.target.value })} />
                     <RoundingSelect value={(newMenu.categoryId === cat.id ? newMenu.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewMenu({ ...newMenu, categoryId: cat.id, discountRounding })} />
                   </div>
-                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
+                  <input type="number" min={0} placeholder="WEB特価(円・任意。設定すると%値引きより優先されます)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.webSpecialPrice : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, webSpecialPrice: e.target.value })} />
+                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
                 </div>
 
                 {/* 【2階層目】中分類リスト */}
@@ -343,6 +469,10 @@ export default function AdminBookingMasterPage() {
                             <input type="number" min={0} max={99} step={0.1} className="w-20 p-1 border rounded text-black text-sm" value={editData.discountPercent ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, discountPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null}))} />
                             <RoundingSelect value={editData.discountRounding} onChange={(discountRounding) => setEditData((prev: any) => ({ ...prev, discountRounding }))} />
                           </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-teal-600">WEB特価(円・空欄で無し。設定すると%値引きより優先):</span>
+                            <input type="number" min={0} className="w-32 p-1 border rounded text-black text-sm" value={editData.webSpecialPrice ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, webSpecialPrice: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
+                          </div>
                           <SetDiscountEditor value={editData.setDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, setDiscountRules: v }))} />
                           <div className="ml-auto flex gap-2 mt-2">
                             <button onClick={saveEdit} className="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold">保存</button>
@@ -354,11 +484,19 @@ export default function AdminBookingMasterPage() {
                           <div className="flex flex-col gap-0.5 mt-1">
                             <button onClick={() => handleMove(menuIdx, "up", cat.menus, "menu")} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded">↑</button>
                             <button onClick={() => handleMove(menuIdx, "down", cat.menus, "menu")} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded">↓</button>
+                            <button onClick={() => toggleMenuCollapse(menu.id)} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded" title={collapsedMenus.has(menu.id) ? "展開" : "折りたたむ"}>
+                              {collapsedMenus.has(menu.id) ? "▶" : "▼"}
+                            </button>
                           </div>
                           <div className="flex-1 flex flex-col gap-2">
                             <div className="flex items-center gap-4 flex-wrap">
-                              <h3 className="font-bold text-blue-800 text-lg">📄 {menu.title}</h3>
-                              {menu.discountPercent ? (
+                              <h3 className="font-bold text-blue-800 text-lg cursor-pointer" onClick={() => toggleMenuCollapse(menu.id)}>📄 {menu.title}</h3>
+                              {menu.webSpecialPrice != null ? (
+                                <span className="text-sm font-bold bg-slate-100 px-2 py-1 rounded">
+                                  <span className="text-slate-400 line-through mr-1">{menu.basePrice.toLocaleString()}円</span>
+                                  <span className="text-red-600">{menu.webSpecialPrice.toLocaleString()}円</span>
+                                </span>
+                              ) : menu.discountPercent ? (
                                 <span className="text-sm font-bold bg-slate-100 px-2 py-1 rounded">
                                   <span className="text-slate-400 line-through mr-1">{menu.basePrice.toLocaleString()}円</span>
                                   <span className="text-red-600">{roundAmount(menu.basePrice * (100 - menu.discountPercent) / 100, menu.discountRounding).toLocaleString()}円</span>
@@ -366,7 +504,7 @@ export default function AdminBookingMasterPage() {
                               ) : (
                                 <span className="text-sm font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded">{menu.basePrice.toLocaleString()}円</span>
                               )}
-                              {menu.discountPercent ? <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{discountLabel(menu.discountPercent, menu.discountRounding)}OFF</span> : null}
+                              {menu.webSpecialPrice != null ? <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">WEB特価</span> : menu.discountPercent ? <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{discountLabel(menu.discountPercent, menu.discountRounding)}OFF</span> : null}
                               {menu.priceNote && <span className="text-xs text-red-600 font-bold">{menu.priceNote}</span>}
                               <span className="text-xs text-slate-500">({menu.durationMin}{menu.durationMax ? `〜${menu.durationMax}` : ""}分)</span>
                               {menu.onSiteEstimate !== "NONE" && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{ON_SITE_ESTIMATE_LABEL[menu.onSiteEstimate]}</span>}
@@ -392,6 +530,7 @@ export default function AdminBookingMasterPage() {
                       )}
                     </div>
 
+                    {!collapsedMenus.has(menu.id) && (
                     <div className="pl-6 border-l-2 border-slate-100 space-y-6">
 
                       {/* --- 作業内容 --- */}
@@ -427,6 +566,10 @@ export default function AdminBookingMasterPage() {
                                     <input type="number" min={0} max={99} step={0.1} className="w-16 p-1 border rounded text-black text-xs" value={editData.discountPercent ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, discountPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null}))} />
                                     <RoundingSelect value={editData.discountRounding} onChange={(discountRounding) => setEditData((prev: any) => ({ ...prev, discountRounding }))} />
                                   </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-teal-600">WEB特価(円・空欄で無し):</span>
+                                    <input type="number" min={0} className="w-24 p-1 border rounded text-black text-xs" value={editData.webSpecialPrice ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, webSpecialPrice: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
+                                  </div>
                                   <div className="ml-auto flex gap-1">
                                     <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">保存</button>
                                     <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-2 py-1 rounded text-[10px] font-bold">中止</button>
@@ -440,7 +583,13 @@ export default function AdminBookingMasterPage() {
                                   </div>
                                   <div className="flex-1 flex items-center gap-3 flex-wrap">
                                     <h4 className="font-bold text-orange-900 text-sm">➖ {subMenu.title}</h4>
-                                    {subMenu.discountPercent ? (
+                                    {subMenu.webSpecialPrice != null ? (
+                                      <span className="text-xs font-bold bg-white px-2 py-0.5 border rounded shadow-sm">
+                                        <span className="text-slate-400 line-through mr-1">+{subMenu.price.toLocaleString()}円</span>
+                                        <span className="text-red-600">+{subMenu.webSpecialPrice.toLocaleString()}円</span>
+                                        {" "}/ +{subMenu.durationMin}{subMenu.durationMax ? `〜${subMenu.durationMax}` : ""}分
+                                      </span>
+                                    ) : subMenu.discountPercent ? (
                                       <span className="text-xs font-bold bg-white px-2 py-0.5 border rounded shadow-sm">
                                         <span className="text-slate-400 line-through mr-1">+{subMenu.price.toLocaleString()}円</span>
                                         <span className="text-red-600">+{roundAmount(subMenu.price * (100 - subMenu.discountPercent) / 100, subMenu.discountRounding).toLocaleString()}円</span>
@@ -449,7 +598,7 @@ export default function AdminBookingMasterPage() {
                                     ) : (
                                       <span className="text-xs font-bold text-orange-700 bg-white px-2 py-0.5 border rounded shadow-sm">+{subMenu.price.toLocaleString()}円 / +{subMenu.durationMin}{subMenu.durationMax ? `〜${subMenu.durationMax}` : ""}分</span>
                                     )}
-                                    {subMenu.discountPercent ? <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{discountLabel(subMenu.discountPercent, subMenu.discountRounding)}OFF</span> : null}
+                                    {subMenu.webSpecialPrice != null ? <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">WEB特価</span> : subMenu.discountPercent ? <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{discountLabel(subMenu.discountPercent, subMenu.discountRounding)}OFF</span> : null}
                                     {subMenu.onSiteEstimate !== "NONE" && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{ON_SITE_ESTIMATE_LABEL[subMenu.onSiteEstimate]}</span>}
                                   </div>
                                   <div className="flex gap-2">
@@ -496,6 +645,7 @@ export default function AdminBookingMasterPage() {
                                           <button onClick={saveEdit} className="bg-green-600 text-white px-1.5 py-0.5 rounded">✓</button>
                                           <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-1.5 py-0.5 rounded">×</button>
                                         </div>
+                                        <input className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (改行で箇条書き、任意)" />
                                         <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                                       </div>
                                     ) : (
@@ -530,10 +680,11 @@ export default function AdminBookingMasterPage() {
 
                               {duplicating?.type === "option" && subMenu.options.some(o => o.id === duplicating.source.id) && (
                                 <div className="flex items-center gap-2 bg-purple-50 border border-purple-300 rounded p-2 mb-3 w-full flex-wrap">
-                                  <span className="text-xs font-bold text-purple-800">「{duplicating.source.title}」のコピー先の小分類:</span>
+                                  <span className="text-xs font-bold text-purple-800">「{duplicating.source.title}」のコピー先:</span>
                                   <select value={duplicateTargetId} onChange={(e) => setDuplicateTargetId(e.target.value)} className="p-1 border rounded text-xs">
                                     {categories.map(c => (
                                       <optgroup key={c.id} label={c.title}>
+                                        {c.menus.map(m => <option key={m.id} value={m.id}>{m.title}（中分類直下）</option>)}
                                         {c.menus.flatMap(m => m.subMenus.map(s => <option key={s.id} value={s.id}>{m.title} ➖ {s.title}</option>))}
                                       </optgroup>
                                     ))}
@@ -545,21 +696,22 @@ export default function AdminBookingMasterPage() {
 
                               {/* 追加オプション追加フォーム */}
                               <div className="flex gap-2 items-center bg-white p-2 rounded border border-orange-200 flex-wrap">
-                                <input type="text" placeholder="追加オプションを追加" className="flex-1 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.title : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, title: e.target.value })} />
-                                <input type="number" placeholder="加算(円)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.price || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, price: parseInt(e.target.value) || 0 })} />
-                                <input type="number" placeholder="最短(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMin || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, durationMin: parseInt(e.target.value) || 0 })} />
-                                <input type="number" placeholder="最長(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMax || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, durationMax: parseInt(e.target.value) || 0 })} />
-                                <select className="p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.onSiteEstimate : "NONE"} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, onSiteEstimate: e.target.value })}>
+                                <input type="text" placeholder="追加オプションを追加" className="flex-1 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.title : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", title: e.target.value })} />
+                                <input type="number" placeholder="加算(円)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.price || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", price: parseInt(e.target.value) || 0 })} />
+                                <input type="number" placeholder="最短(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMin || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", durationMin: parseInt(e.target.value) || 0 })} />
+                                <input type="number" placeholder="最長(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMax || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", durationMax: parseInt(e.target.value) || 0 })} />
+                                <input type="text" placeholder="作業内容 (改行で箇条書き、任意)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", workContent: e.target.value })} />
+                                <select className="p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.onSiteEstimate : "NONE"} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", onSiteEstimate: e.target.value })}>
                                   {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                                 </select>
-                                <input type="number" min={1} placeholder="上限個数(空欄=無制限)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.maxQty : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, maxQty: e.target.value })} />
-                                <input type="number" min={0} max={99} step={0.1} placeholder="値引き%(任意)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.discountPercent : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, discountPercent: e.target.value })} />
-                                <RoundingSelect value={(newOption.subMenuId === subMenu.id ? newOption.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewOption({ ...newOption, subMenuId: subMenu.id, discountRounding })} />
-                                <button onClick={() => { handleAction("POST", { type: "option", subMenuId: subMenu.id, title: newOption.title, price: newOption.price, durationMin: newOption.durationMin, durationMax: newOption.durationMax || null, onSiteEstimate: newOption.onSiteEstimate, maxQty: newOption.maxQty || null, discountPercent: newOption.discountPercent || null, discountRounding: newOption.discountRounding, qtyDiscountRules: newOption.qtyDiscountRules ?? undefined, order: subMenu.options.length }); setNewOption({ subMenuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null }); }} className="bg-orange-500 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-orange-600">追加</button>
+                                <input type="number" min={1} placeholder="上限個数(空欄=無制限)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.maxQty : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", maxQty: e.target.value })} />
+                                <input type="number" min={0} max={99} step={0.1} placeholder="値引き%(任意)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.discountPercent : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", discountPercent: e.target.value })} />
+                                <RoundingSelect value={(newOption.subMenuId === subMenu.id ? newOption.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", discountRounding })} />
+                                <button onClick={() => { handleAction("POST", { type: "option", subMenuId: subMenu.id, title: newOption.title, price: newOption.price, durationMin: newOption.durationMin, durationMax: newOption.durationMax || null, workContent: newOption.workContent, onSiteEstimate: newOption.onSiteEstimate, maxQty: newOption.maxQty || null, discountPercent: newOption.discountPercent || null, discountRounding: newOption.discountRounding, qtyDiscountRules: newOption.qtyDiscountRules ?? undefined, order: subMenu.options.length }); setNewOption({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null }); }} className="bg-orange-500 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-orange-600">追加</button>
                                 <div className="w-full">
                                   <QtyDiscountEditor
                                     value={newOption.subMenuId === subMenu.id ? newOption.qtyDiscountRules : null}
-                                    onChange={(v) => setNewOption({ ...newOption, subMenuId: subMenu.id, qtyDiscountRules: v })}
+                                    onChange={(v) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", qtyDiscountRules: v })}
                                   />
                                 </div>
                               </div>
@@ -584,8 +736,104 @@ export default function AdminBookingMasterPage() {
                             <input type="text" placeholder="注意事項 (任意)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.cautionNote : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, cautionNote: e.target.value })} />
                             <input type="number" min={0} max={99} step={0.1} placeholder="個別値引き%(任意)" className="w-36 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.discountPercent : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, discountPercent: e.target.value })} />
                             <RoundingSelect value={(newSubMenu.menuId === menu.id ? newSubMenu.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, discountRounding })} />
+                            <input type="number" min={0} placeholder="WEB特価(円・任意。%値引きより優先)" className="w-56 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.webSpecialPrice : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, webSpecialPrice: e.target.value })} />
                           </div>
-                          <button onClick={() => { handleAction("POST", { type: "submenu", menuId: menu.id, title: newSubMenu.title, price: newSubMenu.price, durationMin: newSubMenu.durationMin, durationMax: newSubMenu.durationMax || null, onSiteEstimate: newSubMenu.onSiteEstimate, workContent: newSubMenu.workContent, recommendPoint: newSubMenu.recommendPoint, cautionNote: newSubMenu.cautionNote, discountPercent: newSubMenu.discountPercent || null, discountRounding: newSubMenu.discountRounding, order: menu.subMenus.length }); setNewSubMenu({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE" }); }} className="self-end bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-700">小分類追加</button>
+                          <button onClick={() => { handleAction("POST", { type: "submenu", menuId: menu.id, title: newSubMenu.title, price: newSubMenu.price, durationMin: newSubMenu.durationMin, durationMax: newSubMenu.durationMax || null, onSiteEstimate: newSubMenu.onSiteEstimate, workContent: newSubMenu.workContent, recommendPoint: newSubMenu.recommendPoint, cautionNote: newSubMenu.cautionNote, discountPercent: newSubMenu.discountPercent || null, discountRounding: newSubMenu.discountRounding, webSpecialPrice: newSubMenu.webSpecialPrice || null, order: menu.subMenus.length }); setNewSubMenu({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" }); }} className="self-end bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-700">小分類追加</button>
+                        </div>
+                      </div>
+
+                      {/* 中分類直下のオプション（小分類を作らずに数量選択できる追加オプションだけ付けたい場合） */}
+                      <div>
+                        <h4 className="text-xs font-bold text-teal-600 uppercase tracking-widest mb-3 border-l-4 border-teal-300 pl-2">中分類直下のオプション（小分類なしで数量選択させたい場合）</h4>
+                        <div className="bg-teal-50 border border-teal-100 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {menu.options.map((opt, optIdx) => (
+                              <div key={opt.id} className="bg-white border border-teal-100 p-2 rounded flex justify-between items-center text-xs shadow-sm">
+                                {editingId === opt.id ? (
+                                  <div className="flex flex-col gap-1 w-full">
+                                    <div className="flex gap-1 items-center flex-wrap">
+                                      <input className="flex-1 p-1 border rounded text-black text-[10px]" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} placeholder="オプション名" />
+                                      <input type="number" className="w-14 p-1 border rounded text-black text-[10px]" value={editData.price || 0} onChange={(e) => setEditData((prev:any) => ({...prev, price: parseInt(e.target.value) || 0}))} placeholder="円" />
+                                      <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMin || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMin: parseInt(e.target.value) || 0}))} placeholder="最短分" />
+                                      <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMax || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMax: parseInt(e.target.value) || 0}))} placeholder="最長分" />
+                                      <select className="p-1 border rounded text-black text-[10px]" value={editData.onSiteEstimate || "NONE"} onChange={(e) => setEditData((prev:any) => ({...prev, onSiteEstimate: e.target.value}))}>
+                                        {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                                      </select>
+                                      <input type="number" min={1} className="w-16 p-1 border rounded text-black text-[10px]" placeholder="上限個数(空欄=無制限)" value={editData.maxQty ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, maxQty: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
+                                      <input type="number" min={0} max={99} step={0.1} className="w-16 p-1 border rounded text-black text-[10px]" placeholder="値引き%(空欄で無し)" value={editData.discountPercent ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, discountPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null}))} />
+                                      <RoundingSelect value={editData.discountRounding} onChange={(discountRounding) => setEditData((prev: any) => ({ ...prev, discountRounding }))} />
+                                      <button onClick={saveEdit} className="bg-green-600 text-white px-1.5 py-0.5 rounded">✓</button>
+                                      <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-1.5 py-0.5 rounded">×</button>
+                                    </div>
+                                    <input className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (改行で箇条書き、任意)" />
+                                    <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <button onClick={() => handleMove(optIdx, "up", menu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▲</button>
+                                      <button onClick={() => handleMove(optIdx, "down", menu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▼</button>
+                                      <span className="font-bold text-teal-900 ml-1">{opt.title}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {opt.discountPercent ? (
+                                        <span className="font-bold">
+                                          <span className="text-slate-400 line-through mr-1">+{opt.price.toLocaleString()}円</span>
+                                          <span className="text-red-600">+{roundAmount(opt.price * (100 - opt.discountPercent) / 100, opt.discountRounding).toLocaleString()}円</span>
+                                        </span>
+                                      ) : (
+                                        <span className="font-bold text-teal-600">+{opt.price.toLocaleString()}円</span>
+                                      )}
+                                      <span className="text-[10px] text-teal-600 bg-teal-100 px-1 rounded">+{opt.durationMin}{opt.durationMax ? `〜${opt.durationMax}` : ""}分</span>
+                                      {opt.onSiteEstimate !== "NONE" && <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1 rounded-full">{ON_SITE_ESTIMATE_LABEL[opt.onSiteEstimate]}</span>}
+                                      <span className="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1 rounded-full">{opt.maxQty ? `上限${opt.maxQty}個` : "個数無制限"}</span>
+                                      {opt.discountPercent ? <span className="text-[9px] font-bold bg-red-100 text-red-700 px-1 rounded-full">{discountLabel(opt.discountPercent, opt.discountRounding)}OFF</span> : null}
+                                      <button onClick={() => startEdit(opt, "option")} className="text-blue-400 text-[10px] hover:underline ml-1">✎</button>
+                                      <button onClick={() => startDuplicate(opt, "option")} className="text-purple-400 text-[10px] hover:underline">複製</button>
+                                      <button onClick={() => handleAction("DELETE", { id: opt.id, type: "option" })} className="text-red-400 text-[10px] hover:underline font-bold">×</button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {duplicating?.type === "option" && menu.options.some(o => o.id === duplicating.source.id) && (
+                            <div className="flex items-center gap-2 bg-purple-50 border border-purple-300 rounded p-2 mb-3 w-full flex-wrap">
+                              <span className="text-xs font-bold text-purple-800">「{duplicating.source.title}」のコピー先:</span>
+                              <select value={duplicateTargetId} onChange={(e) => setDuplicateTargetId(e.target.value)} className="p-1 border rounded text-xs">
+                                {categories.map(c => (
+                                  <optgroup key={c.id} label={c.title}>
+                                    {c.menus.map(m => <option key={m.id} value={m.id}>{m.title}（中分類直下）</option>)}
+                                    {c.menus.flatMap(m => m.subMenus.map(s => <option key={s.id} value={s.id}>{m.title} ➖ {s.title}</option>))}
+                                  </optgroup>
+                                ))}
+                              </select>
+                              <button onClick={runDuplicate} className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-purple-700">複製実行</button>
+                              <button onClick={() => setDuplicating(null)} className="bg-gray-400 text-white px-2 py-1 rounded text-xs font-bold">キャンセル</button>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 items-center bg-white p-2 rounded border border-teal-200 flex-wrap">
+                            <input type="text" placeholder="オプションを追加" className="flex-1 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.title : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", title: e.target.value })} />
+                            <input type="number" placeholder="加算(円)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.price || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", price: parseInt(e.target.value) || 0 })} />
+                            <input type="number" placeholder="最短(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.durationMin || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", durationMin: parseInt(e.target.value) || 0 })} />
+                            <input type="number" placeholder="最長(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.durationMax || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", durationMax: parseInt(e.target.value) || 0 })} />
+                            <input type="text" placeholder="作業内容 (改行で箇条書き、任意)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", workContent: e.target.value })} />
+                            <select className="p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.onSiteEstimate : "NONE"} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", onSiteEstimate: e.target.value })}>
+                              {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                            </select>
+                            <input type="number" min={1} placeholder="上限個数(空欄=無制限)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.maxQty : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", maxQty: e.target.value })} />
+                            <input type="number" min={0} max={99} step={0.1} placeholder="値引き%(任意)" className="w-24 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.discountPercent : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", discountPercent: e.target.value })} />
+                            <RoundingSelect value={(newOption.menuId === menu.id ? newOption.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", discountRounding })} />
+                            <button onClick={() => { handleAction("POST", { type: "option", menuId: menu.id, title: newOption.title, price: newOption.price, durationMin: newOption.durationMin, durationMax: newOption.durationMax || null, workContent: newOption.workContent, onSiteEstimate: newOption.onSiteEstimate, maxQty: newOption.maxQty || null, discountPercent: newOption.discountPercent || null, discountRounding: newOption.discountRounding, qtyDiscountRules: newOption.qtyDiscountRules ?? undefined, order: menu.options.length }); setNewOption({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null }); }} className="bg-teal-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-teal-700">追加</button>
+                            <div className="w-full">
+                              <QtyDiscountEditor
+                                value={newOption.menuId === menu.id ? newOption.qtyDiscountRules : null}
+                                onChange={(v) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", qtyDiscountRules: v })}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -600,9 +848,11 @@ export default function AdminBookingMasterPage() {
                       </div>
 
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
+              )}
             </div>
           ))}
         </div>

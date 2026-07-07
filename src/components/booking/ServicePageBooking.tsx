@@ -6,14 +6,14 @@ import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } f
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 
-type FoldItem = { id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number; comment?: string; cautionNote?: string };
+type FoldItem = { id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string };
 
 type DiscountRule = { count: number; value: number };
 type QtyDiscount = { enabled: boolean; rules: DiscountRule[]; rounding?: RoundingMode };
 
 type OptionItem = {
   id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number;
-  maxQty: number; comment?: string; parentFoldItemId?: string; qtyDiscount?: QtyDiscount;
+  maxQty: number; workContent?: string; comment?: string; parentFoldItemId?: string; qtyDiscount?: QtyDiscount;
 };
 
 type SetDiscount = { enabled: boolean; type: "amount" | "percent"; rules: DiscountRule[]; rounding?: RoundingMode };
@@ -23,6 +23,7 @@ const discountLabel = (value: number, rounding?: RoundingMode) => `${rounding &&
 
 type MainService = {
   id?: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number;
+  workContent?: string; comment?: string; cautionNote?: string;
   foldTitle?: string; foldItems?: FoldItem[];
   options?: OptionItem[];
   setDiscount?: SetDiscount;
@@ -69,6 +70,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [selectedFoldItemIds, setSelectedFoldItemIds] = useState<string[]>([]);
   const [openFolds, setOpenFolds] = useState<Record<string, boolean>>({});
   const toggleFold = (id: string) => setOpenFolds(prev => ({ ...prev, [id]: !prev[id] }));
+  // 大分類(グループ)のチェックボックス開閉。中身の中分類一覧はチェックしたときだけ表示する。
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
@@ -334,6 +338,74 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     if (nextStart >= startOfDay(new Date())) setCurrentWeekStart(nextStart);
   };
 
+  // 追加オプション1件分の描画。小分類にネストされる場合・中分類直下の場合の両方で共用する。
+  const renderOptionRow = (opt: OptionItem) => {
+    const qty = getQty(opt.id);
+    const qtyDiscountAmount = calcOptionQtyDiscount(opt, qty);
+    return (
+      <div key={opt.id}>
+        <div className={`p-2 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0 mb-1">
+            <div>
+              <span className="text-xs font-medium">{opt.title}</span>
+              {(opt.durationMin > 0 || opt.durationMax > 0) && (
+                <span className="text-[10px] text-slate-400 ml-1">
+                  (+{opt.durationMin === opt.durationMax ? `${opt.durationMin}分` : `${opt.durationMin}〜${opt.durationMax}分`})
+                </span>
+              )}
+            </div>
+            {opt.price > 0 && (
+              <span className="text-xs">
+                {opt.originalPrice != null && (
+                  <span className="text-slate-400 line-through mr-1">+¥{opt.originalPrice.toLocaleString()}</span>
+                )}
+                <span className="font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" onClick={() => setQty(opt.id, Math.max(0, qty - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
+            <span className="w-5 text-center font-bold text-xs">{qty}</span>
+            <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty || Infinity, qty + 1))} disabled={qty >= (opt.maxQty || Infinity)} className="w-6 h-6 rounded-full bg-indigo-500 text-white font-bold text-xs flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
+            {(opt.maxQty || 0) > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
+            {qtyDiscountAmount > 0 && (
+              <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">-¥{qtyDiscountAmount.toLocaleString()}</span>
+            )}
+          </div>
+          {opt.qtyDiscount?.enabled && opt.qtyDiscount.rules.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {[...opt.qtyDiscount.rules].sort((a, b) => a.count - b.count).map(rule => (
+                <span key={rule.count} className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${qty >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-200'}`}>
+                  {rule.count}個以上で{discountLabel(rule.value, opt.qtyDiscount?.rounding)}引き
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {opt.comment && <p className="text-[10px] text-slate-500 ml-2 mt-0.5">💬 {opt.comment}</p>}
+        {opt.workContent && (
+          <ul className="text-[10px] text-slate-500 ml-2 mt-0.5 space-y-0.5 list-disc list-outside pl-4">
+            {opt.workContent.split("\n").filter(Boolean).map((line, i) => (
+              <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  // 中分類(main)直下のオプション（小分類を経由しないもの）の描画。main自身のチェック時のみ表示する。
+  const renderDirectOptions = (main: MainService) => {
+    const directOptions = (main.options || []).filter(o => !o.parentFoldItemId);
+    if (directOptions.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        <p className="text-[10px] font-bold text-indigo-600">┗ オプション</p>
+        {directOptions.map(opt => renderOptionRow(opt))}
+      </div>
+    );
+  };
+
   // 小分類(foldItem)一覧の描画。中分類チェックで展開される場合・手入力の折り畳みグループの
   // どちらからも共用する。各小分類はさらに紐づく追加オプションをネストして表示する。
   const renderFoldItemsList = (main: MainService) => (
@@ -343,24 +415,35 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         const fiOptions = (main.options || []).filter(o => o.parentFoldItemId === fi.id);
         return (
           <div key={fi.id}>
-            <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+            <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0 p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
               <div className="flex items-center gap-3">
                 <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-4 h-4 accent-blue-600" />
                 <div>
                   <span className="font-bold text-sm">{fi.title}</span>
-                  <span className="text-xs text-slate-500 ml-2">
-                    ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                  </span>
+                  {(fi.durationMin > 0 || fi.durationMax > 0) && (
+                    <span className="text-xs text-slate-500 ml-2">
+                      ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
+                    </span>
+                  )}
                 </div>
               </div>
-              <span className="text-sm">
-                {fi.originalPrice != null && (
-                  <span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span>
-                )}
-                <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}</span>
-              </span>
+              {fi.price > 0 && (
+                <span className="text-sm pl-7 sm:pl-0">
+                  {fi.originalPrice != null && (
+                    <span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span>
+                  )}
+                  <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}</span>
+                </span>
+              )}
             </label>
             {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
+            {fi.workContent && (
+              <ul className="text-xs text-slate-600 ml-8 mt-1 space-y-0.5 list-disc list-outside pl-4">
+                {fi.workContent.split("\n").filter(Boolean).map((line, i) => (
+                  <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
+                ))}
+              </ul>
+            )}
 
             {/* 注意事項（折り畳み） */}
             {fi.cautionNote && (
@@ -380,49 +463,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             {checked && fiOptions.length > 0 && (
               <div className="ml-8 mt-2 mb-2 pl-3 border-l-4 border-indigo-200 space-y-1">
                 <p className="text-[10px] font-bold text-indigo-600">┗ オプション</p>
-                {fiOptions.map(opt => {
-                  const qty = getQty(opt.id);
-                  const qtyDiscountAmount = calcOptionQtyDiscount(opt, qty);
-                  return (
-                    <div key={opt.id}>
-                      <div className={`p-2 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div>
-                            <span className="text-xs font-medium">{opt.title}</span>
-                            <span className="text-[10px] text-slate-400 ml-1">
-                              (+{opt.durationMin === opt.durationMax ? `${opt.durationMin}分` : `${opt.durationMin}〜${opt.durationMax}分`})
-                            </span>
-                          </div>
-                          <span className="text-xs">
-                            {opt.originalPrice != null && (
-                              <span className="text-slate-400 line-through mr-1">+¥{opt.originalPrice.toLocaleString()}</span>
-                            )}
-                            <span className="font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button type="button" onClick={() => setQty(opt.id, Math.max(0, qty - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
-                          <span className="w-5 text-center font-bold text-xs">{qty}</span>
-                          <button type="button" onClick={() => setQty(opt.id, Math.min(opt.maxQty || Infinity, qty + 1))} disabled={qty >= (opt.maxQty || Infinity)} className="w-6 h-6 rounded-full bg-indigo-500 text-white font-bold text-xs flex items-center justify-center hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400">+</button>
-                          {(opt.maxQty || 0) > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
-                          {qtyDiscountAmount > 0 && (
-                            <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">-¥{qtyDiscountAmount.toLocaleString()}</span>
-                          )}
-                        </div>
-                        {opt.qtyDiscount?.enabled && opt.qtyDiscount.rules.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {[...opt.qtyDiscount.rules].sort((a, b) => a.count - b.count).map(rule => (
-                              <span key={rule.count} className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${qty >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-200'}`}>
-                                {rule.count}個以上で{discountLabel(rule.value, opt.qtyDiscount?.rounding)}引き
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {opt.comment && <p className="text-[10px] text-slate-500 ml-2 mt-0.5">💬 {opt.comment}</p>}
-                    </div>
-                  );
-                })}
+                {fiOptions.map(opt => renderOptionRow(opt))}
               </div>
             )}
           </div>
@@ -431,19 +472,51 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     </>
   );
 
+  // 中分類(main)のおすすめ・作業内容・注意事項の描画。3種のrenderMain分岐すべてから共用する。
+  // チェック済み(選択中)の場合のみ呼び出す想定 — タイトル行とは別の余白を確保したブロックとして表示する。
+  const renderMainDetails = (main: MainService, key: string) => {
+    if (!main.comment && !main.workContent && !main.cautionNote) return null;
+    return (
+      <div className="space-y-1">
+        {main.comment && <p className="text-xs text-slate-500">💬 {main.comment}</p>}
+        {main.workContent && (
+          <ul className="text-xs text-slate-600 space-y-0.5 list-disc list-outside pl-4">
+            {main.workContent.split("\n").filter(Boolean).map((line, i) => (
+              <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {main.cautionNote && (
+          <div>
+            <button type="button" onClick={() => toggleCaution(key)} className="text-[10px] font-bold text-red-600 hover:underline">
+              {openCautions[key] ? "▲ 注意事項を閉じる" : "⚠️ 注意事項を確認"}
+            </button>
+            {openCautions[key] && (
+              <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 whitespace-pre-wrap">
+                {main.cautionNote}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 中分類1件分の描画。
   // ・予約マスター由来で小分類を持つ場合：中分類自体のチェックボックスを表示し、
   //   チェックすると小分類一覧が下に展開される（中分類の選択が消えないようにする）。
   // ・手入力(BookingDataEditor)の折り畳みグループ：中分類という概念が無いため従来通りのアコーディオン。
   // ・折り畳みが無い単純な項目：通常のチェックボックス。
   const renderMain = (main: MainService, idx: number) => {
-    if (main.foldTitle && main.foldItems && main.foldItems.length > 0 && main.hasBaseSelection) {
+    const hasFoldItems = !!main.foldItems && main.foldItems.length > 0;
+    const hasDirectOptions = !!main.options && main.options.some(o => !o.parentFoldItemId);
+    if (main.hasBaseSelection && (hasFoldItems || hasDirectOptions)) {
       const checked = selectedMains.includes(idx);
-      const selectedInThisMain = main.foldItems.filter(fi => selectedFoldItemIds.includes(fi.id));
+      const selectedInThisMain = (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id));
       const discount = calcSetDiscount(main, idx);
       return (
         <div key={main.id || `main-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <label className={`flex items-center justify-between p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+          <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -456,25 +529,30 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               />
               <div>
                 <span className="font-bold">{main.title}</span>
-                <span className="text-xs text-slate-500 ml-2">
-                  ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-                </span>
+                {(main.durationMin > 0 || main.durationMax > 0) && (
+                  <span className="text-xs text-slate-500 ml-2">
+                    ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pl-7 sm:pl-0">
               {checked && selectedInThisMain.length > 0 && (
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">+{selectedInThisMain.length}件追加</span>
               )}
-              <span>
-                {main.originalPrice != null && (
-                  <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
-                )}
-                <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
-              </span>
+              {main.price > 0 && (
+                <span>
+                  {main.originalPrice != null && (
+                    <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
+                  )}
+                  <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+                </span>
+              )}
             </div>
           </label>
           {checked && (
             <div className="p-4 pt-3 pl-10 space-y-2 border-t border-slate-100">
+              {renderMainDetails(main, main.id || `main-${idx}`)}
               <p className="text-[10px] font-bold text-slate-400">▼ 追加できる項目</p>
               {/* セット値引き案内（この中分類内での小分類選択個数に応じた値引き） */}
               {main.setDiscount?.enabled && main.setDiscount.rules.length > 0 && (
@@ -490,7 +568,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 </div>
               )}
 
-              {renderFoldItemsList(main)}
+              {hasFoldItems && renderFoldItemsList(main)}
+              {renderDirectOptions(main)}
 
               {/* 値引き適用表示 */}
               {discount > 0 && (
@@ -524,6 +603,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </button>
           {openFolds[foldKey] && (
             <div className="p-4 pt-0 space-y-2">
+              {renderMainDetails(main, foldKey)}
               {/* セット値引き案内 */}
               {main.setDiscount?.enabled && main.setDiscount.rules.length > 0 && (
                 <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-2">
@@ -553,32 +633,44 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
 
     // ===== 折り畳みなし =====
+    const flatKey = main.id || `main-${idx}`;
     return (
-      <label key={main.id || `main-${idx}`} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            className="w-4 h-4 text-blue-600"
-            checked={selectedMains.includes(idx)}
-            onChange={(e) => {
-              if (e.target.checked) setSelectedMains([...selectedMains, idx]);
-              else setSelectedMains(selectedMains.filter(i => i !== idx));
-            }}
-          />
-          <div>
-            <span className="font-bold">{main.title}</span>
-            <span className="text-xs text-slate-500 ml-2">
-              ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-            </span>
+      <div key={flatKey}>
+        <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0 p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="w-4 h-4 text-blue-600"
+              checked={selectedMains.includes(idx)}
+              onChange={(e) => {
+                if (e.target.checked) setSelectedMains([...selectedMains, idx]);
+                else setSelectedMains(selectedMains.filter(i => i !== idx));
+              }}
+            />
+            <div>
+              <span className="font-bold">{main.title}</span>
+              {(main.durationMin > 0 || main.durationMax > 0) && (
+                <span className="text-xs text-slate-500 ml-2">
+                  ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <span>
-          {main.originalPrice != null && (
-            <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
+          {main.price > 0 && (
+            <span className="pl-7 sm:pl-0">
+              {main.originalPrice != null && (
+                <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
+              )}
+              <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+            </span>
           )}
-          <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
-        </span>
-      </label>
+        </label>
+        {selectedMains.includes(idx) && (
+          <div className="ml-8 mr-4 mt-1 mb-2">
+            {renderMainDetails(main, flatKey)}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -626,32 +718,43 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   const selectedCount = groupMembers.filter(({ m, idx: i }) => isMainSelected(m, i)).length;
                   const savedAmount = calcGroupDiscount(groupId);
 
+                  const groupOpen = !!openGroups[groupId];
                   rendered.push(
                     <div key={`group-${groupId}`} className="border-2 border-slate-200 rounded-xl p-3 bg-slate-50/60">
-                      <p className="text-xs font-bold text-slate-500 mb-2">📂 {main.groupTitle}</p>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={groupOpen} onChange={() => toggleGroup(groupId)} className="w-4 h-4 accent-slate-600" />
+                        <span className="text-xs font-bold text-slate-500">📂 {main.groupTitle}</span>
+                        {selectedCount > 0 && (
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">選択中{selectedCount}件</span>
+                        )}
+                      </label>
 
-                      {/* まとめ割引の案内（大分類内の中分類を横断した選択個数による値引き） */}
-                      {discount?.enabled && discount.rules?.length > 0 && (
-                        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-3">
-                          <p className="text-xs font-bold text-red-700 mb-1">
-                            🎉 まとめ割引{selectedCount > 0 && `（現在${selectedCount}点選択中）`}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {[...discount.rules].sort((a, b) => a.count - b.count).map(rule => (
-                              <span key={rule.count} className={`text-[10px] px-2 py-1 rounded-full font-bold ${selectedCount >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-300'}`}>
-                                {rule.count}点で{discount.type === "amount" ? `¥${rule.value.toLocaleString()}引き` : `${discountLabel(rule.value, discount.rounding)}引き`}
-                              </span>
-                            ))}
-                          </div>
-                          {savedAmount > 0 && (
-                            <p className="text-sm font-bold text-red-600 mt-2">-¥{savedAmount.toLocaleString()} 適用中</p>
+                      {groupOpen && (
+                        <div className="mt-3">
+                          {/* まとめ割引の案内（大分類内の中分類を横断した選択個数による値引き） */}
+                          {discount?.enabled && discount.rules?.length > 0 && (
+                            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-3">
+                              <p className="text-xs font-bold text-red-700 mb-1">
+                                🎉 まとめ割引{selectedCount > 0 && `（現在${selectedCount}点選択中）`}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {[...discount.rules].sort((a, b) => a.count - b.count).map(rule => (
+                                  <span key={rule.count} className={`text-[10px] px-2 py-1 rounded-full font-bold ${selectedCount >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-300'}`}>
+                                    {rule.count}点で{discount.type === "amount" ? `¥${rule.value.toLocaleString()}引き` : `${discountLabel(rule.value, discount.rounding)}引き`}
+                                  </span>
+                                ))}
+                              </div>
+                              {savedAmount > 0 && (
+                                <p className="text-sm font-bold text-red-600 mt-2">-¥{savedAmount.toLocaleString()} 適用中</p>
+                              )}
+                            </div>
                           )}
+
+                          <div className="space-y-2 pl-2 border-l-2 border-slate-200">
+                            {groupMembers.map(({ m, idx: i }) => renderMain(m, i))}
+                          </div>
                         </div>
                       )}
-
-                      <div className="space-y-2 pl-2 border-l-2 border-slate-200">
-                        {groupMembers.map(({ m, idx: i }) => renderMain(m, i))}
-                      </div>
                     </div>
                   );
                 } else {
@@ -683,7 +786,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                               return (
                                 <div key={fi.id}>
                                   <div className={`p-3 rounded-lg border transition-all ${qty > 0 ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-200'}`}>
-                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0 mb-2">
                                       <div>
                                         <span className="text-sm font-medium">{fi.title}</span>
                                         <span className="text-[10px] text-slate-400 ml-1">
@@ -711,7 +814,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
                   return (
                     <div key={opt.id} className={`p-3 rounded-xl border transition-all ${getQty(opt.id) > 0 ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0 mb-2">
                         <div>
                           <span className="text-sm font-medium">{opt.title}</span>
                           <span className="text-[10px] text-slate-400 ml-1">

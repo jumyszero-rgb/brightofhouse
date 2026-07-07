@@ -386,8 +386,10 @@ model BookingMenu {
   setDiscountRules Json?
   discountPercent  Float?
   discountRounding String           @default("NONE")
+  webSpecialPrice  Int?
   category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subMenus         BookingSubMenu[]
+  options          BookingOption[]
   servicePages     ServicePage[]
   landingPages     LandingPage[]
 }
@@ -406,27 +408,30 @@ model BookingSubMenu {
   onSiteEstimate   String          @default("NONE")
   discountPercent  Float?
   discountRounding String          @default("NONE")
+  webSpecialPrice  Int?
   options          BookingOption[]
   menu             BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
 model BookingOption {
-  id               String         @id @default(uuid())
+  id               String          @id @default(uuid())
   title            String
-  price            Int            @default(0)
-  durationMin      Int            @default(0)
+  price            Int             @default(0)
+  durationMin      Int             @default(0)
   durationMax      Int?
-  order            Int            @default(0)
+  order            Int             @default(0)
   workContent      String?
   cautionNote      String?
   recommendPoint   String?
-  onSiteEstimate   String         @default("NONE")
+  onSiteEstimate   String          @default("NONE")
   maxQty           Int?
   discountPercent  Float?
-  discountRounding String         @default("NONE")
+  discountRounding String          @default("NONE")
   qtyDiscountRules Json?
-  subMenuId        String
-  subMenu          BookingSubMenu @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
+  subMenuId        String?
+  subMenu          BookingSubMenu? @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
+  menuId           String?
+  menu             BookingMenu?    @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
 model TopPriceItem {

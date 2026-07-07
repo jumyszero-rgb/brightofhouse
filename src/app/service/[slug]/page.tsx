@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
-import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount } from "@/lib/bookingMenuToBookingData";
+import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -57,6 +57,7 @@ export default async function ServiceDetailPage({
       include: { options: { orderBy: { order: "asc" as const } } },
       orderBy: { order: "asc" as const },
     },
+    options: { orderBy: { order: "asc" as const } },
   } as const;
 
   const serviceItemInclude = {
@@ -88,9 +89,12 @@ export default async function ServiceDetailPage({
   // displayMenuIdsで絞り込まれていればその項目のみ、未設定(空)なら全件を「現在の料金」欄に表示する
   // （予約フォーム自体は絞り込まず、連動した項目すべてが常に選択可能）。
   const allLinkedMenus = [...linkedMenus, ...linkedCategories.flatMap((c) => c.menus)];
-  const displayMenus = page.displayMenuIds.length > 0
-    ? allLinkedMenus.filter((m) => page.displayMenuIds.includes(m.id))
-    : allLinkedMenus;
+  const hideAllDisplayMenus = page.displayMenuIds.includes(HIDE_ALL_DISPLAY_MENUS);
+  const displayMenus = hideAllDisplayMenus
+    ? []
+    : page.displayMenuIds.length > 0
+      ? allLinkedMenus.filter((m) => page.displayMenuIds.includes(m.id))
+      : allLinkedMenus;
 
   // 予約マスター(BookingMenu/BookingCategory)にリンクされている場合は常にそちらを正とする（価格ズレ防止）。
   // リンクが無いページは手入力のbookingData、それも無ければ旧ServiceItemから自動生成。
@@ -111,8 +115,8 @@ export default async function ServiceDetailPage({
     },
     select: {
       slug: true, title: true, catchphrase: true, cardIcon: true,
-      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } },
-      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true } } } },
+      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } },
+      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } } } },
     },
     orderBy: { createdAt: "asc" },
     take: 6,
@@ -268,25 +272,38 @@ export default async function ServiceDetailPage({
             <div className="bg-white border-2 border-blue-100 rounded-2xl p-6 mb-12 shadow-sm">
               <p className="text-xs font-bold text-blue-600 mb-2">現在の料金</p>
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
-                {displayMenus[0].discountPercent ? (
-                  <>
-                    <span className="text-lg text-slate-400 line-through">
+                {displayMenus[0].basePrice > 0 && (
+                  displayMenus[0].webSpecialPrice != null ? (
+                    <>
+                      <span className="text-lg text-slate-400 line-through">
+                        ¥{displayMenus[0].basePrice.toLocaleString()}
+                      </span>
+                      <span className="text-3xl md:text-4xl font-black text-red-600">
+                        ¥{displayMenus[0].webSpecialPrice.toLocaleString()}
+                      </span>
+                    </>
+                  ) : displayMenus[0].discountPercent ? (
+                    <>
+                      <span className="text-lg text-slate-400 line-through">
+                        ¥{displayMenus[0].basePrice.toLocaleString()}
+                      </span>
+                      <span className="text-3xl md:text-4xl font-black text-red-600">
+                        ¥{roundAmount((displayMenus[0].basePrice * (100 - displayMenus[0].discountPercent)) / 100, displayMenus[0].discountRounding).toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-3xl md:text-4xl font-black text-slate-800">
                       ¥{displayMenus[0].basePrice.toLocaleString()}
                     </span>
-                    <span className="text-3xl md:text-4xl font-black text-red-600">
-                      ¥{roundAmount((displayMenus[0].basePrice * (100 - displayMenus[0].discountPercent)) / 100, displayMenus[0].discountRounding).toLocaleString()}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-3xl md:text-4xl font-black text-slate-800">
-                    ¥{displayMenus[0].basePrice.toLocaleString()}
+                  )
+                )}
+                {(displayMenus[0].durationMin > 0 || (displayMenus[0].durationMax ?? 0) > 0) && (
+                  <span className="text-sm text-slate-500">
+                    (税込・目安時間 {displayMenus[0].durationMin}
+                    {displayMenus[0].durationMax && displayMenus[0].durationMax !== displayMenus[0].durationMin ? `〜${displayMenus[0].durationMax}` : ""}
+                    分〜)
                   </span>
                 )}
-                <span className="text-sm text-slate-500">
-                  (税込・目安時間 {displayMenus[0].durationMin}
-                  {displayMenus[0].durationMax && displayMenus[0].durationMax !== displayMenus[0].durationMin ? `〜${displayMenus[0].durationMax}` : ""}
-                  分〜)
-                </span>
               </div>
               {displayMenus[0].workContent && (
                 <ul className="text-sm text-slate-600 divide-y divide-slate-100 border-t border-slate-100">
@@ -303,25 +320,38 @@ export default async function ServiceDetailPage({
                 <div key={menu.id} className="border-b border-slate-100 pb-5 last:border-0 last:pb-0">
                   <p className="font-bold text-slate-800 text-sm mb-1">{menu.title}</p>
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    {menu.discountPercent ? (
-                      <>
-                        <span className="text-sm text-slate-400 line-through">
+                    {menu.basePrice > 0 && (
+                      menu.webSpecialPrice != null ? (
+                        <>
+                          <span className="text-sm text-slate-400 line-through">
+                            ¥{menu.basePrice.toLocaleString()}
+                          </span>
+                          <span className="text-2xl font-black text-red-600">
+                            ¥{menu.webSpecialPrice.toLocaleString()}
+                          </span>
+                        </>
+                      ) : menu.discountPercent ? (
+                        <>
+                          <span className="text-sm text-slate-400 line-through">
+                            ¥{menu.basePrice.toLocaleString()}
+                          </span>
+                          <span className="text-2xl font-black text-red-600">
+                            ¥{roundAmount((menu.basePrice * (100 - menu.discountPercent)) / 100, menu.discountRounding).toLocaleString()}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-black text-slate-800">
                           ¥{menu.basePrice.toLocaleString()}
                         </span>
-                        <span className="text-2xl font-black text-red-600">
-                          ¥{roundAmount((menu.basePrice * (100 - menu.discountPercent)) / 100, menu.discountRounding).toLocaleString()}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-2xl font-black text-slate-800">
-                        ¥{menu.basePrice.toLocaleString()}
+                      )
+                    )}
+                    {(menu.durationMin > 0 || (menu.durationMax ?? 0) > 0) && (
+                      <span className="text-xs text-slate-500">
+                        (税込・目安時間 {menu.durationMin}
+                        {menu.durationMax && menu.durationMax !== menu.durationMin ? `〜${menu.durationMax}` : ""}
+                        分〜)
                       </span>
                     )}
-                    <span className="text-xs text-slate-500">
-                      (税込・目安時間 {menu.durationMin}
-                      {menu.durationMax && menu.durationMax !== menu.durationMin ? `〜${menu.durationMax}` : ""}
-                      分〜)
-                    </span>
                   </div>
                   {menu.workContent && (
                     <ul className="text-sm text-slate-600 divide-y divide-slate-100 border-t border-slate-100 mt-2">
@@ -333,7 +363,7 @@ export default async function ServiceDetailPage({
                 </div>
               ))}
             </div>
-          ) : linkedItem && (
+          ) : linkedItem && !hideAllDisplayMenus && (
             <div className="bg-white border-2 border-blue-100 rounded-2xl p-6 mb-12 shadow-sm">
               <p className="text-xs font-bold text-blue-600 mb-2">現在の料金</p>
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
@@ -474,16 +504,18 @@ export default async function ServiceDetailPage({
                             {rs.catchphrase}
                           </p>
                         )}
-                        {cheapest && (
+                        {cheapest && (cheapest.basePrice > 0 || cheapest.priceNote) && (
                           <p className="text-[10px] md:text-xs font-bold text-blue-600 mt-1">
                             {cheapest.priceNote && <span className="mr-0.5">{cheapest.priceNote}</span>}
-                            {cheapest.discountPercent ? (
-                              <>
-                                <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
-                                <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
-                              </>
-                            ) : (
-                              <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                            {cheapest.basePrice > 0 && (
+                              (cheapest.discountPercent || cheapest.webSpecialPrice != null) ? (
+                                <>
+                                  <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
+                                  <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
+                                </>
+                              ) : (
+                                <>¥{cheapest.basePrice.toLocaleString()}〜</>
+                              )
                             )}
                           </p>
                         )}

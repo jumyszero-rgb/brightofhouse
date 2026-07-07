@@ -13,6 +13,7 @@ import BookingDataEditor, {
   type LegacyOptionService,
   type BookingFormData,
 } from "@/components/admin/BookingDataEditor";
+import { HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
 
 function EditForm() {
   const router = useRouter();
@@ -395,20 +396,32 @@ function EditForm() {
           const uniquePoolMenus = Array.from(new Map(poolMenus.map((m: any) => [m.id, m])).values());
           if (uniquePoolMenus.length === 0) return null;
 
-          const isDisplayed = (id: string) => displayMenuIds.length === 0 || displayMenuIds.includes(id);
+          const isHidden = displayMenuIds.includes(HIDE_ALL_DISPLAY_MENUS);
+          const isDisplayed = (id: string) => !isHidden && (displayMenuIds.length === 0 || displayMenuIds.includes(id));
           const toggleDisplay = (id: string) => {
             setDisplayMenuIds(prev => {
-              const base = prev.length === 0 ? uniquePoolMenus.map((m: any) => m.id) : prev;
-              return base.includes(id) ? base.filter((x: string) => x !== id) : [...base, id];
+              const current = isHidden ? [] : (prev.length === 0 ? uniquePoolMenus.map((m: any) => m.id) : prev);
+              const next = current.includes(id) ? current.filter((x: string) => x !== id) : [...current, id];
+              return next.length === 0 ? [HIDE_ALL_DISPLAY_MENUS] : next;
             });
           };
 
           return (
             <div className="p-4 bg-sky-50 border border-sky-200 rounded-lg">
-              <label className="block text-sm font-bold text-sky-800 mb-1">本文（現在の料金欄）に表示する項目</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-bold text-sky-800">本文（現在の料金欄）に表示する項目</label>
+                {displayMenuIds.length > 0 && (
+                  <button type="button" onClick={() => setDisplayMenuIds([])} className="text-xs text-sky-600 underline">
+                    すべて表示に戻す
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-sky-600 mb-2">
-                予約フォームには上で連動したメニューがすべて表示されますが、ページ本文の「現在の料金」欄にはここでチェックした項目のみ表示されます（未チェックがあっても予約自体は可能です）。
+                予約フォームには上で連動したメニューがすべて表示されますが、ページ本文の「現在の料金」欄にはここでチェックした項目のみ表示されます（未チェックがあっても予約自体は可能です）。全て外すと本文には料金欄自体が表示されなくなります。
               </p>
+              {isHidden && (
+                <p className="text-xs font-bold text-orange-600 mb-2">現在、本文には料金欄を表示しません。</p>
+              )}
               <div className="space-y-1">
                 {uniquePoolMenus.map((m: any) => (
                   <label key={m.id} className="flex items-center gap-2 bg-white border border-sky-100 rounded-lg px-3 py-2 text-sm cursor-pointer">

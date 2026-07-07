@@ -45,6 +45,7 @@ export default async function LPPage({ params }: Props) {
       include: { options: { orderBy: { order: "asc" as const } } },
       orderBy: { order: "asc" as const },
     },
+    options: { orderBy: { order: "asc" as const } },
   } as const;
 
   const lp = await prisma.landingPage.findUnique({
