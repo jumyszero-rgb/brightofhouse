@@ -316,6 +316,17 @@ export default function RichTextEditor({ value, onChange }: Props) {
     setHeadings(h);
   }, []);
 
+  // 編集画面でページデータが非同期取得されるより先にエディタが初期化されるため、
+  // 本文が届いた時点で一度だけエディタに反映する（以降はユーザーの編集を優先し、上書きしない）
+  const didInitialSync = useRef(false);
+  useEffect(() => {
+    if (!editor || didInitialSync.current || !value) return;
+    if (value !== editor.getHTML()) {
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+    didInitialSync.current = true;
+  }, [editor, value]);
+
   useEffect(() => {
     if (editor) updateHeadings(editor);
   }, [editor]);
