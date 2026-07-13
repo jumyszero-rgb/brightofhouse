@@ -536,7 +536,7 @@ function EditForm() {
       </div>
       <div>
         <label className="block text-sm font-bold mb-1">詳細説明</label>
-        <RichTextEditor value={formData.content} onChange={val => setFormData(prev => ({ ...prev, content: val }))} />
+        <RichTextEditor key={editId} value={formData.content} onChange={val => setFormData(prev => ({ ...prev, content: val }))} />
       </div>
 
       {/* FAQ */}

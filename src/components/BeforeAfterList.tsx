@@ -11,13 +11,18 @@ type Item = {
   beforeUrl: string;
   afterUrl: string;
   createdAt: Date;
+  category?: string | null;
 };
 
 export default function BeforeAfterList({ items }: { items: Item[] }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // 検索フィルタリング
+  const categories = Array.from(new Set(items.map((i) => i.category).filter((c): c is string => !!c)));
+
+  // カテゴリ・検索フィルタリング
   const filteredItems = items.filter((item) => {
+    if (activeCategory && item.category !== activeCategory) return false;
     const term = searchTerm.toLowerCase();
     const titleMatch = item.title.toLowerCase().includes(term);
     const descMatch = item.description?.toLowerCase().includes(term) || false;
@@ -26,6 +31,27 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
 
   return (
     <div>
+      {/* カテゴリ絞り込み */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <button
+            onClick={() => setActiveCategory(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${!activeCategory ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+          >
+            すべて
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${activeCategory === cat ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* 検索ボックス */}
       <div className="max-w-md mx-auto mb-12 relative">
         <input

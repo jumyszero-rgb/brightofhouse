@@ -17,6 +17,13 @@ export default function AdminCalendarPage() {
   const [selectionEnd, setSelectionEnd] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // 日時入力による範囲一括変更用（ドラッグが使いづらい端末向けの代替手段）
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const [rangeStartDate, setRangeStartDate] = useState(todayStr);
+  const [rangeStartHour, setRangeStartHour] = useState(9);
+  const [rangeEndDate, setRangeEndDate] = useState(todayStr);
+  const [rangeEndHour, setRangeEndHour] = useState(18);
+
   // 選択範囲に含まれるか判定
   const isSelected = (date: Date) => {
     if (!selectionStart || !selectionEnd) return false;
@@ -106,16 +113,71 @@ export default function AdminCalendarPage() {
     }
   };
 
+  // 日時入力による範囲一括更新（ドラッグ操作が難しい端末向け）
+  const handleRangeChange = async (targetStatus: string | null) => {
+    if (!rangeStartDate || !rangeEndDate || updating) return;
+
+    const start = new Date(rangeStartDate + "T00:00:00");
+    start.setHours(rangeStartHour, 0, 0, 0);
+    const end = new Date(rangeEndDate + "T00:00:00");
+    end.setHours(rangeEndHour, 0, 0, 0);
+
+    if (start > end) {
+      alert("開始日時が終了日時より後になっています");
+      return;
+    }
+
+    const targets: string[] = [];
+    for (const t = new Date(start); t <= end; t.setHours(t.getHours() + 1)) {
+      targets.push(new Date(t).toISOString());
+    }
+
+    if (targets.length > 1000) {
+      alert("一度に指定できる範囲が大きすぎます。期間を分けて実行してください。");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await Promise.all(targets.map(slotTime =>
+        fetch("/api/admin/calendar", {
+          method: targetStatus === null ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slotTime, status: targetStatus }),
+        })
+      ));
+      await fetchOverrides();
+    } catch (e) {
+      alert("一括更新に失敗しました");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const days = [...Array(14)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
     start: setHours(startOfDay(new Date()), 0),
     end: setHours(startOfDay(new Date()), 23),
   });
 
+  // スマホ・タブレットのドラッグ選択用。touchmoveは指を乗せた要素ではなく最初にタッチした要素に
+  // 送られ続けるため（mouseenterのように別要素へは飛ばない）、座標から要素を都度特定する。
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+    const target = el?.closest("[data-slot-iso]") as HTMLElement | null;
+    const iso = target?.getAttribute("data-slot-iso");
+    if (iso) setSelectionEnd(new Date(iso));
+  };
+
   return (
-    <div 
+    <div
       className={`min-h-screen bg-gray-50 p-8 text-black transition-opacity ${updating ? 'opacity-70 pointer-events-none' : ''}`}
       onMouseUp={() => setIsDragging(false)}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={() => setIsDragging(false)}
     >
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -135,6 +197,38 @@ export default function AdminCalendarPage() {
             <button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, -7))} className="bg-white border px-4 py-2 rounded shadow-sm font-bold text-sm hover:bg-gray-50 transition-colors">◀ 前の週</button>
             <button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} className="bg-white border px-4 py-2 rounded shadow-sm font-bold text-sm hover:bg-gray-50 transition-colors">次の週 ▶</button>
             <Link href="/admin" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm font-bold flex items-center">メニューへ戻る</Link>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 mb-6">
+          <p className="text-sm font-bold text-gray-700 mb-3">日時を指定して一括変更（ドラッグ操作が難しい場合はこちら）</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">開始日</label>
+              <input type="date" value={rangeStartDate} onChange={(e) => setRangeStartDate(e.target.value)} className="p-2 border rounded text-black text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">開始時刻</label>
+              <select value={rangeStartHour} onChange={(e) => setRangeStartHour(parseInt(e.target.value))} className="p-2 border rounded text-black text-sm">
+                {[...Array(24)].map((_, h) => <option key={h} value={h}>{h}:00</option>)}
+              </select>
+            </div>
+            <span className="text-gray-400 pb-2">〜</span>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">終了日</label>
+              <input type="date" value={rangeEndDate} onChange={(e) => setRangeEndDate(e.target.value)} className="p-2 border rounded text-black text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">終了時刻</label>
+              <select value={rangeEndHour} onChange={(e) => setRangeEndHour(parseInt(e.target.value))} className="p-2 border rounded text-black text-sm">
+                {[...Array(24)].map((_, h) => <option key={h} value={h}>{h}:00</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <button onClick={() => handleRangeChange(null)} className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-2 rounded text-xs font-bold hover:bg-emerald-100">〇にする</button>
+              <button onClick={() => handleRangeChange("CONSULT")} className="bg-orange-50 text-orange-600 border border-orange-200 px-3 py-2 rounded text-xs font-bold hover:bg-orange-100">▲にする</button>
+              <button onClick={() => handleRangeChange("CLOSED")} className="bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded text-xs font-bold hover:bg-red-100">×にする</button>
+            </div>
           </div>
         </div>
 
@@ -166,9 +260,10 @@ export default function AdminCalendarPage() {
 
                       return (
                         <td key={currentISO} className="p-1 border-b border-l relative">
-                          <button 
+                          <button
                             type="button"
                             disabled={isPast}
+                            data-slot-iso={currentISO}
                             onMouseDown={() => {
                               if (isPast) return;
                               setSelectionStart(current);
@@ -177,6 +272,12 @@ export default function AdminCalendarPage() {
                             }}
                             onMouseEnter={() => {
                               if (isDragging && !isPast) setSelectionEnd(current);
+                            }}
+                            onTouchStart={() => {
+                              if (isPast) return;
+                              setSelectionStart(current);
+                              setSelectionEnd(current);
+                              setIsDragging(true);
                             }}
                             onClick={() => {
                               if (!isDragging && !isPast) toggleStatus(current, status);

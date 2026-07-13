@@ -80,8 +80,20 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const [customer, setCustomer] = useState({
-    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethod: "お電話"
+    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[]
   });
+  const toggleContactMethod = (method: string) => {
+    setCustomer(prev => {
+      // 最低1つは選択必須のため、残り1つの状態からは外せないようにする
+      if (prev.contactMethods.includes(method) && prev.contactMethods.length === 1) return prev;
+      return {
+        ...prev,
+        contactMethods: prev.contactMethods.includes(method)
+          ? prev.contactMethods.filter(m => m !== method)
+          : [...prev.contactMethods, method],
+      };
+    });
+  };
 
   const [nightWork, setNightWork] = useState(false);
   const [calendarStartHour, setCalendarStartHour] = useState(5);
@@ -269,7 +281,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       alert("作業メニューを1つ以上選択してください。");
       return;
     }
-    if (!customer.contactMethod) {
+    if (customer.contactMethods.length === 0) {
       alert("ご連絡方法を選択してください。");
       return;
     }
@@ -296,7 +308,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           tel: customer.phone,
           zip: customer.zip,
           address: customer.address,
-          contactMethod: customer.contactMethod,
+          contactMethod: customer.contactMethods.join("、"),
           notes: [
             nightWork ? "【深夜帯作業希望】" : "",
             discountNotes,
@@ -1021,16 +1033,16 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <input required value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：北海道札幌市中央区..." />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">ご確認のご連絡方法</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">ご確認のご連絡方法（複数選択可）</label>
               <div className="flex flex-wrap gap-3">
                 {["お電話", "メール", "LINE"].map(method => (
-                  <label key={method} className={`flex items-center gap-2 px-4 py-2 rounded-full border cursor-pointer transition-all ${customer.contactMethod === method ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                  <label key={method} className={`flex items-center gap-2 px-4 py-2 rounded-full border cursor-pointer transition-all ${customer.contactMethods.includes(method) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
                     <input
-                      type="radio"
+                      type="checkbox"
                       name="contactMethod"
                       value={method}
-                      checked={customer.contactMethod === method}
-                      onChange={e => setCustomer({ ...customer, contactMethod: e.target.value })}
+                      checked={customer.contactMethods.includes(method)}
+                      onChange={() => toggleContactMethod(method)}
                       className="hidden"
                     />
                     {method}

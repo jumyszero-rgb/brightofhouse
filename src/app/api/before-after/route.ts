@@ -79,7 +79,10 @@ const uploadToR2 = async (file: File) => {
 export async function GET() {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const items = await prisma.beforeAfter.findMany({ orderBy: { createdAt: "desc" } });
+    const items = await prisma.beforeAfter.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { servicePages: { select: { id: true, title: true } } },
+    });
     return NextResponse.json(items);
   } catch (error: any) {
     return NextResponse.json({ error: "DB Fetch Error: " + error.message }, { status: 500 });
@@ -95,6 +98,9 @@ export async function POST(request: NextRequest) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const dateStr = formData.get("date") as string;
+    const category = (formData.get("category") as string) || null;
+    const servicePageIdsRaw = formData.get("servicePageIds") as string | null;
+    const servicePageIds: string[] = servicePageIdsRaw ? JSON.parse(servicePageIdsRaw) : [];
     const beforeFile = formData.get("beforeImage") as File;
     const afterFile = formData.get("afterImage") as File;
 
@@ -113,7 +119,9 @@ export async function POST(request: NextRequest) {
         description,
         beforeUrl,
         afterUrl,
+        category,
         createdAt: dateStr ? new Date(dateStr) : new Date(),
+        servicePages: { connect: servicePageIds.map((id) => ({ id })) },
       },
     });
 
@@ -134,6 +142,9 @@ export async function PUT(request: NextRequest) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const dateStr = formData.get("date") as string;
+    const category = (formData.get("category") as string) || null;
+    const servicePageIdsRaw = formData.get("servicePageIds") as string | null;
+    const servicePageIds: string[] = servicePageIdsRaw ? JSON.parse(servicePageIdsRaw) : [];
     const beforeFile = formData.get("beforeImage") as File | null;
     const afterFile = formData.get("afterImage") as File | null;
 
@@ -153,7 +164,9 @@ export async function PUT(request: NextRequest) {
         description,
         beforeUrl,
         afterUrl,
+        category,
         createdAt: dateStr ? new Date(dateStr) : current.createdAt,
+        servicePages: { set: servicePageIds.map((sid) => ({ id: sid })) },
       },
     });
 

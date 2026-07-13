@@ -16,13 +16,15 @@ model AdminCode {
 }
 
 model BeforeAfter {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  beforeUrl   String
-  afterUrl    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  beforeUrl    String
+  afterUrl     String
+  category     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  servicePages ServicePage[]
 }
 
 model CompanyProfile {
@@ -334,6 +336,7 @@ model ServicePage {
   bookingMenus      BookingMenu[]
   bookingCategories BookingCategory[]
   displayMenuIds    String[]          @default([])
+  beforeAfters      BeforeAfter[]
 }
 
 model ServiceFaq {

@@ -249,7 +249,7 @@ function EditForm() {
 
         <div className="pb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">本文</label>
-          <RichTextEditor value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+          <RichTextEditor key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
         </div>
 
         {/* SEO設定エリア */}

@@ -317,12 +317,6 @@ export default function RichTextEditor({ value, onChange }: Props) {
   }, []);
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
-    }
-  }, [value]);
-
-  useEffect(() => {
     if (editor) updateHeadings(editor);
   }, [editor]);
 
@@ -479,20 +473,13 @@ export default function RichTextEditor({ value, onChange }: Props) {
         return false;
       }
     });
-    if (detailsPos !== null && detailsNode) {
-      const content: any[] = [];
-      detailsNode.forEach((child: any) => {
-        if (child.type.name === "detailsSummary") {
-          content.push({ type: "paragraph", content: child.content.toJSON() || [] });
-        } else if (child.type.name === "detailsContent") {
-          child.forEach((block: any) => { content.push(block.toJSON()); });
-        }
-      });
-      editor.chain().focus().command(({ tr }) => {
-        tr.replaceWith(detailsPos!, detailsPos! + detailsNode.nodeSize, content.map((c: any) => state.schema.nodeFromJSON(c)));
-        return true;
-      }).run();
+    if (detailsPos === null || !detailsNode) {
+      alert("削除したい折り畳みブロックの中にカーソルを置いてから実行してください");
+      return;
     }
+    // 中身を復元しようとする複雑な変換は失敗しやすいため、ブロックごと削除する
+    const start: number = detailsPos;
+    editor.chain().focus().deleteRange({ from: start, to: start + detailsNode.nodeSize }).run();
   }, [editor]);
 
   const openCtaModal = useCallback(async () => {
@@ -693,7 +680,13 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <button type="button" onClick={() => { setShowOutline(!showOutline); updateHeadings(editor); }} className={`px-2 py-1 text-xs rounded font-bold ${showOutline ? "bg-indigo-600 text-white" : "bg-white border"}`}>📑 見出し</button>
 
-        <button type="button" onClick={() => setHtmlMode(!htmlMode)} className={`px-2 py-1 text-xs rounded font-bold ml-auto ${htmlMode ? "bg-blue-600 text-white" : "bg-white border"}`}>
+        <button type="button" onClick={() => {
+          if (htmlMode) {
+            // 生HTML編集モードから戻る時だけ、編集結果をエディタに反映する
+            editor?.commands.setContent(value || "", { emitUpdate: false });
+          }
+          setHtmlMode(!htmlMode);
+        }} className={`px-2 py-1 text-xs rounded font-bold ml-auto ${htmlMode ? "bg-blue-600 text-white" : "bg-white border"}`}>
           {htmlMode ? "ビジュアル" : "HTML"}
         </button>
       </div>
@@ -736,7 +729,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
         .tiptap h4 { font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em; }
         .tiptap ul { list-style: disc; padding-left: 1.5em; margin-bottom: 1em; }
         .tiptap ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 1em; }
-        .tiptap a { color: #2563eb; text-decoration: underline; }
+        .tiptap a { color: #2563eb; }
         .tiptap img { max-width: 100%; height: auto; border-radius: 8px; }
         .tiptap figure[data-resizable-image] { display: inline-block; }
         .tiptap figure[data-resizable-image] img { width: 100%; height: auto; border-radius: 8px; }

@@ -21,7 +21,15 @@ function EditForm() {
     beforeDescription: "",
     afterDescription: "",
     date: new Date().toISOString().split('T')[0],
+    category: "",
   });
+  const [servicePages, setServicePages] = useState<any[]>([]);
+  const [servicePageIds, setServicePageIds] = useState<string[]>([]);
+  const [servicePageToAdd, setServicePageToAdd] = useState("");
+
+  useEffect(() => {
+    fetch("/api/service-pages").then(r => r.json()).then(data => setServicePages(Array.isArray(data) ? data : []));
+  }, []);
 
   useEffect(() => {
     if (!editId) return;
@@ -30,8 +38,9 @@ function EditForm() {
       const res = await fetch("/api/before-after");
       const items = await res.json();
       const target = items.find((i: any) => i.id === editId);
-      
+
       if (target) {
+        setServicePageIds((target.servicePages || []).map((sp: any) => sp.id));
         // descriptionを「【ビフォー】」等で分割して復元を試みる（既存データ対応）
         let bDesc = "";
         let aDesc = "";
@@ -48,6 +57,7 @@ function EditForm() {
           beforeDescription: bDesc,
           afterDescription: aDesc,
           date: new Date(target.createdAt).toISOString().split('T')[0],
+          category: target.category || "",
         });
         setPreview({
           before: target.beforeUrl,
@@ -95,6 +105,8 @@ function EditForm() {
     // ビフォーとアフターの説明を結合して送信（DBスキーマ維持のため）
     const combinedDescription = `【ビフォー】\n${formData.beforeDescription}\n\n【アフター】\n${formData.afterDescription}`;
     form.set("description", combinedDescription);
+    form.set("category", formData.category);
+    form.set("servicePageIds", JSON.stringify(servicePageIds));
 
     try {
       const method = editId ? "PUT" : "POST";
@@ -144,6 +156,52 @@ function EditForm() {
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-2 border rounded text-black"
             />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">カテゴリ（一覧ページの絞り込みに使用・任意）</label>
+          <input
+            type="text"
+            placeholder="例：水回りクリーニング、ハウスクリーニング、ゴミ屋敷清掃"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="w-full p-2 border rounded text-black"
+          />
+        </div>
+
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
+          <label className="block text-sm font-bold text-emerald-800">紐付けるサービスページ（複数追加可・任意）</label>
+          <p className="text-xs text-emerald-600">
+            追加したページの詳細ページに、この実績が縮小表示されます。
+          </p>
+          {servicePageIds.length > 0 && (
+            <ul className="space-y-1">
+              {servicePageIds.map((id) => {
+                const sp = servicePages.find((s: any) => s.id === id);
+                return (
+                  <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                    <span>{sp?.title || "（読み込み中...）"}</span>
+                    <button type="button" onClick={() => setServicePageIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <select value={servicePageToAdd} onChange={(e) => setServicePageToAdd(e.target.value)} className="flex-1 p-2 border rounded-lg text-black">
+              <option value="">追加するサービスページを選択</option>
+              {servicePages.filter((sp: any) => !servicePageIds.includes(sp.id)).map((sp: any) => (
+                <option key={sp.id} value={sp.id}>{sp.title}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => { if (servicePageToAdd) { setServicePageIds(prev => [...prev, servicePageToAdd]); setServicePageToAdd(""); } }}
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+            >
+              ＋ 追加
+            </button>
           </div>
         </div>
 

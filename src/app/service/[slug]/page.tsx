@@ -7,6 +7,7 @@ import Image from "next/image";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
 import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
+import { extractToc } from "@/lib/extractToc";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -66,6 +67,7 @@ export default async function ServiceDetailPage({
     bookingCategories: { include: { menus: { include: subMenusInclude } } },
     faqs: { orderBy: { order: "asc" } },
     testimonials: { where: { isActive: true }, orderBy: { order: "asc" } },
+    beforeAfters: { orderBy: { createdAt: "desc" as const } },
   } as const;
 
   const page = isPreview
@@ -80,6 +82,9 @@ export default async function ServiceDetailPage({
   if (page.redirectUrl && !isPreview) {
     permanentRedirect(page.redirectUrl);
   }
+
+  // 本文の見出し(H2/H3)から目次を生成し、各見出しにアンカー用のidを付与する
+  const { html: contentHtml, toc } = extractToc(page.content || "");
 
   // 連動するServiceItemの価格・所要時間を常に自動反映（bookingDataの有無に関わらず表示）
   const linkedItem = page.serviceItem;
@@ -387,11 +392,59 @@ export default async function ServiceDetailPage({
             </div>
           )}
 
+          {toc.length > 0 && (
+            <nav className="bg-slate-50 border border-slate-200 rounded-2xl p-5 md:p-6 mb-10" aria-label="目次">
+              <p className="text-sm font-bold text-slate-700 mb-3">目次</p>
+              <ol className="space-y-1.5 text-sm">
+                {toc.map((item) => (
+                  <li key={item.id}>
+                    <a href={`#${item.id}`} className="text-blue-600 hover:underline">
+                      {item.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+
           {page.content && (
             <div
               className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-20"
-              dangerouslySetInnerHTML={{ __html: page.content }}
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
             />
+          )}
+
+          {/* ビフォーアフター（このページに紐づく施工事例） */}
+          {page.beforeAfters.length > 0 && (
+            <section className="mb-16">
+              <h2 className="text-2xl font-bold text-slate-800 mb-6">施工事例（ビフォーアフター）</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {page.beforeAfters.map((ba) => (
+                  <div key={ba.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 mb-1 text-center">BEFORE</p>
+                        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-200">
+                          <Image src={ba.beforeUrl} alt={`${ba.title} 施工前`} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-blue-500 mb-1 text-center">AFTER</p>
+                        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-200">
+                          <Image src={ba.afterUrl} alt={`${ba.title} 施工後`} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm font-bold text-slate-700 mt-3 line-clamp-2">{ba.title}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center mt-6">
+                <Link href="/before-after" className="text-sm font-bold text-blue-600 hover:underline">
+                  他の施工事例もっと見る →
+                </Link>
+              </div>
+            </section>
           )}
 
           {/* お客様の声 */}

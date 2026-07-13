@@ -220,7 +220,7 @@ function BlogEditForm() {
               </button>
             </div>
 
-            <RichTextEditor value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+            <RichTextEditor key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
           </div>
 
           {/* SEO設定エリア */}
