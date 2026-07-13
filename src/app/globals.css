@@ -54,6 +54,36 @@ body {
 .ql-content .ql-color-red { color: #e11d48; }
 .ql-content .ql-color-blue { color: #2563eb; }
 
+/* 見出し（H2〜H4） - サイズだけでなく形状でも区別できるように */
+.ql-content h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 1.8em 0 0.8em;
+  padding: 0.6em 0.9em;
+  background: #eff6ff;
+  border-left: 6px solid #2563eb;
+  border-radius: 4px;
+}
+.ql-content h3 {
+  font-size: 1.25em;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 1.6em 0 0.7em;
+  padding-bottom: 0.3em;
+  border-bottom: 3px solid #93c5fd;
+  color: #1e40af;
+}
+.ql-content h4 {
+  font-size: 1.1em;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 1.3em 0 0.5em;
+  padding-left: 0.7em;
+  border-left: 4px solid #93c5fd;
+  color: #334155;
+}
+
 
 /* 折り畳み（details/summary） */
 .ql-content details {

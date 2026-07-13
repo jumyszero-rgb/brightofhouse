@@ -582,9 +582,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
     <div className="bg-white rounded-md border border-slate-300 overflow-hidden min-h-[350px]" ref={editorRef}>
       {/* ツールバー1段目 */}
       <div className="flex flex-wrap gap-1 p-2 bg-slate-50 border-b">
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 2 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H2</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 3 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H3</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 4 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H4</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 2 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H2</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 3 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H3</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("heading", { level: 4 }) ? "bg-blue-600 text-white" : "bg-white border"}`}>H4</button>
 
         <select onChange={(e) => setFontSize(e.target.value)} className="text-xs border rounded px-1 py-1 bg-white" defaultValue="">
           <option value="" disabled>サイズ</option>
@@ -602,10 +602,10 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("bold") ? "bg-blue-600 text-white" : "bg-white border"}`}>B</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("italic") ? "bg-blue-600 text-white" : "bg-white border"}`}><i>I</i></button>
-        <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("underline") ? "bg-blue-600 text-white" : "bg-white border"}`}><u>U</u></button>
-        <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("strike") ? "bg-blue-600 text-white" : "bg-white border"}`}><s>S</s></button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} className={`px-2 py-1 text-xs font-bold rounded ${editor.isActive("bold") ? "bg-blue-600 text-white" : "bg-white border"}`}>B</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("italic") ? "bg-blue-600 text-white" : "bg-white border"}`}><i>I</i></button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("underline") ? "bg-blue-600 text-white" : "bg-white border"}`}><u>U</u></button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleStrike().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("strike") ? "bg-blue-600 text-white" : "bg-white border"}`}><s>S</s></button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
@@ -634,39 +634,39 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("bulletList") ? "bg-blue-600 text-white" : "bg-white border"}`}>・リスト</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("orderedList") ? "bg-blue-600 text-white" : "bg-white border"}`}>1.リスト</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBulletList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("bulletList") ? "bg-blue-600 text-white" : "bg-white border"}`}>・リスト</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive("orderedList") ? "bg-blue-600 text-white" : "bg-white border"}`}>1.リスト</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "left" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>左</button>
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "center" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>中</button>
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "right" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>右</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign("left").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "left" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>左</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign("center").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "center" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>中</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign("right").run()} className={`px-2 py-1 text-xs rounded ${editor.isActive({ textAlign: "right" }) ? "bg-blue-600 text-white" : "bg-white border"}`}>右</button>
       </div>
 
       {/* ツールバー2段目 */}
       <div className="flex flex-wrap gap-1 p-2 bg-slate-100 border-b">
-        <button type="button" onClick={addLink} className={`px-2 py-1 text-xs rounded ${editor.isActive("link") ? "bg-blue-600 text-white" : "bg-white border"}`}>🔗</button>
-        {editor.isActive("link") && <button type="button" onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
-        <button type="button" onClick={addTelLink} className="px-2 py-1 text-xs rounded bg-green-600 text-white font-bold hover:bg-green-700">📞</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={`px-2 py-1 text-xs rounded ${editor.isActive("link") ? "bg-blue-600 text-white" : "bg-white border"}`}>🔗</button>
+        {editor.isActive("link") && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={removeLink} className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 border border-red-200">🔗✕</button>}
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={addTelLink} className="px-2 py-1 text-xs rounded bg-green-600 text-white font-bold hover:bg-green-700">📞</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={addImage} className="px-2 py-1 text-xs rounded bg-white border">🖼 画像</button>
-        <button type="button" onClick={insertImageRow} className="px-2 py-1 text-xs rounded bg-white border">🖼🖼 横並び</button>
-        <button type="button" onClick={changeImageSize} className="px-2 py-1 text-xs rounded bg-white border">📐 サイズ</button>
-        <button type="button" onClick={changeImageCaption} className="px-2 py-1 text-xs rounded bg-white border">💬 キャプション</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={addImage} className="px-2 py-1 text-xs rounded bg-white border">🖼 画像</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertImageRow} className="px-2 py-1 text-xs rounded bg-white border">🖼🖼 横並び</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={changeImageSize} className="px-2 py-1 text-xs rounded bg-white border">📐 サイズ</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={changeImageCaption} className="px-2 py-1 text-xs rounded bg-white border">💬 キャプション</button>
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={insertTable} className="px-2 py-1 text-xs rounded bg-white border font-bold">📊 表</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertTable} className="px-2 py-1 text-xs rounded bg-white border font-bold">📊 表</button>
         {editor.isActive("table") && (
           <>
-            <button type="button" onClick={() => editor.chain().focus().addColumnAfter().run()} className="px-1 py-1 text-[10px] rounded bg-white border">列+</button>
-            <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()} className="px-1 py-1 text-[10px] rounded bg-white border">列-</button>
-            <button type="button" onClick={() => editor.chain().focus().addRowAfter().run()} className="px-1 py-1 text-[10px] rounded bg-white border">行+</button>
-            <button type="button" onClick={() => editor.chain().focus().deleteRow().run()} className="px-1 py-1 text-[10px] rounded bg-white border">行-</button>
-            <button type="button" onClick={() => editor.chain().focus().deleteTable().run()} className="px-1 py-1 text-[10px] rounded bg-red-100 text-red-600 border border-red-200">表削除</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()} className="px-1 py-1 text-[10px] rounded bg-white border">列+</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().deleteColumn().run()} className="px-1 py-1 text-[10px] rounded bg-white border">列-</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().addRowAfter().run()} className="px-1 py-1 text-[10px] rounded bg-white border">行+</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().deleteRow().run()} className="px-1 py-1 text-[10px] rounded bg-white border">行-</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()} className="px-1 py-1 text-[10px] rounded bg-red-100 text-red-600 border border-red-200">表削除</button>
           </>
         )}
 
@@ -681,17 +681,17 @@ export default function RichTextEditor({ value, onChange }: Props) {
           <option value="gray">📝 メモ（灰）</option>
         </select>
 
-        <button type="button" onClick={insertBalloon} className="px-2 py-1 text-xs rounded bg-sky-500 text-white font-bold hover:bg-sky-600">💬 吹出</button>
-        <button type="button" onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
-        <button type="button" onClick={removeDetails} className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 border border-amber-300 font-bold">▼ 解除</button>
-        <button type="button" onClick={openCtaModal} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertBalloon} className="px-2 py-1 text-xs rounded bg-sky-500 text-white font-bold hover:bg-sky-600">💬 吹出</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={removeDetails} className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 border border-amber-300 font-bold">▼ 解除</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={openCtaModal} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
 
 
         <span className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
-        <button type="button" onClick={() => { setShowOutline(!showOutline); updateHeadings(editor); }} className={`px-2 py-1 text-xs rounded font-bold ${showOutline ? "bg-indigo-600 text-white" : "bg-white border"}`}>📑 見出し</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setShowOutline(!showOutline); updateHeadings(editor); }} className={`px-2 py-1 text-xs rounded font-bold ${showOutline ? "bg-indigo-600 text-white" : "bg-white border"}`}>📑 見出し</button>
 
-        <button type="button" onClick={() => {
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => {
           if (htmlMode) {
             // 生HTML編集モードから戻る時だけ、編集結果をエディタに反映する
             editor?.commands.setContent(value || "", { emitUpdate: false });
@@ -735,9 +735,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
       <style jsx global>{`
         .tiptap { min-height: 250px; padding: 16px; font-size: 16px; color: #000; outline: none; }
         .tiptap p { margin-bottom: 0.8em; }
-        .tiptap h2 { font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em; }
-        .tiptap h3 { font-size: 1.25em; font-weight: bold; margin: 1em 0 0.5em; }
-        .tiptap h4 { font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em; }
+        .tiptap h2 { font-size: 1.5em; font-weight: bold; line-height: 1.5; margin: 1em 0 0.5em; padding: 0.6em 0.9em; background: #eff6ff; border-left: 6px solid #2563eb; border-radius: 4px; }
+        .tiptap h3 { font-size: 1.25em; font-weight: bold; line-height: 1.5; margin: 1em 0 0.5em; padding-bottom: 0.3em; border-bottom: 3px solid #93c5fd; color: #1e40af; }
+        .tiptap h4 { font-size: 1.1em; font-weight: bold; line-height: 1.5; margin: 1em 0 0.5em; padding-left: 0.7em; border-left: 4px solid #93c5fd; color: #334155; }
         .tiptap ul { list-style: disc; padding-left: 1.5em; margin-bottom: 1em; }
         .tiptap ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 1em; }
         .tiptap a { color: #2563eb; }
