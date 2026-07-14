@@ -78,9 +78,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [overrides, setOverrides] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  // 作業内容が未定でお問い合わせのみ行いたい場合（一番上のチェックボックスで作業メニュー選択欄自体を非表示にする）
+  const [inquiryOnly, setInquiryOnly] = useState(false);
+  // 日程が未定の場合（カレンダー選択を必須にせず、後日調整の前提で申し込める）
+  const [dateUndecided, setDateUndecided] = useState(false);
 
   const [customer, setCustomer] = useState({
-    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[]
+    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[],
+    parkingAvailable: "" as string
   });
   const toggleContactMethod = (method: string) => {
     setCustomer(prev => {
@@ -265,11 +270,15 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedDate) return alert("日時を選択してください");
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const quoteOnly = submitter?.name === "quoteOnly";
+    if (!selectedDate && !dateUndecided) return alert("日時を選択するか、「日程未定」にチェックしてください");
 
-    const itemsText = [
+    // お問い合わせのみの場合、メニュー選択欄自体を非表示にしているため、
+    // 初期選択されたままのmains[0]等が意図せず混入しないようにする
+    const itemsTextRaw = inquiryOnly ? "" : [
       ...mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).map(m => m.title),
       ...mains.flatMap((m, idx) => isFoldActive(m, idx) ? (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).map(fi => fi.title) : []),
       ...mains.flatMap((m, idx) => (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).map(o => `${o.title} ×${getQty(o.id)}`)),
@@ -277,10 +286,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       ...legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0).map(fi => `${fi.title} ×${getQty(fi.id)}`))
     ].join(", ");
 
-    if (!itemsText) {
+    if (!itemsTextRaw && !inquiryOnly) {
       alert("作業メニューを1つ以上選択してください。");
       return;
     }
+    const itemsText = itemsTextRaw || "（作業内容未定・お問い合わせのみ）";
     if (customer.contactMethods.length === 0) {
       alert("ご連絡方法を選択してください。");
       return;
@@ -297,6 +307,13 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
     setLoading(true);
 
+    // 日程未定の場合、DB上のstartTime/endTimeは必須項目のため申込時刻を仮値として保存し、
+    // 備考欄に明示することで担当者が「確定枠ではない」と分かるようにする。
+    const effectiveStart = selectedDate || new Date();
+    const effectiveEnd = selectedDate
+      ? new Date(selectedDate.getTime() + totalMinutesMax * 60000)
+      : new Date(effectiveStart.getTime() + Math.max(totalMinutesMax, 60) * 60000);
+
     try {
       const res = await fetch("/api/booking", {
         method: "POST",
@@ -310,15 +327,18 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           address: customer.address,
           contactMethod: customer.contactMethods.join("、"),
           notes: [
+            quoteOnly ? "【見積のみ希望】" : "",
+            dateUndecided ? "【日程未定・後日調整希望】" : "",
+            dateUndecided && customer.parkingAvailable ? `【駐車場：${customer.parkingAvailable}】` : "",
             nightWork ? "【深夜帯作業希望】" : "",
             discountNotes,
             customer.notes,
           ].filter(Boolean).join("\n"),
-          startTime: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
-          endTime: format(new Date(selectedDate.getTime() + totalMinutesMax * 60000), "yyyy-MM-dd'T'HH:mm:ss"),
+          startTime: format(effectiveStart, "yyyy-MM-dd'T'HH:mm:ss"),
+          endTime: format(effectiveEnd, "yyyy-MM-dd'T'HH:mm:ss"),
           items: itemsText,
-          totalPrice,
-          totalMinutes: `${totalMinutesMin}〜${totalMinutesMax}`,
+          totalPrice: inquiryOnly ? 0 : totalPrice,
+          totalMinutes: inquiryOnly ? "未定" : `${totalMinutesMin}〜${totalMinutesMax}`,
         }),
       });
 
@@ -708,7 +728,24 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </div>
         </div>
 
+        {/* 作業内容が決まっていない場合はメニュー選択自体を不要にする */}
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={inquiryOnly}
+              onChange={() => setInquiryOnly(!inquiryOnly)}
+              className="w-4 h-4 accent-amber-600"
+            />
+            <span className="text-sm font-bold text-amber-700">作業内容はまだ決まっていない（お問い合わせのみ）</span>
+          </label>
+          {inquiryOnly && (
+            <p className="text-xs text-amber-600 mt-2">作業メニューの選択は不要です。ご不明点やご相談だけでもお気軽にお問い合わせください。</p>
+          )}
+        </div>
+
         {/* 1. メニュー選択 */}
+        {!inquiryOnly && (
         <section>
           <h4 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800">
             <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
@@ -861,8 +898,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <p className="text-sm text-red-600 font-bold">まとめ割引：-¥{totalGroupDiscount.toLocaleString()}</p>
             )}
             <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
+            <p className="text-[10px] text-slate-400 mt-2 leading-relaxed text-left sm:text-right">
+              ※作業時間はワンオペのおおよその時間です。作業内容・状況により人員が追加になる場合があり、その場合は時間が短縮されることがあります。お申込み後、担当者よりおおよその目安をお伝えしますので、時間には余裕をもってお申込みください。
+            </p>
           </div>
         </section>
+        )}
         {/* 2. カレンダー選択 */}
         <section>
           <div className="flex flex-wrap justify-between items-end mb-4 gap-4">
@@ -877,7 +918,20 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           </div>
 
-          <div ref={calendarRef} className="overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth">
+          <label className="flex items-center gap-2 cursor-pointer mb-3">
+            <input
+              type="checkbox"
+              checked={dateUndecided}
+              onChange={() => {
+                setDateUndecided(!dateUndecided);
+                if (!dateUndecided) setSelectedDate(null);
+              }}
+              className="w-4 h-4 accent-purple-600"
+            />
+            <span className="text-sm font-bold text-purple-700">日程未定（お問い合わせのみ・後日調整したい）</span>
+          </label>
+
+          <div ref={calendarRef} className={`overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth ${dateUndecided ? 'opacity-40 pointer-events-none select-none' : ''}`}>
             <table className="w-full border-collapse min-w-[600px]">
               <thead>
                 <tr>
@@ -968,6 +1022,32 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           )}
 
+          {/* 日程未定の方への確認事項 */}
+          {dateUndecided && (
+            <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+              <p className="text-sm font-bold text-purple-700">日程未定の方へ確認事項</p>
+              <div>
+                <p className="text-xs font-bold text-slate-700 mb-1.5">作業車を停める駐車場はございますか？</p>
+                <div className="flex gap-3">
+                  {["あり", "なし"].map(v => (
+                    <label key={v} className={`px-4 py-1.5 rounded-full border cursor-pointer text-xs font-bold transition-all ${customer.parkingAvailable === v ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                      <input
+                        type="radio"
+                        name="parkingAvailable"
+                        className="hidden"
+                        checked={customer.parkingAvailable === v}
+                        onChange={() => setCustomer({ ...customer, parkingAvailable: v })}
+                      />
+                      {v}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5">※駐車場がない場合は近隣のコインパーキングを利用させていただきます。その際のコインパーキング代は実費にてご請求いたします。</p>
+              </div>
+              <p className="text-[10px] text-slate-500">※作業には水道・電気の使用が必須となります。ガス（お湯）が使用できると助かりますが、必須ではございません。</p>
+            </div>
+          )}
+
                     {/* 当日予約の案内 */}
           <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
             <p className="text-xs text-amber-700 text-center font-bold">
@@ -1025,12 +1105,13 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <input required type="tel" value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：090-1234-5678" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">郵便番号</label>
-              <input value={customer.zip} onChange={e => handleZipSearch(e.target.value.replace(/[^0-9]/g, ""))} className="w-full p-3 border rounded-xl" placeholder="例：0600000（ハイフンなし7桁）" maxLength={7} />
+              <label className="block text-sm font-bold text-slate-700 mb-1">郵便番号 <span className="text-red-500">*</span></label>
+              <input required value={customer.zip} onChange={e => handleZipSearch(e.target.value.replace(/[^0-9]/g, ""))} className="w-full p-3 border rounded-xl" placeholder="例：0600000（ハイフンなし7桁）" maxLength={7} />
+              <p className="text-[10px] text-slate-400 mt-1">※郵便番号を入力すると住所が自動入力されます</p>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">住所 <span className="text-red-500">*</span></label>
-              <input required value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：北海道札幌市中央区..." />
+              <label className="block text-sm font-bold text-slate-700 mb-1">住所</label>
+              <input value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：北海道札幌市中央区..." />
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">ご確認のご連絡方法（複数選択可）</label>
@@ -1062,8 +1143,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || !selectedDate} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
+            <button type="submit" disabled={loading || (!selectedDate && !dateUndecided)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
               {loading ? "送信中..." : "この内容で仮予約・お問い合わせする"}
+            </button>
+            <button type="submit" name="quoteOnly" value="1" disabled={loading || (!selectedDate && !dateUndecided)} className="w-full bg-white text-blue-600 font-black py-3 rounded-xl border-2 border-blue-500 hover:bg-blue-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 transition-all text-base mb-2">
+              {loading ? "送信中..." : "見積のみ希望する"}
             </button>
             <p className="text-center text-[10px] text-slate-400">※送信後、担当者より確認のご連絡をいたします。この時点では予約は確定しません。</p>
           </form>
