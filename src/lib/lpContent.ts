@@ -26,6 +26,7 @@ export type LpFaq = { q: string; a: string };
 export type LpVoice = { text: string; who: string; stars?: number };
 export type LpReason = { title: string; body: string };
 export type LpPhoto = { before: string; after: string; caption?: string };
+export type LpStep = { t: string; d: string };
 
 export type LpContent = {
   slug: string;
@@ -53,6 +54,8 @@ export type LpContent = {
   //   空配列のままだとそのセクションは出ない（壊れ画像を出さないため）。
   photos?: LpPhoto[];
   recommended?: LpRecommend[];   // ← 追加
+  // ページ固有の「ご利用の流れ」。未指定の場合はBRAND.stepsが使われる。
+  steps?: LpStep[];
 };
 
 // ===== ブランド共通（実績・保証など。全LP共通で使う） =====

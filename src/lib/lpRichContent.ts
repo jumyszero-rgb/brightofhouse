@@ -8,6 +8,7 @@ import type {
   LpPhoto,
   LpReason,
   LpRecommend,
+  LpStep,
   LpVoice,
   LpWorkItem,
 } from "@/lib/lpContent";
@@ -43,5 +44,6 @@ export function landingPageToLpContent(lp: any): LpContent {
     voices: (lp.voices as LpVoice[] | null) || undefined,
     photos: photos.length > 0 ? photos : undefined,
     recommended: (lp.recommended as LpRecommend[] | null) || undefined,
+    steps: (lp.steps as LpStep[] | null) || undefined,
   };
 }

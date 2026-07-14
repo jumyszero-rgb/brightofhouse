@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
         reasons: parseJsonField(formData, "reasons"),
         faqItems: parseJsonField(formData, "faqItems"),
         voices: parseJsonField(formData, "voices"),
+        steps: parseJsonField(formData, "steps"),
         beforeAfters: { connect: beforeAfterIds.map((id) => ({ id })) },
       }
     });
@@ -244,6 +245,7 @@ export async function PUT(request: NextRequest) {
         reasons: parseJsonField(formData, "reasons"),
         faqItems: parseJsonField(formData, "faqItems"),
         voices: parseJsonField(formData, "voices"),
+        steps: parseJsonField(formData, "steps"),
         beforeAfters: { set: beforeAfterIds.map((id) => ({ id })) },
       }
     });

@@ -190,6 +190,7 @@ model LandingPage {
   reasons           Json?
   faqItems          Json?
   voices            Json?
+  steps             Json?
   beforeAfters      BeforeAfter[]
 }
 

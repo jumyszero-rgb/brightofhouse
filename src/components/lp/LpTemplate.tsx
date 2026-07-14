@@ -65,6 +65,7 @@ type Props = {
 export default function LpTemplate({ content, bookingData }: Props) {
   const { hero, pains, menu, reasons, faq, voices, photos, recommended, serviceLabel, slug } =
     content;
+  const steps = content.steps && content.steps.length > 0 ? content.steps : BRAND.steps;
 
   return (
     <div className="bg-white text-slate-800 min-h-screen">
@@ -408,7 +409,7 @@ export default function LpTemplate({ content, bookingData }: Props) {
         <section className="py-12">
           <h2 className="text-center text-lg md:text-2xl font-black mb-6">ご利用の流れ</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {BRAND.steps.map((s, i) => (
+            {steps.map((s, i) => (
               <div key={s.t} className="bg-sky-50 border border-sky-100 rounded-xl p-4">
                 <p className="font-bold text-blue-700 text-sm mb-1">
                   <span className="inline-flex w-6 h-6 rounded-full bg-blue-600 text-white text-xs items-center justify-center mr-2">

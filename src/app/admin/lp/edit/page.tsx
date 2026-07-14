@@ -59,6 +59,7 @@ function EditForm() {
   const [reasons, setReasons] = useState<{ id: string; title: string; body: string }[]>([]);
   const [richFaqs, setRichFaqs] = useState<{ id: string; q: string; a: string }[]>([]);
   const [voices, setVoices] = useState<{ id: string; text: string; who: string; stars: number }[]>([]);
+  const [steps, setSteps] = useState<{ id: string; t: string; d: string }[]>([]);
   const [allBeforeAfters, setAllBeforeAfters] = useState<any[]>([]);
   const [beforeAfterIds, setBeforeAfterIds] = useState<string[]>([]);
   const [beforeAfterToAdd, setBeforeAfterToAdd] = useState("");
@@ -115,6 +116,7 @@ function EditForm() {
         setReasons(((data.reasons as any[]) || []).map((r) => ({ id: crypto.randomUUID(), title: r.title || "", body: r.body || "" })));
         setRichFaqs(((data.faqItems as any[]) || []).map((f) => ({ id: crypto.randomUUID(), q: f.q || "", a: f.a || "" })));
         setVoices(((data.voices as any[]) || []).map((v) => ({ id: crypto.randomUUID(), text: v.text || "", who: v.who || "", stars: v.stars ?? 5 })));
+        setSteps(((data.steps as any[]) || []).map((s) => ({ id: crypto.randomUUID(), t: s.t || "", d: s.d || "" })));
         setBeforeAfterIds((data.beforeAfters || []).map((b: any) => b.id));
 
         const bd = data.bookingData;
@@ -196,6 +198,7 @@ function EditForm() {
     form.set("reasons", JSON.stringify(reasons.filter(r => r.title.trim()).map(({ title, body }) => ({ title, body }))));
     form.set("faqItems", JSON.stringify(richFaqs.filter(f => f.q.trim()).map(({ q, a }) => ({ q, a }))));
     form.set("voices", JSON.stringify(voices.filter(v => v.text.trim()).map(({ text, who, stars }) => ({ text, who, stars }))));
+    form.set("steps", JSON.stringify(steps.filter(s => s.t.trim()).map(({ t, d }) => ({ t, d }))));
     form.set("beforeAfterIds", JSON.stringify(beforeAfterIds));
 
 
@@ -598,6 +601,25 @@ function EditForm() {
                       <button type="button" onClick={() => setReasons(prev => prev.filter(x => x.id !== r.id))} className="text-xs text-red-500 hover:underline whitespace-nowrap">削除</button>
                     </div>
                     <textarea value={r.body} onChange={e => setReasons(prev => prev.map(x => x.id === r.id ? { ...x, body: e.target.value } : x))} placeholder="本文" rows={2} className="w-full p-2 border rounded text-sm" />
+                  </div>
+                ))}
+              </div>
+
+              {/* ご利用の流れ */}
+              <div className="bg-white p-4 rounded-lg border border-fuchsia-100 space-y-2">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-fuchsia-800">ご利用の流れ</h3>
+                  <button type="button" onClick={() => setSteps(prev => [...prev, { id: crypto.randomUUID(), t: "", d: "" }])} className="text-xs bg-fuchsia-600 text-white px-3 py-1 rounded-full font-bold hover:bg-fuchsia-700">＋ 追加</button>
+                </div>
+                <p className="text-xs text-slate-500">未入力の場合は共通の「お問い合わせ→無料お見積り→日程の調整→作業・お支払い」が表示されます。</p>
+                {steps.map((s, idx) => (
+                  <div key={s.id} className="bg-fuchsia-50/60 p-2 rounded space-y-2">
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs font-bold text-slate-400 w-5">{idx + 1}.</span>
+                      <input value={s.t} onChange={e => setSteps(prev => prev.map(x => x.id === s.id ? { ...x, t: e.target.value } : x))} placeholder="見出し（例：お問い合わせ）" className="flex-1 p-2 border rounded text-sm font-bold" />
+                      <button type="button" onClick={() => setSteps(prev => prev.filter(x => x.id !== s.id))} className="text-xs text-red-500 hover:underline whitespace-nowrap">削除</button>
+                    </div>
+                    <textarea value={s.d} onChange={e => setSteps(prev => prev.map(x => x.id === s.id ? { ...x, d: e.target.value } : x))} placeholder="説明" rows={2} className="w-full p-2 border rounded text-sm" />
                   </div>
                 ))}
               </div>
