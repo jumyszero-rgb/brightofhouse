@@ -78,14 +78,18 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [overrides, setOverrides] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
-  // 作業内容が未定でお問い合わせのみ行いたい場合（一番上のチェックボックスで作業メニュー選択欄自体を非表示にする）
+  // 作業内容が未定でお問い合わせのみ行いたい場合（チェックした段階でメニュー・カレンダーを両方非表示にする）
   const [inquiryOnly, setInquiryOnly] = useState(false);
-  // 日程が未定の場合（カレンダー選択を必須にせず、後日調整の前提で申し込める）
+  // 日程が未定の場合（お問い合わせのみではない・カレンダーは非表示にし選択不要にする）
   const [dateUndecided, setDateUndecided] = useState(false);
+  // 見積を希望するか（駐車場確認の前に置くチェックボックス）
+  const [wantEstimate, setWantEstimate] = useState(false);
 
   const [customer, setCustomer] = useState({
     name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[],
-    parkingAvailable: "" as string
+    parkingAvailable: "" as string,
+    waterOk: "" as string, electricityOk: "" as string, gasOk: "" as string,
+    paymentMethod: "" as string
   });
   const toggleContactMethod = (method: string) => {
     setCustomer(prev => {
@@ -272,9 +276,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    const quoteOnly = submitter?.name === "quoteOnly";
-    if (!selectedDate && !dateUndecided) return alert("日時を選択するか、「日程未定」にチェックしてください");
+    if (!inquiryOnly && !selectedDate && !dateUndecided) return alert("日時を選択するか、「日程未定」にチェックしてください");
 
     // お問い合わせのみの場合、メニュー選択欄自体を非表示にしているため、
     // 初期選択されたままのmains[0]等が意図せず混入しないようにする
@@ -327,9 +329,13 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           address: customer.address,
           contactMethod: customer.contactMethods.join("、"),
           notes: [
-            quoteOnly ? "【見積のみ希望】" : "",
-            dateUndecided ? "【日程未定・後日調整希望】" : "",
-            dateUndecided && customer.parkingAvailable ? `【駐車場：${customer.parkingAvailable}】` : "",
+            wantEstimate ? "【見積希望】" : "",
+            inquiryOnly ? "【お問い合わせのみ・日程未定】" : dateUndecided ? "【日程未定・後日調整希望】" : "",
+            !inquiryOnly && customer.parkingAvailable ? `【駐車場：${customer.parkingAvailable}】` : "",
+            !inquiryOnly && customer.waterOk ? `【水道：${customer.waterOk}】` : "",
+            !inquiryOnly && customer.electricityOk ? `【電気：${customer.electricityOk}】` : "",
+            !inquiryOnly && customer.gasOk ? `【ガス：${customer.gasOk}】` : "",
+            customer.paymentMethod ? `【希望お支払方法：${customer.paymentMethod}】` : "",
             nightWork ? "【深夜帯作業希望】" : "",
             discountNotes,
             customer.notes,
@@ -905,6 +911,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         </section>
         )}
         {/* 2. カレンダー選択 */}
+        {!inquiryOnly && (
         <section>
           <div className="flex flex-wrap justify-between items-end mb-4 gap-4">
             <h4 className="flex items-center gap-2 font-bold text-lg text-slate-800">
@@ -928,10 +935,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               }}
               className="w-4 h-4 accent-purple-600"
             />
-            <span className="text-sm font-bold text-purple-700">日程未定（お問い合わせのみ・後日調整したい）</span>
+            <span className="text-sm font-bold text-purple-700">日程未定（相談したい・カレンダー選択は不要）</span>
           </label>
 
-          <div ref={calendarRef} className={`overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth ${dateUndecided ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+          {!dateUndecided && (
+          <>
+          <div ref={calendarRef} className="overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth">
             <table className="w-full border-collapse min-w-[600px]">
               <thead>
                 <tr>
@@ -1022,32 +1031,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           )}
 
-          {/* 日程未定の方への確認事項 */}
-          {dateUndecided && (
-            <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
-              <p className="text-sm font-bold text-purple-700">日程未定の方へ確認事項</p>
-              <div>
-                <p className="text-xs font-bold text-slate-700 mb-1.5">作業車を停める駐車場はございますか？</p>
-                <div className="flex gap-3">
-                  {["あり", "なし"].map(v => (
-                    <label key={v} className={`px-4 py-1.5 rounded-full border cursor-pointer text-xs font-bold transition-all ${customer.parkingAvailable === v ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
-                      <input
-                        type="radio"
-                        name="parkingAvailable"
-                        className="hidden"
-                        checked={customer.parkingAvailable === v}
-                        onChange={() => setCustomer({ ...customer, parkingAvailable: v })}
-                      />
-                      {v}
-                    </label>
-                  ))}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1.5">※駐車場がない場合は近隣のコインパーキングを利用させていただきます。その際のコインパーキング代は実費にてご請求いたします。</p>
-              </div>
-              <p className="text-[10px] text-slate-500">※作業には水道・電気の使用が必須となります。ガス（お湯）が使用できると助かりますが、必須ではございません。</p>
-            </div>
-          )}
-
                     {/* 当日予約の案内 */}
           <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
             <p className="text-xs text-amber-700 text-center font-bold">
@@ -1059,7 +1042,66 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <a href="tel:0120-792-684" className="text-sm font-bold text-blue-700 underline">📞 0120-792-684（9:00〜18:00）</a>
             </p>
           </div>
+          </>)}
 
+          {/* 見積希望・駐車場・設備の確認（お問い合わせのみ以外は常に表示） */}
+          <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={wantEstimate}
+                onChange={() => setWantEstimate(!wantEstimate)}
+                className="w-4 h-4 accent-purple-600"
+              />
+              <span className="text-sm font-bold text-purple-700">見積を希望する</span>
+            </label>
+
+            <div>
+              <p className="text-xs font-bold text-slate-700 mb-1.5">作業車を停める駐車場はございますか？</p>
+              <div className="flex gap-3">
+                {["あり", "なし"].map(v => (
+                  <label key={v} className={`px-4 py-1.5 rounded-full border cursor-pointer text-xs font-bold transition-all ${customer.parkingAvailable === v ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      name="parkingAvailable"
+                      className="hidden"
+                      checked={customer.parkingAvailable === v}
+                      onChange={() => setCustomer({ ...customer, parkingAvailable: v })}
+                    />
+                    {v}
+                  </label>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1.5">※駐車場がない場合は近隣のコインパーキングを利用させていただきます。その際のコインパーキング代は実費にてご請求いたします。</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-700">作業に必要な設備はご利用いただけますか？</p>
+              {[
+                { key: "waterOk" as const, label: "水道（必須）" },
+                { key: "electricityOk" as const, label: "電気（必須）" },
+                { key: "gasOk" as const, label: "ガス／お湯（任意・あると助かります）" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs text-slate-600">{label}</span>
+                  <div className="flex gap-2">
+                    {["OK", "NG"].map(v => (
+                      <label key={v} className={`px-3 py-1 rounded-full border cursor-pointer text-xs font-bold transition-all ${customer[key] === v ? (v === "OK" ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-red-500 text-white border-red-500') : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                        <input
+                          type="radio"
+                          name={key}
+                          className="hidden"
+                          checked={customer[key] === v}
+                          onChange={() => setCustomer({ ...customer, [key]: v })}
+                        />
+                        {v}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* 深夜帯・時間外案内 */}
           <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -1084,6 +1126,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             )}
           </div>
         </section>
+        )}
 
         {/* 3. お客様情報 */}
         <section>
@@ -1133,6 +1176,24 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <p className="text-xs text-slate-500 font-bold mt-2">後程担当者よりご連絡いたします。</p>
             </div>
             <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">希望お支払方法</label>
+              <div className="flex flex-wrap gap-3">
+                {["現金", "クレカ", "QR"].map(method => (
+                  <label key={method} className={`px-4 py-2 rounded-full border cursor-pointer transition-all ${customer.paymentMethod === method ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      className="hidden"
+                      checked={customer.paymentMethod === method}
+                      onChange={() => setCustomer({ ...customer, paymentMethod: method })}
+                    />
+                    {method}
+                  </label>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2">※QRコード決済は上限がある場合がございます。当日QR決済ができない場合は、別のお支払い方法にてお支払いいただきます。</p>
+            </div>
+            <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">備考・ご要望</label>
               <textarea value={customer.notes} onChange={e => setCustomer({ ...customer, notes: e.target.value })} rows={3} className="w-full p-3 border rounded-xl" placeholder="ご要望やご質問があればご記入ください" />
             </div>
@@ -1143,11 +1204,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || (!selectedDate && !dateUndecided)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
+            <button type="submit" disabled={loading || (!inquiryOnly && !selectedDate && !dateUndecided)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
               {loading ? "送信中..." : "この内容で仮予約・お問い合わせする"}
-            </button>
-            <button type="submit" name="quoteOnly" value="1" disabled={loading || (!selectedDate && !dateUndecided)} className="w-full bg-white text-blue-600 font-black py-3 rounded-xl border-2 border-blue-500 hover:bg-blue-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 transition-all text-base mb-2">
-              {loading ? "送信中..." : "見積のみ希望する"}
             </button>
             <p className="text-center text-[10px] text-slate-400">※送信後、担当者より確認のご連絡をいたします。この時点では予約は確定しません。</p>
           </form>
