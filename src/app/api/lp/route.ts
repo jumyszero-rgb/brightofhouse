@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
 
-    let heroImageUrl = null;
+    // 複製時など、新規アップロードなしで既存の画像URLをそのまま引き継ぎたい場合に使用
+    let heroImageUrl = (formData.get("existingHeroImage") as string | null) || null;
     const imageFile = formData.get("heroImage") as File | null;
     if (imageFile && imageFile.size > 0) {
       heroImageUrl = await uploadToR2(imageFile);

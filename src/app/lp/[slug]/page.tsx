@@ -14,15 +14,18 @@ export const revalidate = 0;
 
 type Props = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
   const lp = await prisma.landingPage.findUnique({
     where: { slug, category: "CAMPAIGN" }
   });
 
-  if (!lp || lp.status === "DRAFT") return { title: "ページが見つかりません" };
+  if (!lp || (lp.status === "DRAFT" && !isPreview)) return { title: "ページが見つかりません" };
 
 
     return {
@@ -40,8 +43,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 }
 
-export default async function LPPage({ params }: Props) {
+export default async function LPPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
   const subMenusInclude = {
     subMenus: {
       include: { options: { orderBy: { order: "asc" as const } } },
@@ -59,7 +64,7 @@ export default async function LPPage({ params }: Props) {
     },
   });
 
-  if (!lp || lp.status === "DRAFT") notFound();
+  if (!lp || (lp.status === "DRAFT" && !isPreview)) notFound();
 
   const phoneNumber = "0120-792-684";
   const lineUrl = "https://line.me/ti/p/RBwKccvQ1O";
@@ -71,11 +76,27 @@ export default async function LPPage({ params }: Props) {
 
   // リッチテンプレート（静的LPと同等のセクション構成）で描画する場合
   if (lp.templateStyle === "RICH") {
-    return <LpTemplate content={landingPageToLpContent(lp)} bookingData={effectiveBookingData} />;
+    return (
+      <>
+        {isPreview && (
+          <div className="bg-yellow-400 text-black text-center py-2 text-sm font-bold sticky top-0 z-50">
+            ⚠ プレビュー表示中（このページは公開されていません）
+          </div>
+        )}
+        <LpTemplate content={landingPageToLpContent(lp)} bookingData={effectiveBookingData} />
+      </>
+    );
   }
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
+      {/* プレビューバナー */}
+      {isPreview && (
+        <div className="bg-yellow-400 text-black text-center py-2 text-sm font-bold sticky top-0 z-50">
+          ⚠ プレビュー表示中（このページは公開されていません）
+        </div>
+      )}
+
       {/* ナビ */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-[100] border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
