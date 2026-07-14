@@ -33,7 +33,7 @@ function EditForm() {
     metaKeywords: "",
     metaDescription: "",
     showBottomCta: true,
-    noIndex: false,
+    noIndex: true,
     canonicalUrl: "",
   });
 
