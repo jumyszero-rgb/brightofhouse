@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       contactMethod: body.contactMethod || "未指定",
       totalMinutesDisplay: body.totalMinutes || "未定",
       dateUndecided: !!body.dateUndecided,
+      inquiryOnly: !!body.inquiryOnly,
     };
 
     sendBookingNotification(mailData).catch(err => console.error("Admin Email notification error:", err));

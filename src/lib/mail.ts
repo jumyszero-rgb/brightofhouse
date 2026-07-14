@@ -41,7 +41,7 @@ export async function sendBookingNotification(bookingData: any) {
 
   const {
     customerName, phone, email, address, startTime, endTime,
-    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes, dateUndecided
+    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes, dateUndecided, inquiryOnly
   } = bookingData;
 
 const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
@@ -55,13 +55,15 @@ const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
 const scheduleText = dateUndecided
   ? "日程未定（お客様と改めて日程を調整してください）"
   : `${startFormatted} 〜 ${endFormatted}`;
+// 通常予約・日程未定・見積は「予約」、作業内容未定のお問い合わせのみは「お問い合わせ」として区別する
+const label = inquiryOnly ? "お問い合わせ" : "予約";
 
   await transporter.sendMail({
     from: `"Bright House Booking" <${SMTP_FROM}>`,
     to: ADMIN_EMAIL,
-    subject: `【新着予約】${customerName}様より申し込みがありました`,
+    subject: `【新着${label}】${customerName}様より申し込みがありました`,
     text: `
-新しい予約申し込みが入りました。管理画面で詳細を確認し、確定処理を行ってください。
+新しい${label}申し込みが入りました。管理画面で詳細を確認し、確定処理を行ってください。
 
 【予約内容】
 ------------------------------------------
