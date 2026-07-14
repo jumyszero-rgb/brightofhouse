@@ -96,7 +96,6 @@ export default function LeadForm({
 
   return (
     <div
-      id="lead"
       className="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden scroll-mt-20"
     >
       <div className="bg-blue-600 p-5 text-white text-center">

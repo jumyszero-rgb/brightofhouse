@@ -1,6 +1,7 @@
 // @/src/components/lp/LpTemplate.tsx
 import Image from "next/image";
 import LeadForm from "@/components/lp/LeadForm";
+import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { BRAND, type LpContent } from "@/lib/lpContent";
 
 function Stars({ n = 5 }: { n?: number }) {
@@ -55,7 +56,13 @@ function SectionCta({ label = "この内容で無料相談する" }: { label?: s
  * リッチ版 LP共通テンプレート。content（lpContent.ts）を渡すと1枚を描画。
  * FAQ・お悩み等は <details> で隠さず常時表示（Google拾い漏れ＆UX対策）。
  */
-export default function LpTemplate({ content }: { content: LpContent }) {
+type Props = {
+  content: LpContent;
+  // 予約マスターと連動している場合、簡易リードフォームの代わりにカレンダー予約フォームを表示する
+  bookingData?: any;
+};
+
+export default function LpTemplate({ content, bookingData }: Props) {
   const { hero, pains, menu, reasons, faq, voices, photos, recommended, serviceLabel, slug } =
     content;
 
@@ -477,15 +484,21 @@ export default function LpTemplate({ content }: { content: LpContent }) {
           </div>
         </section>
 
-        {/* ===== リードフォーム ===== */}
-        <section className="pb-24 md:pb-16 pt-4">
-          <p className="text-center text-lg md:text-2xl font-black mb-2">
-            まずは無料でご相談ください
-          </p>
-          <p className="text-center text-sm text-slate-600 mb-6">
-            お見積り無料・追加料金なし。30秒で送信できます。
-          </p>
-          <LeadForm service={serviceLabel} source={slug} />
+        {/* ===== リードフォーム（予約マスター連動時はカレンダー予約フォームに差し替え） ===== */}
+        <section id="lead" className="pb-24 md:pb-16 pt-4 scroll-mt-20">
+          {bookingData ? (
+            <ServicePageBooking pageTitle={serviceLabel} bookingData={bookingData} />
+          ) : (
+            <>
+              <p className="text-center text-lg md:text-2xl font-black mb-2">
+                まずは無料でご相談ください
+              </p>
+              <p className="text-center text-sm text-slate-600 mb-6">
+                お見積り無料・追加料金なし。30秒で送信できます。
+              </p>
+              <LeadForm service={serviceLabel} source={slug} />
+            </>
+          )}
         </section>
       </div>
 

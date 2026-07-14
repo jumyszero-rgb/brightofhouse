@@ -6,6 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
+import LpTemplate from "@/components/lp/LpTemplate";
+import { landingPageToLpContent } from "@/lib/lpRichContent";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -53,6 +55,7 @@ export default async function LPPage({ params }: Props) {
     include: {
       bookingMenus: { include: subMenusInclude },
       bookingCategories: { include: { menus: { include: subMenusInclude } } },
+      beforeAfters: { orderBy: { createdAt: "desc" as const } },
     },
   });
 
@@ -65,6 +68,11 @@ export default async function LPPage({ params }: Props) {
   const effectiveBookingData = (lp.bookingMenus.length > 0 || lp.bookingCategories.length > 0)
     ? bookingSelectionToBookingData(lp.bookingCategories, lp.bookingMenus)
     : (lp.bookingData as any);
+
+  // リッチテンプレート（静的LPと同等のセクション構成）で描画する場合
+  if (lp.templateStyle === "RICH") {
+    return <LpTemplate content={landingPageToLpContent(lp)} bookingData={effectiveBookingData} />;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">

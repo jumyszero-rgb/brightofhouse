@@ -59,6 +59,18 @@ const deleteFromR2 = async (url: string) => {
   } catch (e) { console.error(e); }
 };
 
+// リッチLPテンプレート用のJSON配列フィールドをformDataから読み取る（空/不正な場合はnull）
+const parseJsonField = (formData: FormData, key: string) => {
+  const raw = formData.get(key) as string | null;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length === 0 ? null : parsed;
+  } catch {
+    return null;
+  }
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -77,6 +89,7 @@ export async function GET(request: NextRequest) {
         include: {
           bookingMenus: { include: subMenusInclude },
           bookingCategories: { include: { menus: { include: subMenusInclude } } },
+          beforeAfters: { orderBy: { createdAt: "desc" as const } },
         },
       });
       return NextResponse.json(lp);
@@ -108,6 +121,8 @@ export async function POST(request: NextRequest) {
     const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
     const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
     const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
+    const beforeAfterIdsRaw = formData.get("beforeAfterIds") as string | null;
+    const beforeAfterIds: string[] = beforeAfterIdsRaw ? JSON.parse(beforeAfterIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -135,8 +150,24 @@ export async function POST(request: NextRequest) {
           const raw = formData.get("bookingData") as string;
           return raw ? JSON.parse(raw) : null;
         })(),
-
-
+        // ▼ リッチLPテンプレート
+        templateStyle: (formData.get("templateStyle") as string) || "SIMPLE",
+        heroEyebrow: (formData.get("heroEyebrow") as string) || null,
+        heroSubtitle: (formData.get("heroSubtitle") as string) || null,
+        heroPriceLead: (formData.get("heroPriceLead") as string) || null,
+        serviceLabel: (formData.get("serviceLabel") as string) || null,
+        menuIntro: (formData.get("menuIntro") as string) || null,
+        campaignBadge: (formData.get("campaignBadge") as string) || null,
+        setNote: (formData.get("setNote") as string) || null,
+        pains: parseJsonField(formData, "pains"),
+        menuItems: parseJsonField(formData, "menuItems"),
+        menuOptions: parseJsonField(formData, "menuOptions"),
+        baseWork: parseJsonField(formData, "baseWork"),
+        recommended: parseJsonField(formData, "recommended"),
+        reasons: parseJsonField(formData, "reasons"),
+        faqItems: parseJsonField(formData, "faqItems"),
+        voices: parseJsonField(formData, "voices"),
+        beforeAfters: { connect: beforeAfterIds.map((id) => ({ id })) },
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -165,6 +196,8 @@ export async function PUT(request: NextRequest) {
     const bookingMenuIds: string[] = bookingMenuIdsRaw ? JSON.parse(bookingMenuIdsRaw) : [];
     const bookingCategoryIdsRaw = formData.get("bookingCategoryIds") as string | null;
     const bookingCategoryIds: string[] = bookingCategoryIdsRaw ? JSON.parse(bookingCategoryIdsRaw) : [];
+    const beforeAfterIdsRaw = formData.get("beforeAfterIds") as string | null;
+    const beforeAfterIds: string[] = beforeAfterIdsRaw ? JSON.parse(beforeAfterIdsRaw) : [];
 
     const updatedLp = await prisma.landingPage.update({
       where: { id },
@@ -193,6 +226,24 @@ export async function PUT(request: NextRequest) {
           const raw = formData.get("bookingData") as string;
           return raw ? JSON.parse(raw) : null;
         })(),
+        // ▼ リッチLPテンプレート
+        templateStyle: (formData.get("templateStyle") as string) || "SIMPLE",
+        heroEyebrow: (formData.get("heroEyebrow") as string) || null,
+        heroSubtitle: (formData.get("heroSubtitle") as string) || null,
+        heroPriceLead: (formData.get("heroPriceLead") as string) || null,
+        serviceLabel: (formData.get("serviceLabel") as string) || null,
+        menuIntro: (formData.get("menuIntro") as string) || null,
+        campaignBadge: (formData.get("campaignBadge") as string) || null,
+        setNote: (formData.get("setNote") as string) || null,
+        pains: parseJsonField(formData, "pains"),
+        menuItems: parseJsonField(formData, "menuItems"),
+        menuOptions: parseJsonField(formData, "menuOptions"),
+        baseWork: parseJsonField(formData, "baseWork"),
+        recommended: parseJsonField(formData, "recommended"),
+        reasons: parseJsonField(formData, "reasons"),
+        faqItems: parseJsonField(formData, "faqItems"),
+        voices: parseJsonField(formData, "voices"),
+        beforeAfters: { set: beforeAfterIds.map((id) => ({ id })) },
       }
     });
     if (updatedLp.status === "PUBLISHED") {

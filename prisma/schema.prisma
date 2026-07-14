@@ -25,6 +25,7 @@ model BeforeAfter {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   servicePages ServicePage[]
+  landingPages LandingPage[]
 }
 
 model CompanyProfile {
@@ -171,6 +172,25 @@ model LandingPage {
   bookingData       Json?
   bookingMenus      BookingMenu[]
   bookingCategories BookingCategory[]
+
+  // ===== リッチLPテンプレート用（templateStyle="RICH"の場合のみ使用） =====
+  templateStyle     String            @default("SIMPLE") // "SIMPLE" | "RICH"
+  heroEyebrow       String?
+  heroSubtitle      String?
+  heroPriceLead     String?
+  serviceLabel      String?
+  pains             Json?
+  menuIntro         String?
+  campaignBadge     String?
+  menuItems         Json?
+  menuOptions       Json?
+  baseWork          Json?
+  setNote           String?
+  recommended       Json?
+  reasons           Json?
+  faqItems          Json?
+  voices            Json?
+  beforeAfters      BeforeAfter[]
 }
 
 model CtaBlock {
