@@ -87,7 +87,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   const [customer, setCustomer] = useState({
     name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[],
-    parkingAvailable: "" as string,
+    parkingAvailable: "" as string, parkingInstructions: "" as string,
     waterOk: "" as string, electricityOk: "" as string, gasOk: "" as string,
     paymentMethod: "" as string
   });
@@ -332,6 +332,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             wantEstimate ? "【見積希望】" : "",
             inquiryOnly ? "【お問い合わせのみ・日程未定】" : dateUndecided ? "【日程未定・後日調整希望】" : "",
             !inquiryOnly && customer.parkingAvailable ? `【駐車場：${customer.parkingAvailable}】` : "",
+            !inquiryOnly && customer.parkingAvailable === "あり" && customer.parkingInstructions ? `【駐車場所の指示：${customer.parkingInstructions}】` : "",
             !inquiryOnly && customer.waterOk ? `【水道：${customer.waterOk}】` : "",
             !inquiryOnly && customer.electricityOk ? `【電気：${customer.electricityOk}】` : "",
             !inquiryOnly && customer.gasOk ? `【ガス：${customer.gasOk}】` : "",
@@ -1075,6 +1076,17 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 ))}
               </div>
               <p className="text-[10px] text-slate-500 mt-1.5">※駐車場がない場合は近隣のコインパーキングを利用させていただきます。その際のコインパーキング代は実費にてご請求いたします。</p>
+              {customer.parkingAvailable === "あり" && (
+                <div className="mt-2">
+                  <textarea
+                    value={customer.parkingInstructions}
+                    onChange={e => setCustomer({ ...customer, parkingInstructions: e.target.value })}
+                    rows={2}
+                    className="w-full p-2.5 border rounded-lg text-sm"
+                    placeholder="どこに駐車すればいいかご指示ください"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
