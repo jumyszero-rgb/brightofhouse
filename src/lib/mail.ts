@@ -41,7 +41,7 @@ export async function sendBookingNotification(bookingData: any) {
 
   const {
     customerName, phone, email, address, startTime, endTime,
-    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes
+    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes, dateUndecided
   } = bookingData;
 
 const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
@@ -52,6 +52,9 @@ const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
   timeZone: "Asia/Tokyo",  // ← 追加
   hour: "2-digit", minute: "2-digit"
 });
+const scheduleText = dateUndecided
+  ? "日程未定（お客様と改めて日程を調整してください）"
+  : `${startFormatted} 〜 ${endFormatted}`;
 
   await transporter.sendMail({
     from: `"Bright House Booking" <${SMTP_FROM}>`,
@@ -64,7 +67,7 @@ const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
 ------------------------------------------
 ■サービス: ${category}
 ■メニュー: ${items}
-■希望日時: ${startFormatted} 〜 ${endFormatted}
+■希望日時: ${scheduleText}
 ■作業時間目安: ${totalMinutesDisplay}分
 ■概算合計金額: ¥${Number(totalPrice).toLocaleString()} (税込)
 
@@ -96,7 +99,7 @@ export async function sendBookingConfirmationToUser(bookingData: any) {
 
   const {
     customerName, email, startTime, endTime,
-    items, totalPrice, category, totalMinutesDisplay
+    items, totalPrice, category, totalMinutesDisplay, dateUndecided
   } = bookingData;
 
 const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
@@ -107,6 +110,9 @@ const endFormatted = new Date(endTime).toLocaleString("ja-JP", {
   timeZone: "Asia/Tokyo",  // ← 追加
   hour: "2-digit", minute: "2-digit"
 });
+const scheduleText = dateUndecided
+  ? "日程未定（担当者よりご連絡のうえ、日程を調整させていただきます）"
+  : `${startFormatted} 〜 ${endFormatted}`;
 
   await transporter.sendMail({
     from: `"北海道ブライトオブハウス" <${SMTP_FROM}>`,
@@ -125,7 +131,7 @@ ${customerName} 様
 ------------------------------------------
 ■サービス: ${category}
 ■メニュー: ${items}
-■第一希望日時: ${startFormatted} 〜 ${endFormatted}
+■第一希望日時: ${scheduleText}
 ■作業時間目安: ${totalMinutesDisplay}分
 ■概算合計金額: ¥${Number(totalPrice).toLocaleString()} (税込)
 ------------------------------------------

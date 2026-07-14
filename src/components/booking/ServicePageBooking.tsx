@@ -342,6 +342,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           ].filter(Boolean).join("\n"),
           startTime: format(effectiveStart, "yyyy-MM-dd'T'HH:mm:ss"),
           endTime: format(effectiveEnd, "yyyy-MM-dd'T'HH:mm:ss"),
+          dateUndecided: inquiryOnly || dateUndecided,
           items: itemsText,
           totalPrice: inquiryOnly ? 0 : totalPrice,
           totalMinutes: inquiryOnly ? "未定" : `${totalMinutesMin}〜${totalMinutesMax}`,
