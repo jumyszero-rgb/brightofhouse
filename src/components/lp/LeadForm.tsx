@@ -35,8 +35,16 @@ export default function LeadForm({
     notes: "",
   });
   const [contactMethods, setContactMethods] = useState<string[]>(["電話"]);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const MAX_PHOTOS = 5;
+  const handlePhotoSelect = (files: FileList | null) => {
+    if (!files) return;
+    setPhotos((prev) => [...prev, ...Array.from(files)].slice(0, MAX_PHOTOS));
+  };
+  const removePhoto = (idx: number) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
 
   const update = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -76,15 +84,16 @@ export default function LeadForm({
     }
     setLoading(true);
     try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => fd.set(k, v));
+      fd.set("contactMethod", contactMethods.join("・"));
+      fd.set("service", service);
+      fd.set("source", source);
+      photos.forEach((file) => fd.append("photos", file));
+
       const res = await fetch("/api/lead", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          contactMethod: contactMethods.join("・"),
-          service,
-          source,
-        }),
+        body: fd,
       });
       if (!res.ok) throw new Error();
       window.location.href = "/lp/thank-you";
@@ -257,6 +266,43 @@ export default function LeadForm({
             className="w-full p-3 border border-slate-300 rounded-xl"
             placeholder="汚れの状態や広さ、ご質問などお気軽にどうぞ"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold mb-1">
+            写真を添付（任意・最大{MAX_PHOTOS}枚）
+          </label>
+          <p className="text-[11px] text-slate-500 mb-2">
+            気になる汚れの写真を送っていただくと、概算のお見積りがスムーズになります。
+          </p>
+          <label className="flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl py-4 cursor-pointer text-slate-500 hover:bg-slate-50 transition-colors">
+            <span aria-hidden>📷</span>
+            <span className="text-sm font-bold">写真を選択する</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => { handlePhotoSelect(e.target.files); e.target.value = ""; }}
+              disabled={photos.length >= MAX_PHOTOS}
+            />
+          </label>
+          {photos.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {photos.map((file, i) => (
+                <span key={i} className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-full pl-3 pr-1 py-1 text-xs">
+                  {file.name}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="w-5 h-5 rounded-full bg-slate-300 text-white text-[10px] font-bold flex items-center justify-center hover:bg-slate-400"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {error && (

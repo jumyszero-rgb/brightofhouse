@@ -71,6 +71,13 @@ export function landingPageToLpContent(lp: any): LpContent {
   const manualVoices = (lp.voices as LpVoice[] | null) || [];
   const voices = [...linkedVoices, ...manualVoices];
 
+  // FAQを、連動させたサービス詳細ページ(ServicePage)の現在のFAQから取得する。
+  const linkedFaq: LpFaq[] = (lp.faqServicePages || []).flatMap((sp: any) =>
+    (sp.faqs || []).map((f: any) => ({ q: f.question, a: f.answer }))
+  );
+  const manualFaq = (lp.faqItems as LpFaq[] | null) || [];
+  const faq = [...linkedFaq, ...manualFaq];
+
   return {
     slug: lp.slug,
     serviceLabel: lp.serviceLabel || lp.title,
@@ -91,7 +98,7 @@ export function landingPageToLpContent(lp: any): LpContent {
       setNote: lp.setNote || undefined,
     },
     reasons: (lp.reasons as LpReason[] | null) || [],
-    faq: (lp.faqItems as LpFaq[] | null) || [],
+    faq,
     voices: voices.length > 0 ? voices : undefined,
     photos: photos.length > 0 ? photos : undefined,
     recommended: (lp.recommended as LpRecommend[] | null) || undefined,

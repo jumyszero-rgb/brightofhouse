@@ -65,6 +65,7 @@ export default async function LPPage({ params, searchParams }: Props) {
       menuSubMenuRefs: true,
       menuItemRefs: true,
       testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
+      faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
     },
   });
 

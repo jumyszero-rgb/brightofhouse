@@ -71,6 +71,8 @@ function EditForm() {
   const [allServicePages, setAllServicePages] = useState<any[]>([]);
   const [testimonialServicePageIds, setTestimonialServicePageIds] = useState<string[]>([]);
   const [testimonialServicePageToAdd, setTestimonialServicePageToAdd] = useState("");
+  const [faqServicePageIds, setFaqServicePageIds] = useState<string[]>([]);
+  const [faqServicePageToAdd, setFaqServicePageToAdd] = useState("");
 
   useEffect(() => {
     fetch("/api/booking-master").then(r => r.json()).then(setBookingCategories).catch(() => {});
@@ -131,6 +133,7 @@ function EditForm() {
         setMenuSubMenuRefIds((data.menuSubMenuRefs || []).map((s: any) => s.id));
         setMenuItemRefIds((data.menuItemRefs || []).map((m: any) => m.id));
         setTestimonialServicePageIds((data.testimonialServicePages || []).map((s: any) => s.id));
+        setFaqServicePageIds((data.faqServicePages || []).map((s: any) => s.id));
 
         const bd = data.bookingData;
         if (bd && bd.mains) {
@@ -217,6 +220,7 @@ function EditForm() {
     form.set("menuSubMenuRefIds", JSON.stringify(menuSubMenuRefIds));
     form.set("menuItemRefIds", JSON.stringify(menuItemRefIds));
     form.set("testimonialServicePageIds", JSON.stringify(testimonialServicePageIds));
+    form.set("faqServicePageIds", JSON.stringify(faqServicePageIds));
 
 
     try {
@@ -732,10 +736,38 @@ function EditForm() {
                 ))}
               </div>
 
-              {/* FAQ */}
+              {/* FAQ（サービス詳細ページと連動） */}
+              <div className="bg-white p-4 rounded-lg border border-fuchsia-100 space-y-2">
+                <h3 className="text-sm font-bold text-fuchsia-800">よくあるご質問（サービス詳細ページと連動）</h3>
+                <p className="text-[10px] text-slate-500">同じ作業内容のサービス詳細ページを選ぶと、そのページのFAQが常に最新の状態で表示されます。</p>
+                {faqServicePageIds.length > 0 && (
+                  <ul className="space-y-1">
+                    {faqServicePageIds.map((id) => {
+                      const sp = allServicePages.find((s) => s.id === id);
+                      return (
+                        <li key={id} className="flex items-center justify-between gap-2 bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                          <span className="min-w-0 break-words">{sp?.title || "（読み込み中...）"}</span>
+                          <button type="button" onClick={() => setFaqServicePageIds(prev => prev.filter(x => x !== id))} className="shrink-0 text-xs text-red-500 hover:underline">削除</button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <select value={faqServicePageToAdd} onChange={e => setFaqServicePageToAdd(e.target.value)} className="flex-1 min-w-0 basis-full sm:basis-0 p-2 border rounded-lg text-sm">
+                    <option value="">連動するサービス詳細ページを選択</option>
+                    {allServicePages.filter((s) => !faqServicePageIds.includes(s.id)).map((s) => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => { if (faqServicePageToAdd) { setFaqServicePageIds(prev => [...prev, faqServicePageToAdd]); setFaqServicePageToAdd(""); } }} className="shrink-0 bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                </div>
+              </div>
+
+              {/* FAQ（手入力） */}
               <div className="bg-white p-4 rounded-lg border border-fuchsia-100 space-y-2">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-fuchsia-800">よくあるご質問</h3>
+                  <h3 className="text-sm font-bold text-fuchsia-800">よくあるご質問（手入力）</h3>
                   <button type="button" onClick={() => setRichFaqs(prev => [...prev, { id: crypto.randomUUID(), q: "", a: "" }])} className="text-xs bg-fuchsia-600 text-white px-3 py-1 rounded-full font-bold hover:bg-fuchsia-700">＋ 追加</button>
                 </div>
                 {richFaqs.map((f) => (

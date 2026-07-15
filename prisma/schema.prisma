@@ -204,7 +204,9 @@ model LandingPage {
   // お客様の声(voices)を、同じ作業内容のサービス詳細ページ(ServicePage)の口コミと連動させる。
   // Testimonialは保存のたびに作り直される(id不安定)ため、個別のTestimonialではなく
   // 参照元のServicePageを保持し、表示時に都度そのページの現在のテスティモニアルを取得する。
-  testimonialServicePages ServicePage[]
+  testimonialServicePages ServicePage[] @relation("LpTestimonialServicePages")
+  // FAQも同様の理由（保存のたびに作り直されIDが不安定）で、参照元のServicePageを保持する。
+  faqServicePages   ServicePage[]     @relation("LpFaqServicePages")
 }
 
 model CtaBlock {
@@ -371,7 +373,8 @@ model ServicePage {
   bookingCategories BookingCategory[]
   displayMenuIds    String[]          @default([])
   beforeAfters      BeforeAfter[]
-  testimonialSourceForLps LandingPage[]
+  testimonialSourceForLps LandingPage[] @relation("LpTestimonialServicePages")
+  faqSourceForLps   LandingPage[]     @relation("LpFaqServicePages")
 }
 
 model ServiceFaq {

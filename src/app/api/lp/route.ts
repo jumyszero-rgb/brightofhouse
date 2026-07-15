@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
           menuSubMenuRefs: true,
           menuItemRefs: true,
           testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
+          faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
         },
       });
       return NextResponse.json(lp);
@@ -136,6 +137,8 @@ export async function POST(request: NextRequest) {
     const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
     const testimonialServicePageIdsRaw = formData.get("testimonialServicePageIds") as string | null;
     const testimonialServicePageIds: string[] = testimonialServicePageIdsRaw ? JSON.parse(testimonialServicePageIdsRaw) : [];
+    const faqServicePageIdsRaw = formData.get("faqServicePageIds") as string | null;
+    const faqServicePageIds: string[] = faqServicePageIdsRaw ? JSON.parse(faqServicePageIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -186,6 +189,7 @@ export async function POST(request: NextRequest) {
         menuSubMenuRefs: { connect: menuSubMenuRefIds.map((id) => ({ id })) },
         menuItemRefs: { connect: menuItemRefIds.map((id) => ({ id })) },
         testimonialServicePages: { connect: testimonialServicePageIds.map((id) => ({ id })) },
+        faqServicePages: { connect: faqServicePageIds.map((id) => ({ id })) },
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -224,6 +228,8 @@ export async function PUT(request: NextRequest) {
     const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
     const testimonialServicePageIdsRaw = formData.get("testimonialServicePageIds") as string | null;
     const testimonialServicePageIds: string[] = testimonialServicePageIdsRaw ? JSON.parse(testimonialServicePageIdsRaw) : [];
+    const faqServicePageIdsRaw = formData.get("faqServicePageIds") as string | null;
+    const faqServicePageIds: string[] = faqServicePageIdsRaw ? JSON.parse(faqServicePageIdsRaw) : [];
 
     const updatedLp = await prisma.landingPage.update({
       where: { id },
@@ -275,6 +281,7 @@ export async function PUT(request: NextRequest) {
         menuSubMenuRefs: { set: menuSubMenuRefIds.map((id) => ({ id })) },
         menuItemRefs: { set: menuItemRefIds.map((id) => ({ id })) },
         testimonialServicePages: { set: testimonialServicePageIds.map((id) => ({ id })) },
+        faqServicePages: { set: faqServicePageIds.map((id) => ({ id })) },
       }
     });
     if (updatedLp.status === "PUBLISHED") {

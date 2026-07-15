@@ -34,6 +34,7 @@ async function getDbLp(item: string) {
       menuSubMenuRefs: true,
       menuItemRefs: true,
       testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
+      faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
     },
   });
 }

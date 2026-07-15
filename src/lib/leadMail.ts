@@ -33,6 +33,7 @@ export type LeadData = {
   contactMethod?: string; // 電話 / LINE / メール
   notes?: string;
   source?: string; // どのLPから来たか（例: lp/mizumawari/bathroom）
+  photoUrls?: string[]; // お客様が添付した写真（現地の汚れ具合など）
 };
 
 /** 管理者へのリード通知 */
@@ -77,7 +78,11 @@ export async function sendLeadNotification(lead: LeadData) {
 【ご要望・備考】
 ------------------------------------------
 ${lead.notes || "なし"}
-
+${lead.photoUrls && lead.photoUrls.length > 0 ? `
+【添付写真】
+------------------------------------------
+${lead.photoUrls.map((url, i) => `写真${i + 1}: ${url}`).join("\n")}
+` : ""}
 ------------------------------------------
 受付日時: ${receivedAt}
 流入元LP: ${lead.source || "不明"}
