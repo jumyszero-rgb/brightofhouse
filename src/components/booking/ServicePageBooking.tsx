@@ -66,7 +66,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       : [];
 
   const [optionQuantities, setOptionQuantities] = useState<Record<string, number>>({});
-  const [selectedMains, setSelectedMains] = useState<number[]>([0]);
+  const [selectedMains, setSelectedMains] = useState<number[]>([]);
   const [selectedFoldItemIds, setSelectedFoldItemIds] = useState<string[]>([]);
   const [openFolds, setOpenFolds] = useState<Record<string, boolean>>({});
   const toggleFold = (id: string) => setOpenFolds(prev => ({ ...prev, [id]: !prev[id] }));
