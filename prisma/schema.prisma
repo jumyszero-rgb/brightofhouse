@@ -201,6 +201,10 @@ model LandingPage {
   // 料金表(menuItems)の項目を予約マスターの中分類と連動させたいもの。
   // 名称・価格・作業内容・注意事項は保存せず常にマスターの最新値から解決する。
   menuItemRefs      BookingMenu[]     @relation("LpMenuItemRefs")
+  // お客様の声(voices)を、同じ作業内容のサービス詳細ページ(ServicePage)の口コミと連動させる。
+  // Testimonialは保存のたびに作り直される(id不安定)ため、個別のTestimonialではなく
+  // 参照元のServicePageを保持し、表示時に都度そのページの現在のテスティモニアルを取得する。
+  testimonialServicePages ServicePage[]
 }
 
 model CtaBlock {
@@ -367,6 +371,7 @@ model ServicePage {
   bookingCategories BookingCategory[]
   displayMenuIds    String[]          @default([])
   beforeAfters      BeforeAfter[]
+  testimonialSourceForLps LandingPage[]
 }
 
 model ServiceFaq {

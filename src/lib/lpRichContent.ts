@@ -60,6 +60,17 @@ export function landingPageToLpContent(lp: any): LpContent {
   const manualMenuItems = (lp.menuItems as LpMenuItem[] | null) || [];
   const menuItems = [...linkedMenuItems, ...manualMenuItems];
 
+  // お客様の声を、連動させたサービス詳細ページ(ServicePage)の現在の口コミから取得する。
+  const linkedVoices: LpVoice[] = (lp.testimonialServicePages || []).flatMap((sp: any) =>
+    (sp.testimonials || []).map((t: any) => ({
+      text: t.body,
+      who: t.authorLabel,
+      stars: t.rating ?? undefined,
+    }))
+  );
+  const manualVoices = (lp.voices as LpVoice[] | null) || [];
+  const voices = [...linkedVoices, ...manualVoices];
+
   return {
     slug: lp.slug,
     serviceLabel: lp.serviceLabel || lp.title,
@@ -81,7 +92,7 @@ export function landingPageToLpContent(lp: any): LpContent {
     },
     reasons: (lp.reasons as LpReason[] | null) || [],
     faq: (lp.faqItems as LpFaq[] | null) || [],
-    voices: (lp.voices as LpVoice[] | null) || undefined,
+    voices: voices.length > 0 ? voices : undefined,
     photos: photos.length > 0 ? photos : undefined,
     recommended: (lp.recommended as LpRecommend[] | null) || undefined,
     steps: (lp.steps as LpStep[] | null) || undefined,

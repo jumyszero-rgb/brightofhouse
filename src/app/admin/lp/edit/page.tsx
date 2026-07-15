@@ -68,10 +68,14 @@ function EditForm() {
   const [menuItemRefIds, setMenuItemRefIds] = useState<string[]>([]);
   const [menuItemRefToAdd, setMenuItemRefToAdd] = useState("");
   const [menuOptionRefToAdd, setMenuOptionRefToAdd] = useState("");
+  const [allServicePages, setAllServicePages] = useState<any[]>([]);
+  const [testimonialServicePageIds, setTestimonialServicePageIds] = useState<string[]>([]);
+  const [testimonialServicePageToAdd, setTestimonialServicePageToAdd] = useState("");
 
   useEffect(() => {
     fetch("/api/booking-master").then(r => r.json()).then(setBookingCategories).catch(() => {});
     fetch("/api/before-after").then(r => r.json()).then(setAllBeforeAfters).catch(() => {});
+    fetch("/api/service-pages").then(r => r.json()).then(setAllServicePages).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -126,6 +130,7 @@ function EditForm() {
         setMenuOptionRefIds((data.menuOptionRefs || []).map((o: any) => o.id));
         setMenuSubMenuRefIds((data.menuSubMenuRefs || []).map((s: any) => s.id));
         setMenuItemRefIds((data.menuItemRefs || []).map((m: any) => m.id));
+        setTestimonialServicePageIds((data.testimonialServicePages || []).map((s: any) => s.id));
 
         const bd = data.bookingData;
         if (bd && bd.mains) {
@@ -211,6 +216,7 @@ function EditForm() {
     form.set("menuOptionRefIds", JSON.stringify(menuOptionRefIds));
     form.set("menuSubMenuRefIds", JSON.stringify(menuSubMenuRefIds));
     form.set("menuItemRefIds", JSON.stringify(menuItemRefIds));
+    form.set("testimonialServicePageIds", JSON.stringify(testimonialServicePageIds));
 
 
     try {
@@ -745,8 +751,36 @@ function EditForm() {
 
               {/* お客様の声 */}
               <div className="bg-white p-4 rounded-lg border border-fuchsia-100 space-y-2">
+                <h3 className="text-sm font-bold text-fuchsia-800">お客様の声（サービス詳細ページと連動）</h3>
+                <p className="text-[10px] text-slate-500">同じ作業内容のサービス詳細ページを選ぶと、そのページの口コミが常に最新の状態で表示されます。</p>
+                {testimonialServicePageIds.length > 0 && (
+                  <ul className="space-y-1">
+                    {testimonialServicePageIds.map((id) => {
+                      const sp = allServicePages.find((s) => s.id === id);
+                      return (
+                        <li key={id} className="flex items-center justify-between gap-2 bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                          <span className="min-w-0 break-words">{sp?.title || "（読み込み中...）"}</span>
+                          <button type="button" onClick={() => setTestimonialServicePageIds(prev => prev.filter(x => x !== id))} className="shrink-0 text-xs text-red-500 hover:underline">削除</button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <select value={testimonialServicePageToAdd} onChange={e => setTestimonialServicePageToAdd(e.target.value)} className="flex-1 min-w-0 basis-full sm:basis-0 p-2 border rounded-lg text-sm">
+                    <option value="">連動するサービス詳細ページを選択</option>
+                    {allServicePages.filter((s) => !testimonialServicePageIds.includes(s.id)).map((s) => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => { if (testimonialServicePageToAdd) { setTestimonialServicePageIds(prev => [...prev, testimonialServicePageToAdd]); setTestimonialServicePageToAdd(""); } }} className="shrink-0 bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                </div>
+              </div>
+
+              {/* お客様の声（手入力） */}
+              <div className="bg-white p-4 rounded-lg border border-fuchsia-100 space-y-2">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-fuchsia-800">お客様の声</h3>
+                  <h3 className="text-sm font-bold text-fuchsia-800">お客様の声（手入力）</h3>
                   <button type="button" onClick={() => setVoices(prev => [...prev, { id: crypto.randomUUID(), text: "", who: "", stars: 5 }])} className="text-xs bg-fuchsia-600 text-white px-3 py-1 rounded-full font-bold hover:bg-fuchsia-700">＋ 追加</button>
                 </div>
                 {voices.map((v) => (

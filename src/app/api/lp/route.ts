@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
           menuOptionRefs: true,
           menuSubMenuRefs: true,
           menuItemRefs: true,
+          testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
         },
       });
       return NextResponse.json(lp);
@@ -133,6 +134,8 @@ export async function POST(request: NextRequest) {
     const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
     const menuItemRefIdsRaw = formData.get("menuItemRefIds") as string | null;
     const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
+    const testimonialServicePageIdsRaw = formData.get("testimonialServicePageIds") as string | null;
+    const testimonialServicePageIds: string[] = testimonialServicePageIdsRaw ? JSON.parse(testimonialServicePageIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -182,6 +185,7 @@ export async function POST(request: NextRequest) {
         menuOptionRefs: { connect: menuOptionRefIds.map((id) => ({ id })) },
         menuSubMenuRefs: { connect: menuSubMenuRefIds.map((id) => ({ id })) },
         menuItemRefs: { connect: menuItemRefIds.map((id) => ({ id })) },
+        testimonialServicePages: { connect: testimonialServicePageIds.map((id) => ({ id })) },
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -218,6 +222,8 @@ export async function PUT(request: NextRequest) {
     const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
     const menuItemRefIdsRaw = formData.get("menuItemRefIds") as string | null;
     const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
+    const testimonialServicePageIdsRaw = formData.get("testimonialServicePageIds") as string | null;
+    const testimonialServicePageIds: string[] = testimonialServicePageIdsRaw ? JSON.parse(testimonialServicePageIdsRaw) : [];
 
     const updatedLp = await prisma.landingPage.update({
       where: { id },
@@ -268,6 +274,7 @@ export async function PUT(request: NextRequest) {
         menuOptionRefs: { set: menuOptionRefIds.map((id) => ({ id })) },
         menuSubMenuRefs: { set: menuSubMenuRefIds.map((id) => ({ id })) },
         menuItemRefs: { set: menuItemRefIds.map((id) => ({ id })) },
+        testimonialServicePages: { set: testimonialServicePageIds.map((id) => ({ id })) },
       }
     });
     if (updatedLp.status === "PUBLISHED") {

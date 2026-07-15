@@ -29,6 +29,7 @@ async function getDbLp() {
       menuOptionRefs: true,
       menuSubMenuRefs: true,
       menuItemRefs: true,
+      testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
     },
   });
 }
