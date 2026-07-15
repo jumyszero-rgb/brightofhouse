@@ -44,6 +44,22 @@ export function landingPageToLpContent(lp: any): LpContent {
   const manualOptions = (lp.menuOptions as LpMenuItem[] | null) || [];
   const options = [...linkedOptions, ...linkedSubMenus, ...manualOptions];
 
+  // 料金表(menu.items)を予約マスターの中分類(BookingMenu)と連動させた項目。
+  // 名称・価格・作業内容・注意事項は保存せず常に最新のマスターから解決する。
+  const linkedMenuItems: LpMenuItem[] = (lp.menuItemRefs || []).map((m: any) => {
+    const { price, originalPrice } = resolvePrice(m.basePrice, m.webSpecialPrice, m.discountPercent, m.discountRounding);
+    return {
+      name: m.title,
+      price: `¥${price.toLocaleString()}`,
+      note: m.recommendPoint || undefined,
+      compare: originalPrice != null ? `¥${originalPrice.toLocaleString()}` : undefined,
+      workContent: m.workContent || undefined,
+      cautionNote: m.cautionNote || undefined,
+    };
+  });
+  const manualMenuItems = (lp.menuItems as LpMenuItem[] | null) || [];
+  const menuItems = [...linkedMenuItems, ...manualMenuItems];
+
   return {
     slug: lp.slug,
     serviceLabel: lp.serviceLabel || lp.title,
@@ -58,7 +74,7 @@ export function landingPageToLpContent(lp: any): LpContent {
     menu: {
       intro: lp.menuIntro || undefined,
       campaignBadge: lp.campaignBadge || undefined,
-      items: (lp.menuItems as LpMenuItem[] | null) || [],
+      items: menuItems,
       options: options.length > 0 ? options : undefined,
       baseWork: (lp.baseWork as LpWorkItem[] | null) || undefined,
       setNote: lp.setNote || undefined,

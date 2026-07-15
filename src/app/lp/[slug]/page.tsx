@@ -63,6 +63,7 @@ export default async function LPPage({ params, searchParams }: Props) {
       beforeAfters: { orderBy: { createdAt: "desc" as const } },
       menuOptionRefs: true,
       menuSubMenuRefs: true,
+      menuItemRefs: true,
     },
   });
 

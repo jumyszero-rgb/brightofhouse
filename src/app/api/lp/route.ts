@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
           beforeAfters: { orderBy: { createdAt: "desc" as const } },
           menuOptionRefs: true,
           menuSubMenuRefs: true,
+          menuItemRefs: true,
         },
       });
       return NextResponse.json(lp);
@@ -130,6 +131,8 @@ export async function POST(request: NextRequest) {
     const menuOptionRefIds: string[] = menuOptionRefIdsRaw ? JSON.parse(menuOptionRefIdsRaw) : [];
     const menuSubMenuRefIdsRaw = formData.get("menuSubMenuRefIds") as string | null;
     const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
+    const menuItemRefIdsRaw = formData.get("menuItemRefIds") as string | null;
+    const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -178,6 +181,7 @@ export async function POST(request: NextRequest) {
         beforeAfters: { connect: beforeAfterIds.map((id) => ({ id })) },
         menuOptionRefs: { connect: menuOptionRefIds.map((id) => ({ id })) },
         menuSubMenuRefs: { connect: menuSubMenuRefIds.map((id) => ({ id })) },
+        menuItemRefs: { connect: menuItemRefIds.map((id) => ({ id })) },
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -212,6 +216,8 @@ export async function PUT(request: NextRequest) {
     const menuOptionRefIds: string[] = menuOptionRefIdsRaw ? JSON.parse(menuOptionRefIdsRaw) : [];
     const menuSubMenuRefIdsRaw = formData.get("menuSubMenuRefIds") as string | null;
     const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
+    const menuItemRefIdsRaw = formData.get("menuItemRefIds") as string | null;
+    const menuItemRefIds: string[] = menuItemRefIdsRaw ? JSON.parse(menuItemRefIdsRaw) : [];
 
     const updatedLp = await prisma.landingPage.update({
       where: { id },
@@ -261,6 +267,7 @@ export async function PUT(request: NextRequest) {
         beforeAfters: { set: beforeAfterIds.map((id) => ({ id })) },
         menuOptionRefs: { set: menuOptionRefIds.map((id) => ({ id })) },
         menuSubMenuRefs: { set: menuSubMenuRefIds.map((id) => ({ id })) },
+        menuItemRefs: { set: menuItemRefIds.map((id) => ({ id })) },
       }
     });
     if (updatedLp.status === "PUBLISHED") {

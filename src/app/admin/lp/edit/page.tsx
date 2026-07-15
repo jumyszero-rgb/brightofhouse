@@ -65,6 +65,8 @@ function EditForm() {
   const [beforeAfterToAdd, setBeforeAfterToAdd] = useState("");
   const [menuOptionRefIds, setMenuOptionRefIds] = useState<string[]>([]);
   const [menuSubMenuRefIds, setMenuSubMenuRefIds] = useState<string[]>([]);
+  const [menuItemRefIds, setMenuItemRefIds] = useState<string[]>([]);
+  const [menuItemRefToAdd, setMenuItemRefToAdd] = useState("");
   const [menuOptionRefToAdd, setMenuOptionRefToAdd] = useState("");
 
   useEffect(() => {
@@ -123,6 +125,7 @@ function EditForm() {
         setBeforeAfterIds((data.beforeAfters || []).map((b: any) => b.id));
         setMenuOptionRefIds((data.menuOptionRefs || []).map((o: any) => o.id));
         setMenuSubMenuRefIds((data.menuSubMenuRefs || []).map((s: any) => s.id));
+        setMenuItemRefIds((data.menuItemRefs || []).map((m: any) => m.id));
 
         const bd = data.bookingData;
         if (bd && bd.mains) {
@@ -207,6 +210,7 @@ function EditForm() {
     form.set("beforeAfterIds", JSON.stringify(beforeAfterIds));
     form.set("menuOptionRefIds", JSON.stringify(menuOptionRefIds));
     form.set("menuSubMenuRefIds", JSON.stringify(menuSubMenuRefIds));
+    form.set("menuItemRefIds", JSON.stringify(menuItemRefIds));
 
 
     try {
@@ -250,6 +254,17 @@ function EditForm() {
             rows.push({ id: opt.id, kind: "option", label: `${cat.title} > ${menu.title} > ${sub.title} > ${opt.title}`, price: opt.price });
           }
         }
+      }
+    }
+    return rows;
+  }, [bookingCategories]);
+
+  // 予約マスターの中分類(BookingMenu)を「大分類 > 中分類」の形にフラット化（料金表の項目連動用）
+  const flatBookingMenus = useMemo(() => {
+    const rows: { id: string; label: string; price: number }[] = [];
+    for (const cat of bookingCategories) {
+      for (const menu of cat.menus || []) {
+        rows.push({ id: menu.id, label: `${cat.title} > ${menu.title}`, price: menu.basePrice });
       }
     }
     return rows;
@@ -543,8 +558,35 @@ function EditForm() {
                 </div>
 
                 <div className="space-y-2">
+                  <p className="text-xs font-bold text-fuchsia-700">メニュー本体（予約マスター連動）</p>
+                  <p className="text-[10px] text-slate-500">予約マスターの中分類から選ぶと、価格・作業内容・注意事項が常にマスターの最新値で表示されます。</p>
+                  {menuItemRefIds.length > 0 && (
+                    <ul className="space-y-1">
+                      {menuItemRefIds.map((id) => {
+                        const m = flatBookingMenus.find((x) => x.id === id);
+                        return (
+                          <li key={id} className="flex items-center justify-between gap-2 bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                            <span className="min-w-0 break-words">{m?.label || "（読み込み中...）"}</span>
+                            <button type="button" onClick={() => setMenuItemRefIds(prev => prev.filter(x => x !== id))} className="shrink-0 text-xs text-red-500 hover:underline">削除</button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <select value={menuItemRefToAdd} onChange={e => setMenuItemRefToAdd(e.target.value)} className="flex-1 min-w-0 basis-full sm:basis-0 p-2 border rounded-lg text-sm">
+                      <option value="">追加する中分類を選択</option>
+                      {flatBookingMenus.filter((m) => !menuItemRefIds.includes(m.id)).map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}（¥{m.price.toLocaleString()}）</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => { if (menuItemRefToAdd) { setMenuItemRefIds(prev => [...prev, menuItemRefToAdd]); setMenuItemRefToAdd(""); } }} className="shrink-0 bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <p className="text-xs font-bold text-fuchsia-700">メニュー本体</p>
+                    <p className="text-xs font-bold text-fuchsia-700">メニュー本体（手入力）</p>
                     <button type="button" onClick={() => setMenuItems(prev => [...prev, { id: crypto.randomUUID(), name: "", price: "", note: "", compare: "" }])} className="text-xs bg-fuchsia-600 text-white px-3 py-1 rounded-full font-bold hover:bg-fuchsia-700">＋ 追加</button>
                   </div>
                   {menuItems.map((m) => (

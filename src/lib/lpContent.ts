@@ -20,6 +20,8 @@ export type LpMenuItem = {
   price?: string; // 例: "¥9,800"。未定なら "お見積り"
   note?: string;
   compare?: string; // 比較用（例: "他サイト経由 ¥12,000"）任意
+  workContent?: string; // 作業内容（改行区切りの箇条書き）。予約マスター連動時のみ使用。
+  cautionNote?: string; // 注意事項。予約マスター連動時のみ使用。
 };
 
 export type LpFaq = { q: string; a: string };

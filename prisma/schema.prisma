@@ -170,7 +170,7 @@ model LandingPage {
   canonicalUrl      String?
   showBottomCta     Boolean           @default(true)
   bookingData       Json?
-  bookingMenus      BookingMenu[]
+  bookingMenus      BookingMenu[]     @relation("LpBookingMenus")
   bookingCategories BookingCategory[]
 
   // ===== リッチLPテンプレート用（templateStyle="RICH"の場合のみ使用） =====
@@ -198,6 +198,9 @@ model LandingPage {
   // 小分類自体を「追加メニュー」として使っている場合はBookingSubMenuを選べるようにする。
   menuOptionRefs    BookingOption[]
   menuSubMenuRefs   BookingSubMenu[]
+  // 料金表(menuItems)の項目を予約マスターの中分類と連動させたいもの。
+  // 名称・価格・作業内容・注意事項は保存せず常にマスターの最新値から解決する。
+  menuItemRefs      BookingMenu[]     @relation("LpMenuItemRefs")
 }
 
 model CtaBlock {
@@ -421,7 +424,8 @@ model BookingMenu {
   subMenus         BookingSubMenu[]
   options          BookingOption[]
   servicePages     ServicePage[]
-  landingPages     LandingPage[]
+  landingPages     LandingPage[]     @relation("LpBookingMenus")
+  landingPagesAsMenuItem LandingPage[] @relation("LpMenuItemRefs")
 }
 
 model BookingSubMenu {

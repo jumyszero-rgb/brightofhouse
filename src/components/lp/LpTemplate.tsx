@@ -224,11 +224,26 @@ export default function LpTemplate({ content, bookingData }: Props) {
             {menu.items.map((m, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                className="flex items-start justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
               >
                 <div>
                   <p className="font-bold text-sm md:text-base">{m.name}</p>
                   {m.note && <p className="text-xs text-slate-500 mt-0.5">{m.note}</p>}
+                  {m.workContent && (
+                    <ul className="text-xs text-slate-600 mt-1.5 space-y-0.5 list-disc list-outside pl-4">
+                      {m.workContent.split("\n").filter(Boolean).map((line, li) => (
+                        <li key={li} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {m.cautionNote && (
+                    <details className="mt-1.5">
+                      <summary className="text-[11px] font-bold text-red-600 cursor-pointer">⚠️ 注意事項を確認</summary>
+                      <p className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-[11px] text-red-700 whitespace-pre-wrap">
+                        {m.cautionNote}
+                      </p>
+                    </details>
+                  )}
                 </div>
                 <div className="text-right ml-3 whitespace-nowrap">
                   {m.compare && (

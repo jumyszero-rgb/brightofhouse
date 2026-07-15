@@ -32,6 +32,7 @@ async function getDbLp(item: string) {
       beforeAfters: { orderBy: { createdAt: "desc" as const } },
       menuOptionRefs: true,
       menuSubMenuRefs: true,
+      menuItemRefs: true,
     },
   });
 }
