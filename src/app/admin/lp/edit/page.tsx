@@ -566,16 +566,16 @@ function EditForm() {
                       {[...menuOptionRefIds.map(id => ({ id, kind: "option" as const })), ...menuSubMenuRefIds.map(id => ({ id, kind: "subMenu" as const }))].map(({ id, kind }) => {
                         const opt = flatBookingOptions.find((o) => o.id === id && o.kind === kind);
                         return (
-                          <li key={`${kind}-${id}`} className="flex items-center justify-between bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
-                            <span>{opt?.label || "（読み込み中...）"}</span>
-                            <button type="button" onClick={() => kind === "option" ? setMenuOptionRefIds(prev => prev.filter(x => x !== id)) : setMenuSubMenuRefIds(prev => prev.filter(x => x !== id))} className="text-xs text-red-500 hover:underline">削除</button>
+                          <li key={`${kind}-${id}`} className="flex items-center justify-between gap-2 bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                            <span className="min-w-0 break-words">{opt?.label || "（読み込み中...）"}</span>
+                            <button type="button" onClick={() => kind === "option" ? setMenuOptionRefIds(prev => prev.filter(x => x !== id)) : setMenuSubMenuRefIds(prev => prev.filter(x => x !== id))} className="shrink-0 text-xs text-red-500 hover:underline">削除</button>
                           </li>
                         );
                       })}
                     </ul>
                   )}
-                  <div className="flex gap-2">
-                    <select value={menuOptionRefToAdd} onChange={e => setMenuOptionRefToAdd(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm">
+                  <div className="flex flex-wrap gap-2">
+                    <select value={menuOptionRefToAdd} onChange={e => setMenuOptionRefToAdd(e.target.value)} className="flex-1 min-w-0 basis-full sm:basis-0 p-2 border rounded-lg text-sm">
                       <option value="">追加するオプション・小分類を選択</option>
                       {flatBookingOptions.filter((o) => o.kind === "option" ? !menuOptionRefIds.includes(o.id) : !menuSubMenuRefIds.includes(o.id)).map((o) => (
                         <option key={`${o.kind}-${o.id}`} value={`${o.kind}:${o.id}`}>{o.label}（¥{o.price.toLocaleString()}）</option>
@@ -587,7 +587,7 @@ function EditForm() {
                       if (kind === "option") setMenuOptionRefIds(prev => [...prev, id]);
                       else setMenuSubMenuRefIds(prev => [...prev, id]);
                       setMenuOptionRefToAdd("");
-                    }} className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                    }} className="shrink-0 bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
                   </div>
                 </div>
 
