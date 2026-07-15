@@ -237,8 +237,8 @@ export default function LpTemplate({ content, bookingData }: Props) {
                     </ul>
                   )}
                   {m.cautionNote && (
-                    <details className="mt-1.5">
-                      <summary className="text-[11px] font-bold text-red-600 cursor-pointer">⚠️ 注意事項を確認</summary>
+                    <details className="mt-1.5" open>
+                      <summary className="text-[11px] font-bold text-red-600 cursor-pointer">⚠️ 注意事項</summary>
                       <p className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-[11px] text-red-700 whitespace-pre-wrap">
                         {m.cautionNote}
                       </p>
