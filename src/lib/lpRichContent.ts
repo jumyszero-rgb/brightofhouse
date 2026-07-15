@@ -21,7 +21,8 @@ export function landingPageToLpContent(lp: any): LpContent {
     caption: ba.title,
   }));
 
-  // 予約マスターのオプション(BookingOption)と連動させた項目。価格・名称は常に最新のマスターから解決する。
+  // 予約マスターのオプション(BookingOption)・小分類(BookingSubMenu)と連動させた項目。
+  // 価格・名称は保存せず常に最新のマスターから解決する。
   const linkedOptions: LpMenuItem[] = (lp.menuOptionRefs || []).map((o: any) => {
     const { price, originalPrice } = resolvePrice(o.price, null, o.discountPercent, o.discountRounding);
     return {
@@ -31,8 +32,17 @@ export function landingPageToLpContent(lp: any): LpContent {
       compare: originalPrice != null ? `¥${originalPrice.toLocaleString()}` : undefined,
     };
   });
+  const linkedSubMenus: LpMenuItem[] = (lp.menuSubMenuRefs || []).map((sm: any) => {
+    const { price, originalPrice } = resolvePrice(sm.price, sm.webSpecialPrice, sm.discountPercent, sm.discountRounding);
+    return {
+      name: sm.title,
+      price: `¥${price.toLocaleString()}`,
+      note: sm.workContent || sm.recommendPoint || undefined,
+      compare: originalPrice != null ? `¥${originalPrice.toLocaleString()}` : undefined,
+    };
+  });
   const manualOptions = (lp.menuOptions as LpMenuItem[] | null) || [];
-  const options = [...linkedOptions, ...manualOptions];
+  const options = [...linkedOptions, ...linkedSubMenus, ...manualOptions];
 
   return {
     slug: lp.slug,

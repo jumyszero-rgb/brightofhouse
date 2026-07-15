@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
           bookingCategories: { include: { menus: { include: subMenusInclude } } },
           beforeAfters: { orderBy: { createdAt: "desc" as const } },
           menuOptionRefs: true,
+          menuSubMenuRefs: true,
         },
       });
       return NextResponse.json(lp);
@@ -127,6 +128,8 @@ export async function POST(request: NextRequest) {
     const beforeAfterIds: string[] = beforeAfterIdsRaw ? JSON.parse(beforeAfterIdsRaw) : [];
     const menuOptionRefIdsRaw = formData.get("menuOptionRefIds") as string | null;
     const menuOptionRefIds: string[] = menuOptionRefIdsRaw ? JSON.parse(menuOptionRefIdsRaw) : [];
+    const menuSubMenuRefIdsRaw = formData.get("menuSubMenuRefIds") as string | null;
+    const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
 
     const newLp = await prisma.landingPage.create({
       data: {
@@ -174,6 +177,7 @@ export async function POST(request: NextRequest) {
         steps: parseJsonField(formData, "steps"),
         beforeAfters: { connect: beforeAfterIds.map((id) => ({ id })) },
         menuOptionRefs: { connect: menuOptionRefIds.map((id) => ({ id })) },
+        menuSubMenuRefs: { connect: menuSubMenuRefIds.map((id) => ({ id })) },
       }
     });
     if (newLp.status === "PUBLISHED") {
@@ -206,6 +210,8 @@ export async function PUT(request: NextRequest) {
     const beforeAfterIds: string[] = beforeAfterIdsRaw ? JSON.parse(beforeAfterIdsRaw) : [];
     const menuOptionRefIdsRaw = formData.get("menuOptionRefIds") as string | null;
     const menuOptionRefIds: string[] = menuOptionRefIdsRaw ? JSON.parse(menuOptionRefIdsRaw) : [];
+    const menuSubMenuRefIdsRaw = formData.get("menuSubMenuRefIds") as string | null;
+    const menuSubMenuRefIds: string[] = menuSubMenuRefIdsRaw ? JSON.parse(menuSubMenuRefIdsRaw) : [];
 
     const updatedLp = await prisma.landingPage.update({
       where: { id },
@@ -254,6 +260,7 @@ export async function PUT(request: NextRequest) {
         steps: parseJsonField(formData, "steps"),
         beforeAfters: { set: beforeAfterIds.map((id) => ({ id })) },
         menuOptionRefs: { set: menuOptionRefIds.map((id) => ({ id })) },
+        menuSubMenuRefs: { set: menuSubMenuRefIds.map((id) => ({ id })) },
       }
     });
     if (updatedLp.status === "PUBLISHED") {

@@ -64,6 +64,7 @@ function EditForm() {
   const [beforeAfterIds, setBeforeAfterIds] = useState<string[]>([]);
   const [beforeAfterToAdd, setBeforeAfterToAdd] = useState("");
   const [menuOptionRefIds, setMenuOptionRefIds] = useState<string[]>([]);
+  const [menuSubMenuRefIds, setMenuSubMenuRefIds] = useState<string[]>([]);
   const [menuOptionRefToAdd, setMenuOptionRefToAdd] = useState("");
 
   useEffect(() => {
@@ -121,6 +122,7 @@ function EditForm() {
         setSteps(((data.steps as any[]) || []).map((s) => ({ id: crypto.randomUUID(), t: s.t || "", d: s.d || "" })));
         setBeforeAfterIds((data.beforeAfters || []).map((b: any) => b.id));
         setMenuOptionRefIds((data.menuOptionRefs || []).map((o: any) => o.id));
+        setMenuSubMenuRefIds((data.menuSubMenuRefs || []).map((s: any) => s.id));
 
         const bd = data.bookingData;
         if (bd && bd.mains) {
@@ -204,6 +206,7 @@ function EditForm() {
     form.set("steps", JSON.stringify(steps.filter(s => s.t.trim()).map(({ t, d }) => ({ t, d }))));
     form.set("beforeAfterIds", JSON.stringify(beforeAfterIds));
     form.set("menuOptionRefIds", JSON.stringify(menuOptionRefIds));
+    form.set("menuSubMenuRefIds", JSON.stringify(menuSubMenuRefIds));
 
 
     try {
@@ -232,17 +235,19 @@ function EditForm() {
     }));
   };
 
-  // 予約マスターの全オプション(BookingOption)を「大分類 > 中分類 > 小分類 > オプション」の形にフラット化
+  // 予約マスターの全オプション(BookingOption)・小分類(BookingSubMenu)を
+  // 「大分類 > 中分類 > 小分類 > オプション」の形にフラット化（小分類自体もオプション扱いする運用があるため）
   const flatBookingOptions = useMemo(() => {
-    const rows: { id: string; label: string; price: number }[] = [];
+    const rows: { id: string; kind: "option" | "subMenu"; label: string; price: number }[] = [];
     for (const cat of bookingCategories) {
       for (const menu of cat.menus || []) {
         for (const opt of menu.options || []) {
-          rows.push({ id: opt.id, label: `${cat.title} > ${menu.title} > ${opt.title}`, price: opt.price });
+          rows.push({ id: opt.id, kind: "option", label: `${cat.title} > ${menu.title} > ${opt.title}`, price: opt.price });
         }
         for (const sub of menu.subMenus || []) {
+          rows.push({ id: sub.id, kind: "subMenu", label: `${cat.title} > ${menu.title} > ${sub.title}［小分類］`, price: sub.price });
           for (const opt of sub.options || []) {
-            rows.push({ id: opt.id, label: `${cat.title} > ${menu.title} > ${sub.title} > ${opt.title}`, price: opt.price });
+            rows.push({ id: opt.id, kind: "option", label: `${cat.title} > ${menu.title} > ${sub.title} > ${opt.title}`, price: opt.price });
           }
         }
       }
@@ -555,15 +560,15 @@ function EditForm() {
 
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-fuchsia-700">オプション・追加メニュー（予約マスター連動）</p>
-                  <p className="text-[10px] text-slate-500">予約マスターのオプションから選ぶと、価格・名称が常にマスターの最新値で表示されます。</p>
-                  {menuOptionRefIds.length > 0 && (
+                  <p className="text-[10px] text-slate-500">予約マスターのオプション・小分類（小分類自体をオプション扱いしている場合も可）から選ぶと、価格・名称が常にマスターの最新値で表示されます。</p>
+                  {(menuOptionRefIds.length > 0 || menuSubMenuRefIds.length > 0) && (
                     <ul className="space-y-1">
-                      {menuOptionRefIds.map((id) => {
-                        const opt = flatBookingOptions.find((o) => o.id === id);
+                      {[...menuOptionRefIds.map(id => ({ id, kind: "option" as const })), ...menuSubMenuRefIds.map(id => ({ id, kind: "subMenu" as const }))].map(({ id, kind }) => {
+                        const opt = flatBookingOptions.find((o) => o.id === id && o.kind === kind);
                         return (
-                          <li key={id} className="flex items-center justify-between bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                          <li key={`${kind}-${id}`} className="flex items-center justify-between bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
                             <span>{opt?.label || "（読み込み中...）"}</span>
-                            <button type="button" onClick={() => setMenuOptionRefIds(prev => prev.filter(x => x !== id))} className="text-xs text-red-500 hover:underline">削除</button>
+                            <button type="button" onClick={() => kind === "option" ? setMenuOptionRefIds(prev => prev.filter(x => x !== id)) : setMenuSubMenuRefIds(prev => prev.filter(x => x !== id))} className="text-xs text-red-500 hover:underline">削除</button>
                           </li>
                         );
                       })}
@@ -571,12 +576,18 @@ function EditForm() {
                   )}
                   <div className="flex gap-2">
                     <select value={menuOptionRefToAdd} onChange={e => setMenuOptionRefToAdd(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm">
-                      <option value="">追加するオプションを選択</option>
-                      {flatBookingOptions.filter((o) => !menuOptionRefIds.includes(o.id)).map((o) => (
-                        <option key={o.id} value={o.id}>{o.label}（¥{o.price.toLocaleString()}）</option>
+                      <option value="">追加するオプション・小分類を選択</option>
+                      {flatBookingOptions.filter((o) => o.kind === "option" ? !menuOptionRefIds.includes(o.id) : !menuSubMenuRefIds.includes(o.id)).map((o) => (
+                        <option key={`${o.kind}-${o.id}`} value={`${o.kind}:${o.id}`}>{o.label}（¥{o.price.toLocaleString()}）</option>
                       ))}
                     </select>
-                    <button type="button" onClick={() => { if (menuOptionRefToAdd) { setMenuOptionRefIds(prev => [...prev, menuOptionRefToAdd]); setMenuOptionRefToAdd(""); } }} className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                    <button type="button" onClick={() => {
+                      if (!menuOptionRefToAdd) return;
+                      const [kind, id] = menuOptionRefToAdd.split(":");
+                      if (kind === "option") setMenuOptionRefIds(prev => [...prev, id]);
+                      else setMenuSubMenuRefIds(prev => [...prev, id]);
+                      setMenuOptionRefToAdd("");
+                    }} className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
                   </div>
                 </div>
 

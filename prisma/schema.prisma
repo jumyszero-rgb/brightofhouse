@@ -192,9 +192,12 @@ model LandingPage {
   voices            Json?
   steps             Json?
   beforeAfters      BeforeAfter[]
-  // 追加メニュー(menuOptions)のうち、予約マスターのオプションと連動させたいもの。
-  // 価格・名称は常にBookingOptionの最新値から解決する（menuOptionsは手入力の項目用に残す）。
+  // 追加メニュー(menuOptions)のうち、予約マスターと連動させたいもの。
+  // 価格・名称は保存せず常にマスターの最新値から解決する（menuOptionsは手入力の項目用に残す）。
+  // 予約マスター側でオプションとして作られている場合はBookingOption、
+  // 小分類自体を「追加メニュー」として使っている場合はBookingSubMenuを選べるようにする。
   menuOptionRefs    BookingOption[]
+  menuSubMenuRefs   BookingSubMenu[]
 }
 
 model CtaBlock {
@@ -438,6 +441,7 @@ model BookingSubMenu {
   webSpecialPrice  Int?
   options          BookingOption[]
   menu             BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  landingPages     LandingPage[]
 }
 
 model BookingOption {

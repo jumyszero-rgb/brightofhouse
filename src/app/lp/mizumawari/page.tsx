@@ -27,6 +27,7 @@ async function getDbLp() {
       bookingCategories: { include: { menus: { include: subMenusInclude } } },
       beforeAfters: { orderBy: { createdAt: "desc" as const } },
       menuOptionRefs: true,
+      menuSubMenuRefs: true,
     },
   });
 }

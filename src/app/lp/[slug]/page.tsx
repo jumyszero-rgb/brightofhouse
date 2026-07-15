@@ -62,6 +62,7 @@ export default async function LPPage({ params, searchParams }: Props) {
       bookingCategories: { include: { menus: { include: subMenusInclude } } },
       beforeAfters: { orderBy: { createdAt: "desc" as const } },
       menuOptionRefs: true,
+      menuSubMenuRefs: true,
     },
   });
 
