@@ -90,7 +90,7 @@ function applyDiscount(price: number, discountPercent: number | null, rounding?:
 
 // WEB特価(絶対金額)が設定されていれば、%値引きより優先してそちらを使う
 // （通常価格はbasePrice/price自身をそのまま「通常価格」として使う）。
-function resolvePrice(price: number, webSpecialPrice: number | null | undefined, discountPercent: number | null, rounding?: string) {
+export function resolvePrice(price: number, webSpecialPrice: number | null | undefined, discountPercent: number | null, rounding?: string) {
   if (webSpecialPrice != null) return { price: webSpecialPrice, originalPrice: price };
   return applyDiscount(price, discountPercent, rounding);
 }

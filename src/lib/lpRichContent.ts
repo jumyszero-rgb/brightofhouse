@@ -12,6 +12,7 @@ import type {
   LpVoice,
   LpWorkItem,
 } from "@/lib/lpContent";
+import { resolvePrice } from "@/lib/bookingMenuToBookingData";
 
 export function landingPageToLpContent(lp: any): LpContent {
   const photos: LpPhoto[] = (lp.beforeAfters || []).map((ba: any) => ({
@@ -19,6 +20,19 @@ export function landingPageToLpContent(lp: any): LpContent {
     after: ba.afterUrl,
     caption: ba.title,
   }));
+
+  // 予約マスターのオプション(BookingOption)と連動させた項目。価格・名称は常に最新のマスターから解決する。
+  const linkedOptions: LpMenuItem[] = (lp.menuOptionRefs || []).map((o: any) => {
+    const { price, originalPrice } = resolvePrice(o.price, null, o.discountPercent, o.discountRounding);
+    return {
+      name: o.title,
+      price: `¥${price.toLocaleString()}`,
+      note: o.workContent || o.recommendPoint || undefined,
+      compare: originalPrice != null ? `¥${originalPrice.toLocaleString()}` : undefined,
+    };
+  });
+  const manualOptions = (lp.menuOptions as LpMenuItem[] | null) || [];
+  const options = [...linkedOptions, ...manualOptions];
 
   return {
     slug: lp.slug,
@@ -35,7 +49,7 @@ export function landingPageToLpContent(lp: any): LpContent {
       intro: lp.menuIntro || undefined,
       campaignBadge: lp.campaignBadge || undefined,
       items: (lp.menuItems as LpMenuItem[] | null) || [],
-      options: (lp.menuOptions as LpMenuItem[] | null) || undefined,
+      options: options.length > 0 ? options : undefined,
       baseWork: (lp.baseWork as LpWorkItem[] | null) || undefined,
       setNote: lp.setNote || undefined,
     },

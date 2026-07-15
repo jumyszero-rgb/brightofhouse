@@ -1,7 +1,7 @@
 // @/src/app/admin/lp/edit/page.tsx
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -63,6 +63,8 @@ function EditForm() {
   const [allBeforeAfters, setAllBeforeAfters] = useState<any[]>([]);
   const [beforeAfterIds, setBeforeAfterIds] = useState<string[]>([]);
   const [beforeAfterToAdd, setBeforeAfterToAdd] = useState("");
+  const [menuOptionRefIds, setMenuOptionRefIds] = useState<string[]>([]);
+  const [menuOptionRefToAdd, setMenuOptionRefToAdd] = useState("");
 
   useEffect(() => {
     fetch("/api/booking-master").then(r => r.json()).then(setBookingCategories).catch(() => {});
@@ -118,6 +120,7 @@ function EditForm() {
         setVoices(((data.voices as any[]) || []).map((v) => ({ id: crypto.randomUUID(), text: v.text || "", who: v.who || "", stars: v.stars ?? 5 })));
         setSteps(((data.steps as any[]) || []).map((s) => ({ id: crypto.randomUUID(), t: s.t || "", d: s.d || "" })));
         setBeforeAfterIds((data.beforeAfters || []).map((b: any) => b.id));
+        setMenuOptionRefIds((data.menuOptionRefs || []).map((o: any) => o.id));
 
         const bd = data.bookingData;
         if (bd && bd.mains) {
@@ -200,6 +203,7 @@ function EditForm() {
     form.set("voices", JSON.stringify(voices.filter(v => v.text.trim()).map(({ text, who, stars }) => ({ text, who, stars }))));
     form.set("steps", JSON.stringify(steps.filter(s => s.t.trim()).map(({ t, d }) => ({ t, d }))));
     form.set("beforeAfterIds", JSON.stringify(beforeAfterIds));
+    form.set("menuOptionRefIds", JSON.stringify(menuOptionRefIds));
 
 
     try {
@@ -227,6 +231,24 @@ function EditForm() {
       [name]: type === "checkbox" ? checked : value
     }));
   };
+
+  // 予約マスターの全オプション(BookingOption)を「大分類 > 中分類 > 小分類 > オプション」の形にフラット化
+  const flatBookingOptions = useMemo(() => {
+    const rows: { id: string; label: string; price: number }[] = [];
+    for (const cat of bookingCategories) {
+      for (const menu of cat.menus || []) {
+        for (const opt of menu.options || []) {
+          rows.push({ id: opt.id, label: `${cat.title} > ${menu.title} > ${opt.title}`, price: opt.price });
+        }
+        for (const sub of menu.subMenus || []) {
+          for (const opt of sub.options || []) {
+            rows.push({ id: opt.id, label: `${cat.title} > ${menu.title} > ${sub.title} > ${opt.title}`, price: opt.price });
+          }
+        }
+      }
+    }
+    return rows;
+  }, [bookingCategories]);
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md text-black">
@@ -532,8 +554,35 @@ function EditForm() {
                 </div>
 
                 <div className="space-y-2">
+                  <p className="text-xs font-bold text-fuchsia-700">オプション・追加メニュー（予約マスター連動）</p>
+                  <p className="text-[10px] text-slate-500">予約マスターのオプションから選ぶと、価格・名称が常にマスターの最新値で表示されます。</p>
+                  {menuOptionRefIds.length > 0 && (
+                    <ul className="space-y-1">
+                      {menuOptionRefIds.map((id) => {
+                        const opt = flatBookingOptions.find((o) => o.id === id);
+                        return (
+                          <li key={id} className="flex items-center justify-between bg-white border border-fuchsia-200 rounded-lg px-3 py-2 text-sm">
+                            <span>{opt?.label || "（読み込み中...）"}</span>
+                            <button type="button" onClick={() => setMenuOptionRefIds(prev => prev.filter(x => x !== id))} className="text-xs text-red-500 hover:underline">削除</button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <select value={menuOptionRefToAdd} onChange={e => setMenuOptionRefToAdd(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm">
+                      <option value="">追加するオプションを選択</option>
+                      {flatBookingOptions.filter((o) => !menuOptionRefIds.includes(o.id)).map((o) => (
+                        <option key={o.id} value={o.id}>{o.label}（¥{o.price.toLocaleString()}）</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => { if (menuOptionRefToAdd) { setMenuOptionRefIds(prev => [...prev, menuOptionRefToAdd]); setMenuOptionRefToAdd(""); } }} className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-fuchsia-700">＋ 追加</button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <p className="text-xs font-bold text-fuchsia-700">オプション・追加メニュー</p>
+                    <p className="text-xs font-bold text-fuchsia-700">オプション・追加メニュー（手入力）</p>
                     <button type="button" onClick={() => setMenuOptions(prev => [...prev, { id: crypto.randomUUID(), name: "", price: "", note: "" }])} className="text-xs bg-fuchsia-600 text-white px-3 py-1 rounded-full font-bold hover:bg-fuchsia-700">＋ 追加</button>
                   </div>
                   {menuOptions.map((m) => (

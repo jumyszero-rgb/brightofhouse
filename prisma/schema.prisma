@@ -192,6 +192,9 @@ model LandingPage {
   voices            Json?
   steps             Json?
   beforeAfters      BeforeAfter[]
+  // 追加メニュー(menuOptions)のうち、予約マスターのオプションと連動させたいもの。
+  // 価格・名称は常にBookingOptionの最新値から解決する（menuOptionsは手入力の項目用に残す）。
+  menuOptionRefs    BookingOption[]
 }
 
 model CtaBlock {
@@ -456,6 +459,7 @@ model BookingOption {
   subMenu          BookingSubMenu? @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
   menuId           String?
   menu             BookingMenu?    @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  landingPages     LandingPage[]
 }
 
 model TopPriceItem {

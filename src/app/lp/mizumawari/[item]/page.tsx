@@ -30,6 +30,7 @@ async function getDbLp(item: string) {
       bookingMenus: { include: subMenusInclude },
       bookingCategories: { include: { menus: { include: subMenusInclude } } },
       beforeAfters: { orderBy: { createdAt: "desc" as const } },
+      menuOptionRefs: true,
     },
   });
 }
