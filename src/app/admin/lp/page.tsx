@@ -91,45 +91,31 @@ export default function AdminLPList() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="p-4 text-sm font-bold text-gray-600">状態</th>
-                <th className="p-4 text-sm font-bold text-gray-600">タイトル / URL</th>
-                <th className="p-4 text-sm font-bold text-gray-600">更新日</th>
-                <th className="p-4 text-sm font-bold text-gray-600 text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {lps.map((lp) => (
-                <tr key={lp.id} className="hover:bg-slate-50">
-                  <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${lp.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
-                      {lp.status === 'PUBLISHED' ? '公開中' : '下書き'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <p className="font-bold text-gray-800">{lp.title}</p>
-                    <a href={`/lp/${lp.slug}`} target="_blank" className="text-xs text-blue-500 hover:underline">/lp/{lp.slug}</a>
-                  </td>
-                  <td className="p-4 text-sm text-gray-500">
-                    {new Date(lp.updatedAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                    <a href={`/lp/${lp.slug}?preview=true`} target="_blank" className="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold hover:bg-amber-200">プレビュー</a>
-                    <Link href={`/admin/lp/edit?id=${lp.id}`} className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200">編集</Link>
-                    <Link href={`/admin/lp/blocks?id=${lp.id}`} className="bg-fuchsia-100 text-fuchsia-700 px-3 py-1 rounded text-xs font-bold hover:bg-fuchsia-200">ブロック編集</Link>
-                    <button onClick={() => handleDuplicate(lp)} disabled={duplicating === lp.id} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-xs font-bold hover:bg-emerald-200 disabled:opacity-50">{duplicating === lp.id ? "複製中..." : "複製"}</button>
-                    <button onClick={() => handleDelete(lp.id)} className="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">削除</button>
-                  </td>
-                </tr>
-              ))}
-              {lps.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-gray-500">LPがありません。新規作成してください。</td></tr>
-              )}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {lps.map((lp) => (
+            <div key={lp.id} className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${lp.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                    {lp.status === 'PUBLISHED' ? '公開中' : '下書き'}
+                  </span>
+                  <span className="text-xs text-gray-400">{new Date(lp.updatedAt).toLocaleDateString()}</span>
+                </div>
+                <p className="font-bold text-gray-800 break-all">{lp.title}</p>
+                <a href={`/lp/${lp.slug}`} target="_blank" className="text-xs text-blue-500 hover:underline break-all">/lp/{lp.slug}</a>
+              </div>
+              <div className="flex flex-wrap gap-2 sm:justify-end shrink-0">
+                <a href={`/lp/${lp.slug}?preview=true`} target="_blank" className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-amber-200">プレビュー</a>
+                <Link href={`/admin/lp/edit?id=${lp.id}`} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-200">編集</Link>
+                <Link href={`/admin/lp/blocks?id=${lp.id}`} className="bg-fuchsia-100 text-fuchsia-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-fuchsia-200">ブロック編集</Link>
+                <button onClick={() => handleDuplicate(lp)} disabled={duplicating === lp.id} className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-emerald-200 disabled:opacity-50">{duplicating === lp.id ? "複製中..." : "複製"}</button>
+                <button onClick={() => handleDelete(lp.id)} className="bg-red-100 text-red-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-200">削除</button>
+              </div>
+            </div>
+          ))}
+          {lps.length === 0 && (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">LPがありません。新規作成してください。</div>
+          )}
         </div>
       </div>
     </div>
