@@ -130,22 +130,41 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
             );
           }
 
-          case "richText":
+          case "richText": {
+            const boxClasses: Record<string, string> = {
+              info: "bg-blue-50 border border-blue-200",
+              warning: "bg-red-50 border border-red-200",
+              highlight: "bg-amber-50 border border-amber-300",
+              card: "bg-white border-2 border-slate-200 shadow-sm",
+              green: "bg-emerald-50 border border-emerald-200",
+            };
+            const box = d.boxStyle && d.boxStyle !== "none" ? (boxClasses[d.boxStyle] || "") : "";
+            const bodyEl = d.body ? (d.collapsible ? (
+              <details>
+                <summary className="cursor-pointer text-blue-700 font-bold text-sm mb-2">{d.summaryLabel || "詳しく見る"} ▼</summary>
+                <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed mt-3" dangerouslySetInnerHTML={{ __html: d.body }} />
+              </details>
+            ) : (
+              <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: d.body }} />
+            )) : null;
             return (
-              <section key={block.id} className="py-10">
+              <section key={block.id} className="py-8">
                 <div className="max-w-3xl mx-auto px-4">
-                  {d.heading && <h2 className="text-xl md:text-2xl font-black text-slate-800 mb-4 text-center">{d.heading}</h2>}
-                  {d.body && (d.collapsible ? (
-                    <details>
-                      <summary className="cursor-pointer text-blue-700 font-bold text-sm mb-2">{d.summaryLabel || "詳しく見る"} ▼</summary>
-                      <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed mt-3" dangerouslySetInnerHTML={{ __html: d.body }} />
-                    </details>
+                  {box ? (
+                    <div className={`rounded-2xl p-5 md:p-6 ${box}`}>
+                      {d.heading && <h2 className="text-lg md:text-xl font-black text-slate-800 mb-3">{d.heading}</h2>}
+                      {bodyEl}
+                    </div>
                   ) : (
-                    <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: d.body }} />
-                  ))}
+                    <>
+                      {d.heading && <h2 className="text-xl md:text-2xl font-black text-slate-800 mb-4 text-center">{d.heading}</h2>}
+                      {bodyEl}
+                    </>
+                  )}
                 </div>
               </section>
             );
+          }
 
           case "image":
             return (

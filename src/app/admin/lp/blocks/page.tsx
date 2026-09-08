@@ -278,6 +278,14 @@ function BlocksBuilder() {
       return (
         <>
           <input className={inputCls} placeholder="見出し" value={d.heading || ""} onChange={(e) => updateData(idx, { heading: e.target.value })} />
+          <select className={inputCls} value={d.boxStyle || "none"} onChange={(e) => updateData(idx, { boxStyle: e.target.value })}>
+            <option value="none">囲み枠：なし（通常）</option>
+            <option value="card">白カード枠</option>
+            <option value="info">青枠</option>
+            <option value="warning">赤枠（注意）</option>
+            <option value="highlight">アンバー枠（強調）</option>
+            <option value="green">緑枠</option>
+          </select>
           <div className="border rounded-lg">
             <RichTextEditor key={b.id} value={d.body || ""} onChange={(html) => updateData(idx, { body: html })} />
           </div>
