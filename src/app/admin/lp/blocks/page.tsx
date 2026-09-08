@@ -11,6 +11,7 @@ const BLOCK_TYPES: { type: string; label: string }[] = [
   { type: "hero", label: "ヒーロー" },
   { type: "richText", label: "見出し＋本文" },
   { type: "image", label: "画像" },
+  { type: "seasonal", label: "季節のおすすめ(月替り)" },
   { type: "masterMenu", label: "メニュー(予約マスター連動)" },
   { type: "cta", label: "CTAボタン" },
   { type: "leadForm", label: "申込フォーム(軽量)" },
@@ -23,6 +24,7 @@ function newBlock(type: string): Block {
     case "hero": return { id, type, visible: true, data: { eyebrow: "", title: "", subtitle: "", priceLead: "", imageUrl: "" } };
     case "richText": return { id, type, visible: true, data: { heading: "", body: "" } };
     case "image": return { id, type, visible: true, data: { imageUrl: "", caption: "" } };
+    case "seasonal": return { id, type, visible: true, data: { entries: {} } };
     case "masterMenu": return { id, type, visible: true, data: { showDesc: true }, refs: { refType: "menu", refId: "" } };
     case "cta": return { id, type, visible: true, data: { label: "お問い合わせはこちら", targetType: "form", targetValue: "" } };
     case "leadForm": return { id, type, visible: true, data: { heading: "無料相談・お見積り", note: "30秒で送信できます" } };
@@ -42,6 +44,7 @@ function BlocksBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [editMonths, setEditMonths] = useState<Record<string, number>>({});
 
   // 新規作成用
   const [newTitle, setNewTitle] = useState("");
@@ -94,6 +97,13 @@ function BlocksBuilder() {
     setBlocks((prev) => prev.map((b, i) => (i === idx ? { ...b, data: { ...b.data, ...patch } } : b)));
   const updateRefs = (idx: number, patch: any) =>
     setBlocks((prev) => prev.map((b, i) => (i === idx ? { ...b, refs: { ...(b.refs || {}), ...patch } } : b)));
+  const updateEntry = (idx: number, month: number, patch: any) =>
+    setBlocks((prev) => prev.map((b, i) => {
+      if (i !== idx) return b;
+      const entries = { ...((b.data && b.data.entries) || {}) };
+      entries[String(month)] = { ...(entries[String(month)] || {}), ...patch };
+      return { ...b, data: { ...b.data, entries } };
+    }));
   const move = (idx: number, dir: -1 | 1) =>
     setBlocks((prev) => {
       const arr = [...prev];
@@ -312,6 +322,26 @@ function BlocksBuilder() {
             {flat.categories.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
           </select>
           <p className="text-[11px] text-gray-400">※選んだ大分類のメニューで、カレンダー付きの予約・見積フォームを表示します（価格は予約マスター連動）。</p>
+        </>
+      );
+    }
+    if (b.type === "seasonal") {
+      const em = editMonths[b.id] || (new Date().getMonth() + 1);
+      const entries = (b.data && b.data.entries) || {};
+      const e = entries[String(em)] || {};
+      const filledMonths = Object.keys(entries).filter((k) => { const x = entries[k]; return x && (x.heading || x.body || x.badge); }).map(Number);
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-gray-600">編集する月</label>
+            <select className="p-2 border rounded-lg text-sm" value={em} onChange={(ev) => setEditMonths((pp) => ({ ...pp, [b.id]: Number(ev.target.value) }))}>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}月{filledMonths.includes(m) ? " ●" : ""}</option>)}
+            </select>
+          </div>
+          <input className={inputCls} placeholder="バッジ（例：梅雨のカビ対策）" value={e.badge || ""} onChange={(ev) => updateEntry(idx, em, { badge: ev.target.value })} />
+          <input className={inputCls} placeholder="見出し" value={e.heading || ""} onChange={(ev) => updateEntry(idx, em, { heading: ev.target.value })} />
+          <textarea className={inputCls} rows={5} placeholder="本文（長くてもOK。公開ページでは折り畳みで表示）" value={e.body || ""} onChange={(ev) => updateEntry(idx, em, { body: ev.target.value })} />
+          <p className="text-[11px] text-gray-400">●=入力済みの月。入力した月がその月に自動表示され、未入力の月は直近で入力済みの月の内容が出ます。</p>
         </>
       );
     }

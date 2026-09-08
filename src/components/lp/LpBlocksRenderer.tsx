@@ -203,6 +203,39 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
             );
           }
 
+          case "seasonal": {
+            const entries = d.entries || {};
+            const monthNow = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo", month: "numeric" }).format(new Date()));
+            const filled = (e: any) => e && (e.heading || e.body || e.badge);
+            let entry = entries[String(monthNow)];
+            if (!filled(entry)) {
+              for (let i = 1; i < 12; i++) {
+                const m = ((monthNow - 1 - i + 12) % 12) + 1;
+                if (filled(entries[String(m)])) { entry = entries[String(m)]; break; }
+              }
+            }
+            if (!filled(entry)) return null;
+            return (
+              <section key={block.id} className="py-10 bg-gradient-to-br from-orange-50 to-amber-100">
+                <div className="max-w-3xl mx-auto px-4">
+                  <div className="bg-white rounded-2xl border-2 border-amber-300 shadow-sm p-6">
+                    {entry.badge && <span className="inline-block bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full mb-3">{entry.badge}</span>}
+                    {entry.heading && <h2 className="text-xl md:text-2xl font-black text-slate-800 mb-3">{entry.heading}</h2>}
+                    {entry.body && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-blue-700 font-bold text-sm">詳しく見る ▼</summary>
+                        <div className="text-slate-700 leading-relaxed whitespace-pre-wrap mt-3">{entry.body}</div>
+                      </details>
+                    )}
+                    <div className="mt-5 text-center">
+                      <a href="#lead" className="inline-block bg-red-600 text-white font-black px-8 py-3 rounded-full shadow hover:bg-red-700 transition-all">今の時期のご相談はこちら</a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            );
+          }
+
           default:
             return null;
         }
