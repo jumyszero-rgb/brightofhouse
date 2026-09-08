@@ -277,7 +277,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
               <section key={block.id} className="py-8">
                 <div className="max-w-3xl mx-auto px-4">
                   <div
-                    className="prose prose-slate max-w-none [&_.bn-block-column-list]:gap-4 [&_.bn-block-column-list]:items-start [&_.bn-block-content]:my-2"
+                    className="bn-content prose prose-slate max-w-none [&_.bn-block-column-list]:gap-4 [&_.bn-block-column-list]:items-start [&_.bn-block-content]:my-2"
                     dangerouslySetInnerHTML={{ __html: html }}
                   />
                 </div>

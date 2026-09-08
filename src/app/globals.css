@@ -104,3 +104,27 @@ body {
   padding-bottom: 8px;
   border-bottom: 1px solid #e2e8f0;
 }
+
+/* BlockNote 公開ページ用 色マッピング（BlockNote本体CSSは読み込まず、色属性のみ再現） */
+.bn-content [data-text-color="gray"],.bn-content [data-style-type="textColor"][data-value="gray"]{color:#9b9a97}
+.bn-content [data-text-color="brown"],.bn-content [data-style-type="textColor"][data-value="brown"]{color:#64473a}
+.bn-content [data-text-color="red"],.bn-content [data-style-type="textColor"][data-value="red"]{color:#e03e3e}
+.bn-content [data-text-color="orange"],.bn-content [data-style-type="textColor"][data-value="orange"]{color:#d9730d}
+.bn-content [data-text-color="yellow"],.bn-content [data-style-type="textColor"][data-value="yellow"]{color:#dfab01}
+.bn-content [data-text-color="green"],.bn-content [data-style-type="textColor"][data-value="green"]{color:#4d6461}
+.bn-content [data-text-color="blue"],.bn-content [data-style-type="textColor"][data-value="blue"]{color:#0b6e99}
+.bn-content [data-text-color="purple"],.bn-content [data-style-type="textColor"][data-value="purple"]{color:#6940a5}
+.bn-content [data-text-color="pink"],.bn-content [data-style-type="textColor"][data-value="pink"]{color:#ad1a72}
+.bn-content [data-background-color="gray"],.bn-content [data-style-type="backgroundColor"][data-value="gray"]{background-color:#ebeced}
+.bn-content [data-background-color="brown"],.bn-content [data-style-type="backgroundColor"][data-value="brown"]{background-color:#e9e5e3}
+.bn-content [data-background-color="red"],.bn-content [data-style-type="backgroundColor"][data-value="red"]{background-color:#fbe4e4}
+.bn-content [data-background-color="orange"],.bn-content [data-style-type="backgroundColor"][data-value="orange"]{background-color:#f6e9d9}
+.bn-content [data-background-color="yellow"],.bn-content [data-style-type="backgroundColor"][data-value="yellow"]{background-color:#fbf3db}
+.bn-content [data-background-color="green"],.bn-content [data-style-type="backgroundColor"][data-value="green"]{background-color:#ddedea}
+.bn-content [data-background-color="blue"],.bn-content [data-style-type="backgroundColor"][data-value="blue"]{background-color:#ddebf1}
+.bn-content [data-background-color="purple"],.bn-content [data-style-type="backgroundColor"][data-value="purple"]{background-color:#eae4f2}
+.bn-content [data-background-color="pink"],.bn-content [data-style-type="backgroundColor"][data-value="pink"]{background-color:#f4dfeb}
+/* ブロック全体の背景色は枠のように余白と角丸を付ける */
+.bn-content .bn-block-content[data-background-color]{padding:12px 16px;border-radius:8px}
+/* インライン背景色は軽い余白 */
+.bn-content span[data-style-type="backgroundColor"]{padding:1px 4px;border-radius:3px}
