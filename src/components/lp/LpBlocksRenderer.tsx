@@ -3,6 +3,7 @@
 // blocks(Json配列)を上から順に描画する。価格・名称は予約マスターから解決したresolvedを参照する。
 import LeadForm from "@/components/lp/LeadForm";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import { BRAND } from "@/lib/lpContent";
 
 type MasterItem = { title: string; price: number; workContent?: string | null };
 export type ResolvedMaster = {
@@ -48,6 +49,22 @@ function ctaHref(data: any): string {
   return v || "#lead";
 }
 
+function HeroStars() {
+  return <span className="text-amber-400" aria-hidden>★★★★★</span>;
+}
+
+function HeroCtas() {
+  return (
+    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="#lead" className="bg-amber-400 text-slate-900 font-black px-6 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center">無料で相談・見積り</a>
+      <a href="tel:0120-792-684" className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center">📞 0120-792-684</a>
+      {BRAND.lineUrl && (
+        <a href={BRAND.lineUrl} className="bg-green-500 text-white font-bold px-6 py-3.5 rounded-full shadow hover:bg-green-600 transition-colors text-center">LINEで相談</a>
+      )}
+    </div>
+  );
+}
+
 export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
@@ -58,39 +75,49 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
         switch (block.type) {
           case "hero":
             return (
-              <section key={block.id} className="relative overflow-hidden">
-                {d.imageUrl ? (
-                  <>
-                    <img src={d.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-[#022047]/60" aria-hidden />
-                  </>
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500" aria-hidden />
-                )}
-                <div className="relative z-10 max-w-3xl mx-auto px-5 pt-12 pb-10 md:pt-16 md:pb-14 text-white text-center">
-                  {d.eyebrow && (
-                    <p className="inline-block text-xs md:text-sm font-bold bg-white/20 rounded-full px-3 py-1 mb-4">{d.eyebrow}</p>
+              <div key={block.id}>
+                <section className="relative overflow-hidden">
+                  {d.imageUrl ? (
+                    <>
+                      <img src={d.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-[#022047]/60" aria-hidden />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500" aria-hidden />
                   )}
-                  <h1 className="text-2xl md:text-4xl font-black leading-tight mb-3 drop-shadow">{d.title || lpTitle}</h1>
-                  {d.subtitle && <p className="text-sm md:text-base text-blue-50 mb-4 leading-relaxed">{d.subtitle}</p>}
-                  <p className="text-sm font-bold mb-4">
-                    <span className="text-amber-300">★★★★★</span>
-                    <span className="ml-1">お客様満足度の高いサービス</span>
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 mb-5">
-                    {["明朗会計", "地域密着・札幌", "損害保険加入済"].map((b) => (
-                      <span key={b} className="bg-white/15 border border-white/30 rounded-full px-3 py-1 text-xs font-bold">✓ {b}</span>
+                  <div className="relative z-10 max-w-3xl mx-auto px-5 pt-12 pb-10 md:pt-16 md:pb-14 text-white text-center">
+                    {d.eyebrow && (
+                      <p className="inline-block text-xs md:text-sm font-bold bg-white/20 rounded-full px-3 py-1 mb-4">{d.eyebrow}</p>
+                    )}
+                    <h1 className="text-2xl md:text-4xl font-black leading-tight mb-3 drop-shadow">{d.title || lpTitle}</h1>
+                    {d.subtitle && <p className="text-sm md:text-base text-blue-50 mb-4 leading-relaxed">{d.subtitle}</p>}
+                    <p className="text-sm font-bold mb-4">
+                      <HeroStars /> <span className="ml-1">{BRAND.ratingLabel}</span>
+                      <span className="text-blue-100 font-normal ml-2 text-xs">{BRAND.ratingNote}</span>
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2 mb-5">
+                      {BRAND.badges.map((b) => (
+                        <span key={b} className="bg-white/15 border border-white/30 rounded-full px-3 py-1 text-xs font-bold">✓ {b}</span>
+                      ))}
+                    </div>
+                    {d.priceLead && (
+                      <p className="inline-block bg-amber-400 text-slate-900 font-black text-sm md:text-lg px-4 py-2 rounded-xl mb-6 shadow">{d.priceLead}</p>
+                    )}
+                    <HeroCtas />
+                    <p className="text-[11px] text-blue-100 mt-3">受付 9:00〜18:00 / お見積り無料</p>
+                  </div>
+                </section>
+                <section className="bg-slate-900 text-white">
+                  <div className="max-w-3xl mx-auto px-5 py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    {BRAND.stats.map((s) => (
+                      <div key={s.label}>
+                        <p className="text-xl md:text-2xl font-black text-amber-400">{s.value}</p>
+                        <p className="text-[11px] text-slate-300 mt-1">{s.label}</p>
+                      </div>
                     ))}
                   </div>
-                  {d.priceLead && (
-                    <p className="inline-block bg-amber-400 text-slate-900 font-black text-sm md:text-lg px-4 py-2 rounded-xl mb-6 shadow">{d.priceLead}</p>
-                  )}
-                  <div>
-                    <a href="#lead" className="inline-block bg-white text-blue-700 font-black px-8 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-all">無料で相談・お見積り</a>
-                  </div>
-                  <p className="text-[11px] text-blue-100 mt-3">受付 9:00〜18:00 / お見積り無料</p>
-                </div>
-              </section>
+                </section>
+              </div>
             );
 
           case "richText":
