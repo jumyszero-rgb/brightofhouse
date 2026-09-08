@@ -9,6 +9,9 @@ import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
 import LpBlocksRenderer from "@/components/lp/LpBlocksRenderer";
+import { BlockNoteSchema } from "@blocknote/core";
+import { withMultiColumn } from "@blocknote/xl-multi-column";
+import { ServerBlockNoteEditor } from "@blocknote/server-util";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -126,6 +129,19 @@ export default async function LPPage({ params, searchParams }: Props) {
     for (const cat of formCats) {
       bookingForms[cat.id] = bookingSelectionToBookingData([cat as any], []);
     }
+    // BlockNote本文 → HTML（サーバー側で変換）
+    const blocknoteHtml: Record<string, string> = {};
+    const bnBlocks = rawBlocks.filter((b: any) => b?.type === "blocknote" && Array.isArray(b?.data?.blocks) && b.data.blocks.length > 0);
+    if (bnBlocks.length > 0) {
+      const serverEditor = ServerBlockNoteEditor.create({ schema: withMultiColumn(BlockNoteSchema.create()) });
+      for (const b of bnBlocks) {
+        try {
+          blocknoteHtml[b.id] = await serverEditor.blocksToFullHTML(b.data.blocks);
+        } catch {
+          blocknoteHtml[b.id] = "";
+        }
+      }
+    }
     return (
       <>
         {isPreview && (
@@ -133,7 +149,7 @@ export default async function LPPage({ params, searchParams }: Props) {
             ⚠ プレビュー表示中（このページは公開されていません）
           </div>
         )}
-        <LpBlocksRenderer blocks={rawBlocks} resolved={resolved} bookingForms={bookingForms} lpTitle={lp.title} slug={lp.slug} />
+        <LpBlocksRenderer blocks={rawBlocks} resolved={resolved} bookingForms={bookingForms} blocknoteHtml={blocknoteHtml} lpTitle={lp.title} slug={lp.slug} />
       </>
     );
   }

@@ -24,6 +24,7 @@ type Props = {
   blocks: Block[];
   resolved: ResolvedMaster;
   bookingForms?: Record<string, any>; // categoryId -> bookingData({mains,...})
+  blocknoteHtml?: Record<string, string>; // blockId -> HTML (BlockNote本文)
   lpTitle: string;
   slug: string;
 };
@@ -53,7 +54,7 @@ function HeroStars() {
   return <span className="text-amber-400" aria-hidden>★★★★★</span>;
 }
 
-export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
+export default function LpBlocksRenderer({ blocks, resolved, bookingForms, blocknoteHtml, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
   return (
@@ -265,6 +266,21 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                       <a href="#lead" className="inline-block bg-red-600 text-white font-black px-8 py-3 rounded-full shadow hover:bg-red-700 transition-all">今の時期のご相談はこちら</a>
                     </div>
                   </div>
+                </div>
+              </section>
+            );
+          }
+
+          case "blocknote": {
+            const html = blocknoteHtml?.[block.id] || "";
+            if (!html) return null;
+            return (
+              <section key={block.id} className="py-8">
+                <div className="max-w-3xl mx-auto px-4">
+                  <div
+                    className="prose prose-slate max-w-none [&_.bn-block-column-list]:gap-4 [&_.bn-block-column-list]:items-start [&_.bn-block-content]:my-2"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
                 </div>
               </section>
             );

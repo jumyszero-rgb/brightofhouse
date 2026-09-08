@@ -5,12 +5,19 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor from "@/components/RichTextEditor";
+import dynamic from "next/dynamic";
+
+const BlockNoteBody = dynamic(() => import("@/components/lp/BlockNoteBody"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-sm text-gray-400">エディタ読み込み中...</div>,
+});
 
 type Block = { id: string; type: string; visible?: boolean; data: any; refs?: any };
 
 const BLOCK_TYPES: { type: string; label: string }[] = [
   { type: "hero", label: "ヒーロー" },
   { type: "richText", label: "見出し＋本文" },
+  { type: "blocknote", label: "本文(BlockNote・段組み)" },
   { type: "image", label: "画像" },
   { type: "seasonal", label: "季節のおすすめ(月替り)" },
   { type: "masterMenu", label: "メニュー(予約マスター連動)" },
@@ -25,6 +32,7 @@ function newBlock(type: string): Block {
     case "hero": return { id, type, visible: true, data: { eyebrow: "", title: "", subtitle: "", priceLead: "", imageUrl: "" } };
     case "richText": return { id, type, visible: true, data: { heading: "", body: "" } };
     case "image": return { id, type, visible: true, data: { imageUrl: "", caption: "" } };
+    case "blocknote": return { id, type, visible: true, data: { blocks: [] } };
     case "seasonal": return { id, type, visible: true, data: { entries: {} } };
     case "masterMenu": return { id, type, visible: true, data: { showDesc: true }, refs: { refType: "menu", refId: "" } };
     case "cta": return { id, type, visible: true, data: { label: "お問い合わせはこちら", targetType: "form", targetValue: "" } };
@@ -241,6 +249,14 @@ function BlocksBuilder() {
   function renderEditor(b: Block, idx: number) {
     const d = b.data || {};
     const inputCls = "w-full p-2 border rounded-lg text-sm";
+    if (b.type === "blocknote") {
+      return (
+        <div className="border rounded-lg bg-white">
+          <BlockNoteBody value={d.blocks} onChange={(blocks) => updateData(idx, { blocks })} />
+          <p className="text-[11px] text-gray-400 p-2">※ブロックを右端へドラッグすると横並び（段組み）にできます。「/」でメニュー、選択で装飾。</p>
+        </div>
+      );
+    }
     if (b.type === "hero") {
       const common = d.useCommon !== false;
       const stats = Array.isArray(d.stats) && d.stats.length ? d.stats : [{ value: "", label: "" }, { value: "", label: "" }, { value: "", label: "" }, { value: "", label: "" }];
