@@ -528,11 +528,19 @@ export default function RichTextEditor({ value, onChange }: Props) {
 
 
   const insertBox = useCallback((boxType: string) => {
-    editor?.chain().focus().insertContent({
-      type: "boxBlock",
-      attrs: { boxType },
-      content: [{ type: "paragraph", content: [{ type: "text", text: "ここにテキストを入力" }] }],
-    }).run();
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from !== to) {
+      // 選択範囲がある場合は、その部分（段落）を枠で囲む
+      editor.chain().focus().wrapIn("boxBlock", { boxType }).run();
+    } else {
+      // 選択が無い場合は、空の枠を挿入
+      editor.chain().focus().insertContent({
+        type: "boxBlock",
+        attrs: { boxType },
+        content: [{ type: "paragraph", content: [{ type: "text", text: "ここにテキストを入力" }] }],
+      }).run();
+    }
   }, [editor]);
 
   const insertBalloon = useCallback(() => {
