@@ -84,9 +84,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [dateUndecided, setDateUndecided] = useState(false);
   // 見積を希望するか（駐車場確認の前に置くチェックボックス）
   const [wantEstimate, setWantEstimate] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [customer, setCustomer] = useState({
-    name: "", email: "", phone: "", zip: "", address: "", notes: "", contactMethods: ["お電話"] as string[],
+    name: "", email: "", phone: "", zip: "", address: "", building: "", notes: "", contactMethods: ["お電話"] as string[],
     parkingAvailable: "" as string, parkingInstructions: "" as string,
     waterOk: "" as string, electricityOk: "" as string, gasOk: "" as string,
     paymentMethod: "" as string
@@ -274,29 +275,62 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const buildOrderLines = () => {
+    if (inquiryOnly) return [] as { indent: number; title: string; qty?: number; price?: number }[];
+    const lines: { indent: number; title: string; qty?: number; price?: number }[] = [];
+    mains.forEach((m, idx) => {
+      const mainSelected = hasBaseSelection(m) && selectedMains.includes(idx);
+      const activeFolds = isFoldActive(m, idx) ? (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)) : [];
+      const directOpts = (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o) && !o.parentFoldItemId);
+      if (!mainSelected && activeFolds.length === 0 && directOpts.length === 0) return;
+      if (mainSelected) lines.push({ indent: 0, title: m.title, price: m.price });
+      else if (m.foldTitle) lines.push({ indent: 0, title: m.foldTitle || m.title });
+      activeFolds.forEach(fi => {
+        lines.push({ indent: 1, title: fi.title, price: fi.price });
+        (m.options || [])
+          .filter(o => o.parentFoldItemId === fi.id && getQty(o.id) > 0 && isOptionActive(m, idx, o))
+          .forEach(o => lines.push({ indent: 2, title: o.title, qty: getQty(o.id), price: o.price }));
+      });
+      directOpts.forEach(o => lines.push({ indent: 1, title: o.title, qty: getQty(o.id), price: o.price }));
+    });
+    legacyOptions.forEach(o => {
+      if (o.foldTitle) {
+        const sel = (o.foldItems || []).filter(fi => getQty(fi.id) > 0);
+        if (sel.length) {
+          lines.push({ indent: 0, title: o.foldTitle });
+          sel.forEach(fi => lines.push({ indent: 1, title: fi.title, qty: getQty(fi.id), price: fi.price }));
+        }
+      } else if (getQty(o.id) > 0) {
+        lines.push({ indent: 0, title: o.title, qty: getQty(o.id), price: o.price });
+      }
+    });
+    return lines;
+  };
+
+  const formatOrderLine = (l: { indent: number; title: string; qty?: number; price?: number }) => {
+    const indent = l.indent === 0 ? "" : l.indent === 1 ? "　└ " : "　　└ ";
+    const qtyStr = l.qty ? ` ×${l.qty}` : "";
+    const priceStr = (l.price !== undefined && l.price !== null) ? `  ¥${(l.price * (l.qty || 1)).toLocaleString()}` : "";
+    return `${indent}${l.title}${qtyStr}${priceStr}`;
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!inquiryOnly && !selectedDate && !dateUndecided) return alert("日時を選択するか、「日程未定」にチェックしてください");
-
-    // お問い合わせのみの場合、メニュー選択欄自体を非表示にしているため、
-    // 初期選択されたままのmains[0]等が意図せず混入しないようにする
-    const itemsTextRaw = inquiryOnly ? "" : [
-      ...mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).map(m => m.title),
-      ...mains.flatMap((m, idx) => isFoldActive(m, idx) ? (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).map(fi => fi.title) : []),
-      ...mains.flatMap((m, idx) => (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).map(o => `${o.title} ×${getQty(o.id)}`)),
-      ...legacyOptions.filter(o => !o.foldTitle && getQty(o.id) > 0).map(o => `${o.title} ×${getQty(o.id)}`),
-      ...legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0).map(fi => `${fi.title} ×${getQty(fi.id)}`))
-    ].join(", ");
-
-    if (!itemsTextRaw && !inquiryOnly) {
+    if (!inquiryOnly && !selectedDate && !dateUndecided && !wantEstimate) return alert("日時を選択するか、「日程未定」または「見積を希望」にチェックしてください");
+    if (!inquiryOnly && buildOrderLines().length === 0) {
       alert("作業メニューを1つ以上選択してください。");
       return;
     }
-    const itemsText = itemsTextRaw || "（作業内容未定・お問い合わせのみ）";
     if (customer.contactMethods.length === 0) {
       alert("ご連絡方法を選択してください。");
       return;
     }
+    setShowConfirm(true);
+  };
+
+  const submitBooking = async () => {
+    setShowConfirm(false);
+    const itemsText = buildOrderLines().map(formatOrderLine).join("\n") || "（作業内容未定・お問い合わせのみ）";
 
     const discountNotes = mains.map((m, idx) => {
       const disc = calcSetDiscount(m, idx);
@@ -326,7 +360,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           email: customer.email,
           tel: customer.phone,
           zip: customer.zip,
-          address: customer.address,
+          address: [customer.address, customer.building].filter(Boolean).join(" "),
           contactMethod: customer.contactMethods.join("、"),
           notes: [
             wantEstimate ? "【見積希望】" : "",
@@ -343,7 +377,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           ].filter(Boolean).join("\n"),
           startTime: format(effectiveStart, "yyyy-MM-dd'T'HH:mm:ss"),
           endTime: format(effectiveEnd, "yyyy-MM-dd'T'HH:mm:ss"),
-          dateUndecided: inquiryOnly || dateUndecided,
+          dateUndecided: inquiryOnly || dateUndecided || (wantEstimate && !selectedDate),
           inquiryOnly,
           items: itemsText,
           totalPrice: inquiryOnly ? 0 : totalPrice,
@@ -913,6 +947,22 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </div>
         </section>
         )}
+        {/* 見積希望（カレンダーの前） */}
+        {!inquiryOnly && (
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={wantEstimate}
+                onChange={() => setWantEstimate(!wantEstimate)}
+                className="w-4 h-4 accent-amber-600"
+              />
+              <span className="text-sm font-bold text-amber-700">見積を希望する</span>
+            </label>
+            <p className="text-xs text-amber-700 mt-1.5">※見積をご希望の方は日程の選択はご不要です。</p>
+          </div>
+        )}
+
         {/* 2. カレンダー選択 */}
         {!inquiryOnly && (
         <section>
@@ -947,12 +997,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             <table className="w-full border-collapse min-w-[600px]">
               <thead>
                 <tr>
-                  <th className="p-2 text-xs text-slate-500 bg-slate-50 sticky top-0 z-10">時間</th>
+                  <th className="px-1 py-1 text-xs text-slate-500 bg-slate-50 sticky top-0 z-10">時間</th>
                   {days.map(day => {
                     const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
                     const dow = day.getDay();
                     return (
-                      <th key={day.toISOString()} className={`p-2 text-xs sticky top-0 z-10 ${isToday ? 'bg-blue-100 text-blue-700' : dow === 0 ? 'bg-red-50 text-red-600' : dow === 6 ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-600'}`}>
+                      <th key={day.toISOString()} className={`px-1 py-1 text-xs sticky top-0 z-10 ${isToday ? 'bg-blue-100 text-blue-700' : dow === 0 ? 'bg-red-50 text-red-600' : dow === 6 ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-600'}`}>
                         {format(day, "M/d(E)", { locale: ja })}
                       </th>
                     );
@@ -964,7 +1014,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   const hour = slot.getHours();
                   return (
                     <tr key={hour}>
-                      <td className="p-2 text-xs text-slate-500 text-center border-t font-bold whitespace-nowrap">{hour}:00</td>
+                      <td className="px-1 py-0.5 text-xs text-slate-500 text-center border-t font-bold whitespace-nowrap">{hour}:00</td>
                       {days.map(day => {
                         const current = setHours(startOfDay(day), hour);
                         const isPast = current < new Date();
@@ -1011,7 +1061,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                             <button
                               type="button"
                               disabled={isUnavailable}
-                              className={`w-full py-2 text-sm font-bold rounded transition-all ${color} ${isUnavailable ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                              className={`w-full py-1 text-sm font-bold rounded transition-all ${color} ${isUnavailable ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                               onClick={() => setSelectedDate(current)}
                             >
                               {display}
@@ -1047,18 +1097,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </div>
           </>)}
 
-          {/* 見積希望・駐車場・設備の確認（お問い合わせのみ以外は常に表示） */}
+          {/* 駐車場・設備の確認（お問い合わせのみ以外は常に表示） */}
           <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={wantEstimate}
-                onChange={() => setWantEstimate(!wantEstimate)}
-                className="w-4 h-4 accent-purple-600"
-              />
-              <span className="text-sm font-bold text-purple-700">見積を希望する</span>
-            </label>
-
             <div>
               <p className="text-xs font-bold text-slate-700 mb-1.5">作業車を停める駐車場はございますか？</p>
               <div className="flex gap-3">
@@ -1171,6 +1211,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <input value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：北海道札幌市中央区..." />
             </div>
             <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">建物名・号室</label>
+              <input value={customer.building} onChange={e => setCustomer({ ...customer, building: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="例：〇〇マンション 101号室" />
+            </div>
+            <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">ご確認のご連絡方法（複数選択可）</label>
               <div className="flex flex-wrap gap-3">
                 {["お電話", "メール", "LINE"].map(method => (
@@ -1218,13 +1262,64 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || (!inquiryOnly && !selectedDate && !dateUndecided)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
-              {loading ? "送信中..." : "この内容で仮予約・お問い合わせする"}
+            <button type="submit" disabled={loading || (!inquiryOnly && !selectedDate && !dateUndecided && !wantEstimate)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
+              {loading ? "送信中..." : "入力内容を確認する"}
             </button>
             <p className="text-center text-[10px] text-slate-400">※送信後、担当者より確認のご連絡をいたします。この時点では予約は確定しません。</p>
           </form>
         </section>
       </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowConfirm(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-blue-600 text-white px-6 py-4 rounded-t-2xl z-10">
+              <h3 className="text-lg font-black">入力内容のご確認</h3>
+              <p className="text-xs text-blue-100 mt-0.5">内容をご確認のうえ「この内容で申し込む」を押してください</p>
+            </div>
+            <div className="p-6 space-y-4 text-sm text-slate-800">
+              {!inquiryOnly && (
+                <div>
+                  <p className="font-bold text-slate-500 text-xs mb-1">ご希望メニュー</p>
+                  <div className="bg-slate-50 rounded-lg p-3 space-y-0.5">
+                    {buildOrderLines().length > 0 ? buildOrderLines().map((l, i) => (
+                      <div key={i} className={`flex justify-between gap-2 ${l.indent === 0 ? 'font-bold' : l.indent === 1 ? 'text-slate-600' : 'text-slate-500 text-xs'}`}>
+                        <span>{l.indent === 0 ? '' : l.indent === 1 ? '　└ ' : '　　└ '}{l.title}{l.qty ? ` ×${l.qty}` : ''}</span>
+                        {(l.price !== undefined && l.price !== null) && <span className="font-mono whitespace-nowrap">¥{(l.price * (l.qty || 1)).toLocaleString()}</span>}
+                      </div>
+                    )) : <p className="text-slate-400 text-xs">（作業内容未定・お問い合わせのみ）</p>}
+                  </div>
+                </div>
+              )}
+              {!inquiryOnly && (
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-bold">概算合計金額（税込）</span>
+                  <span className="font-black text-blue-700">¥{totalPrice.toLocaleString()}</span>
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-slate-500 text-xs mb-1">ご希望日時</p>
+                <p>{wantEstimate ? "見積希望（日程は後日調整）" : dateUndecided ? "日程未定（後日調整）" : selectedDate ? format(selectedDate, "yyyy年M月d日(E) HH:00〜", { locale: ja }) : "未選択"}</p>
+              </div>
+              <div className="border-t pt-3 space-y-1">
+                <p className="font-bold text-slate-500 text-xs mb-1">お客様情報</p>
+                <p>お名前：{customer.name} 様</p>
+                <p>メール：{customer.email}</p>
+                <p>電話：{customer.phone}</p>
+                <p>住所：〒{customer.zip} {customer.address} {customer.building}</p>
+                <p>ご連絡方法：{customer.contactMethods.join("、")}</p>
+                {customer.paymentMethod && <p>お支払方法：{customer.paymentMethod}</p>}
+                {customer.notes && <p>備考：{customer.notes}</p>}
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t p-4 flex flex-col sm:flex-row gap-2">
+              <button type="button" onClick={() => setShowConfirm(false)} className="flex-1 py-3 rounded-xl border-2 border-slate-300 text-slate-600 font-bold hover:bg-slate-50">修正する</button>
+              <button type="button" onClick={() => setShowConfirm(false)} className="flex-1 py-3 rounded-xl border-2 border-red-200 text-red-500 font-bold hover:bg-red-50">キャンセル</button>
+              <button type="button" onClick={submitBooking} disabled={loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 disabled:bg-slate-300">{loading ? "送信中..." : "この内容で申し込む"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

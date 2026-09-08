@@ -1,0 +1,29 @@
+name: Deploy to ConoHa
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:   # GitHubの画面から手動実行も可能
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /root/brightofhouse
+            echo "==> git 最新化"
+            git fetch origin main
+            git reset --hard origin/main
+            echo "==> Docker 再ビルド＆再起動"
+            docker compose up -d --build --force-recreate
+            echo "==> 古いイメージを掃除"
+            docker image prune -f
+            echo "==> 完了"

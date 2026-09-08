@@ -19,11 +19,15 @@ export default function ThankYouPage() {
           <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4">
             お申し込みありがとうございます
           </h1>
-          <p className="text-sm text-slate-600 leading-relaxed mb-6">
-            仮予約・お問い合わせを受け付けました。<br />
-            担当者より確認のご連絡をいたしますので、<br />
-            少々お待ちくださいませ。
+          <p className="text-base font-bold text-slate-800 leading-relaxed mb-4">
+            仮予約の申し込みを完了いたしました。<br />
+            担当者よりご指定の方法で連絡があります。
           </p>
+          <div className="text-left text-xs text-slate-600 leading-relaxed bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 space-y-2">
+            <p className="font-bold text-slate-700">仮予約 → 担当者より返信またはお電話 → 確定 になります。</p>
+            <p>※お電話以外のやり取りに関しましては、返信にご回答いただいて申込完了となります。</p>
+            <p className="text-red-600 font-bold">※現段階は仮予約です。作業前日までに最終的なご返信がない場合は無効となりますのでご注意をお願いします。</p>
+          </div>
           <div className="bg-sky-50 rounded-xl p-4 mb-6 border border-sky-200">
             <p className="text-xs text-slate-500 font-bold mb-1">お急ぎの場合は お電話ください</p>
             <a href="tel:0120792684" className="text-2xl font-black text-sky-700 tracking-widest font-mono">

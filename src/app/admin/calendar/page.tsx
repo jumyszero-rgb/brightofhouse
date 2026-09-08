@@ -237,9 +237,9 @@ export default function AdminCalendarPage() {
             <table className="w-full text-center border-collapse select-none">
               <thead>
                 <tr className="bg-slate-50 border-b border-gray-200">
-                  <th className="p-3 text-xs font-bold w-20 sticky left-0 bg-slate-50 z-10 text-black">時間</th>
+                  <th className="px-2 py-1 text-xs font-bold w-20 sticky left-0 bg-slate-50 z-10 text-black">時間</th>
                   {days.map(day => (
-                    <th key={day.toISOString()} className="p-3 border-l text-xs font-bold text-black">
+                    <th key={day.toISOString()} className="px-1 py-1 border-l text-xs font-bold text-black">
                       {format(day, "M/d")}<br/><span className={format(day, "E", {locale:ja}) === "日" ? "text-red-500" : format(day, "E", {locale:ja}) === "土" ? "text-blue-500" : ""}>({format(day, "E", {locale:ja})})</span>
                     </th>
                   ))}
@@ -248,7 +248,7 @@ export default function AdminCalendarPage() {
               <tbody>
                 {timeSlots.map(slot => (
                   <tr key={slot.toISOString()} className="hover:bg-slate-50/30">
-                    <td className="p-2 border-b text-xs font-bold bg-slate-50 sticky left-0 z-10 text-black">{format(slot, "HH:00")}</td>
+                    <td className="px-2 py-0.5 border-b text-xs font-bold bg-slate-50 sticky left-0 z-10 text-black">{format(slot, "HH:00")}</td>
                     {days.map(day => {
                       const current = new Date(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), 0, 0, 0);
                       const currentISO = current.toISOString();
@@ -259,7 +259,7 @@ export default function AdminCalendarPage() {
                       const selected = isSelected(current);
 
                       return (
-                        <td key={currentISO} className="p-1 border-b border-l relative">
+                        <td key={currentISO} className="p-0.5 border-b border-l relative">
                           <button
                             type="button"
                             disabled={isPast}
@@ -282,7 +282,7 @@ export default function AdminCalendarPage() {
                             onClick={() => {
                               if (!isDragging && !isPast) toggleStatus(current, status);
                             }}
-                            className={`w-full h-12 flex items-center justify-center rounded font-bold text-2xl transition-all ${
+                            className={`w-full h-8 flex items-center justify-center rounded font-bold text-lg transition-all ${
                               isPast ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
                               selected ? 'ring-2 ring-inset ring-blue-400 bg-blue-50 z-20' : ''
                             } ${

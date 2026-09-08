@@ -120,9 +120,9 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="p-4">
                       <p className="text-xs font-bold text-indigo-600">{b.category}</p>
-                      <p className="text-xs text-gray-600 line-clamp-1">{b.items}</p>
+                      <p className="text-xs text-gray-600 whitespace-pre-wrap">{b.items}</p>
                       {/* ▼ 追加: 備考 */}
-                      {b.notes && <p className="text-[10px] text-gray-400 mt-1 bg-gray-50 p-1 rounded italic line-clamp-2">備考: {b.notes}</p>}
+                      {b.notes && <p className="text-[10px] text-gray-400 mt-1 bg-gray-50 p-1 rounded italic whitespace-pre-wrap">備考: {b.notes}</p>}
                     </td>
                     <td className="p-4">
                       <p className="text-sm font-bold text-gray-800">¥{b.totalPrice.toLocaleString()}</p>
