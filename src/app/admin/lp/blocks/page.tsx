@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import RichTextEditor from "@/components/RichTextEditor";
 
 type Block = { id: string; type: string; visible?: boolean; data: any; refs?: any };
 
@@ -241,6 +242,9 @@ function BlocksBuilder() {
     const d = b.data || {};
     const inputCls = "w-full p-2 border rounded-lg text-sm";
     if (b.type === "hero") {
+      const common = d.useCommon !== false;
+      const stats = Array.isArray(d.stats) && d.stats.length ? d.stats : [{ value: "", label: "" }, { value: "", label: "" }, { value: "", label: "" }, { value: "", label: "" }];
+      const setStat = (i: number, patch: any) => { const arr = [0, 1, 2, 3].map((k) => ({ ...(stats[k] || {}) })); arr[i] = { ...arr[i], ...patch }; updateData(idx, { stats: arr }); };
       return (
         <>
           <input className={inputCls} placeholder="小見出し(eyebrow)" value={d.eyebrow || ""} onChange={(e) => updateData(idx, { eyebrow: e.target.value })} />
@@ -248,6 +252,25 @@ function BlocksBuilder() {
           <input className={inputCls} placeholder="サブコピー" value={d.subtitle || ""} onChange={(e) => updateData(idx, { subtitle: e.target.value })} />
           <input className={inputCls} placeholder="価格リード(例: 3点セット ¥26,460〜)" value={d.priceLead || ""} onChange={(e) => updateData(idx, { priceLead: e.target.value })} />
           <ImageField url={d.imageUrl} onPick={(f) => uploadImage(f, idx)} />
+          <label className="text-xs flex items-center gap-1 mt-1"><input type="checkbox" checked={common} onChange={(e) => updateData(idx, { useCommon: e.target.checked })} />評価・バッジ・実績バー・CTA・受付文言を「共通設定」にする</label>
+          {!common && (
+            <div className="mt-2 p-3 bg-slate-50 rounded-lg border space-y-2">
+              <p className="text-[11px] font-bold text-slate-500">このLP独自の設定（共通OFF時のみ）</p>
+              <input className={inputCls} placeholder="評価ラベル（例：★4.9）" value={d.ratingLabel || ""} onChange={(e) => updateData(idx, { ratingLabel: e.target.value })} />
+              <input className={inputCls} placeholder="評価の補足（例：Google・ミツモア）" value={d.ratingNote || ""} onChange={(e) => updateData(idx, { ratingNote: e.target.value })} />
+              <input className={inputCls} placeholder="信頼バッジ（カンマ区切り）" value={typeof d.badges === "string" ? d.badges : (Array.isArray(d.badges) ? d.badges.join(",") : "")} onChange={(e) => updateData(idx, { badges: e.target.value })} />
+              <input className={inputCls} placeholder="電話番号" value={d.phone || ""} onChange={(e) => updateData(idx, { phone: e.target.value })} />
+              <input className={inputCls} placeholder="LINE URL（空欄でLINEボタン非表示）" value={d.lineUrl !== undefined ? d.lineUrl : ""} onChange={(e) => updateData(idx, { lineUrl: e.target.value })} />
+              <input className={inputCls} placeholder="受付文言（例：受付 9:00〜18:00 / お見積り無料）" value={d.note || ""} onChange={(e) => updateData(idx, { note: e.target.value })} />
+              <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={d.showStats !== false} onChange={(e) => updateData(idx, { showStats: e.target.checked })} />実績数字バーを表示する</label>
+              {d.showStats !== false && [0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-2">
+                  <input className={inputCls} placeholder={`実績${i + 1} 数値`} value={stats[i]?.value || ""} onChange={(e) => setStat(i, { value: e.target.value })} />
+                  <input className={inputCls} placeholder="ラベル" value={stats[i]?.label || ""} onChange={(e) => setStat(i, { label: e.target.value })} />
+                </div>
+              ))}
+            </div>
+          )}
         </>
       );
     }
@@ -255,7 +278,11 @@ function BlocksBuilder() {
       return (
         <>
           <input className={inputCls} placeholder="見出し" value={d.heading || ""} onChange={(e) => updateData(idx, { heading: e.target.value })} />
-          <textarea className={inputCls} rows={5} placeholder="本文（簡単なHTML可：<br> <strong> など）" value={d.body || ""} onChange={(e) => updateData(idx, { body: e.target.value })} />
+          <div className="border rounded-lg">
+            <RichTextEditor key={b.id} value={d.body || ""} onChange={(html) => updateData(idx, { body: html })} />
+          </div>
+          <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={!!d.collapsible} onChange={(e) => updateData(idx, { collapsible: e.target.checked })} />この本文を折り畳んで表示する</label>
+          {d.collapsible && <input className={inputCls} placeholder="折り畳みのラベル（例：詳しく見る）" value={d.summaryLabel || ""} onChange={(e) => updateData(idx, { summaryLabel: e.target.value })} />}
         </>
       );
     }
@@ -340,7 +367,9 @@ function BlocksBuilder() {
           </div>
           <input className={inputCls} placeholder="バッジ（例：梅雨のカビ対策）" value={e.badge || ""} onChange={(ev) => updateEntry(idx, em, { badge: ev.target.value })} />
           <input className={inputCls} placeholder="見出し" value={e.heading || ""} onChange={(ev) => updateEntry(idx, em, { heading: ev.target.value })} />
-          <textarea className={inputCls} rows={5} placeholder="本文（長くてもOK。公開ページでは折り畳みで表示）" value={e.body || ""} onChange={(ev) => updateEntry(idx, em, { body: ev.target.value })} />
+          <div className="border rounded-lg">
+            <RichTextEditor key={b.id + "-" + em} value={e.body || ""} onChange={(html) => updateEntry(idx, em, { body: html })} />
+          </div>
           <p className="text-[11px] text-gray-400">●=入力済みの月。入力した月がその月に自動表示され、未入力の月は直近で入力済みの月の内容が出ます。</p>
         </>
       );

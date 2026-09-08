@@ -53,18 +53,6 @@ function HeroStars() {
   return <span className="text-amber-400" aria-hidden>★★★★★</span>;
 }
 
-function HeroCtas() {
-  return (
-    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-      <a href="#lead" className="bg-amber-400 text-slate-900 font-black px-6 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center">無料で相談・見積り</a>
-      <a href="tel:0120-792-684" className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center">📞 0120-792-684</a>
-      {BRAND.lineUrl && (
-        <a href={BRAND.lineUrl} className="bg-green-500 text-white font-bold px-6 py-3.5 rounded-full shadow hover:bg-green-600 transition-colors text-center">LINEで相談</a>
-      )}
-    </div>
-  );
-}
-
 export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
@@ -73,7 +61,18 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
       {list.map((block) => {
         const d = block.data || {};
         switch (block.type) {
-          case "hero":
+          case "hero": {
+            const common = d.useCommon !== false;
+            const ratingLabel = common ? BRAND.ratingLabel : (d.ratingLabel || BRAND.ratingLabel);
+            const ratingNote = common ? BRAND.ratingNote : (d.ratingNote || "");
+            const badges: string[] = common
+              ? BRAND.badges
+              : (Array.isArray(d.badges) ? d.badges : (typeof d.badges === "string" ? d.badges.split(",").map((s: string) => s.trim()).filter(Boolean) : BRAND.badges));
+            const stats: any[] = common ? BRAND.stats : (Array.isArray(d.stats) && d.stats.length ? d.stats : BRAND.stats);
+            const showStats = common ? true : d.showStats !== false;
+            const note = common ? "受付 9:00〜18:00 / お見積り無料" : (d.note || "");
+            const phone = common ? "0120-792-684" : (d.phone || "0120-792-684");
+            const lineUrl = common ? BRAND.lineUrl : (d.lineUrl !== undefined ? d.lineUrl : BRAND.lineUrl);
             return (
               <div key={block.id}>
                 <section className="relative overflow-hidden">
@@ -92,42 +91,58 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                     <h1 className="text-2xl md:text-4xl font-black leading-tight mb-3 drop-shadow">{d.title || lpTitle}</h1>
                     {d.subtitle && <p className="text-sm md:text-base text-blue-50 mb-4 leading-relaxed">{d.subtitle}</p>}
                     <p className="text-sm font-bold mb-4">
-                      <HeroStars /> <span className="ml-1">{BRAND.ratingLabel}</span>
-                      <span className="text-blue-100 font-normal ml-2 text-xs">{BRAND.ratingNote}</span>
+                      <HeroStars /> <span className="ml-1">{ratingLabel}</span>
+                      {ratingNote && <span className="text-blue-100 font-normal ml-2 text-xs">{ratingNote}</span>}
                     </p>
-                    <div className="flex flex-wrap justify-center gap-2 mb-5">
-                      {BRAND.badges.map((b) => (
-                        <span key={b} className="bg-white/15 border border-white/30 rounded-full px-3 py-1 text-xs font-bold">✓ {b}</span>
-                      ))}
-                    </div>
+                    {badges.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-2 mb-5">
+                        {badges.map((b) => (
+                          <span key={b} className="bg-white/15 border border-white/30 rounded-full px-3 py-1 text-xs font-bold">✓ {b}</span>
+                        ))}
+                      </div>
+                    )}
                     {d.priceLead && (
                       <p className="inline-block bg-amber-400 text-slate-900 font-black text-sm md:text-lg px-4 py-2 rounded-xl mb-6 shadow">{d.priceLead}</p>
                     )}
-                    <HeroCtas />
-                    <p className="text-[11px] text-blue-100 mt-3">受付 9:00〜18:00 / お見積り無料</p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <a href="#lead" className="bg-amber-400 text-slate-900 font-black px-6 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center">無料で相談・見積り</a>
+                      <a href={`tel:${phone}`} className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center">📞 {phone}</a>
+                      {lineUrl && (
+                        <a href={lineUrl} className="bg-green-500 text-white font-bold px-6 py-3.5 rounded-full shadow hover:bg-green-600 transition-colors text-center">LINEで相談</a>
+                      )}
+                    </div>
+                    {note && <p className="text-[11px] text-blue-100 mt-3">{note}</p>}
                   </div>
                 </section>
-                <section className="bg-slate-900 text-white">
-                  <div className="max-w-3xl mx-auto px-5 py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    {BRAND.stats.map((s) => (
-                      <div key={s.label}>
-                        <p className="text-xl md:text-2xl font-black text-amber-400">{s.value}</p>
-                        <p className="text-[11px] text-slate-300 mt-1">{s.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                {showStats && stats.length > 0 && (
+                  <section className="bg-slate-900 text-white">
+                    <div className="max-w-3xl mx-auto px-5 py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      {stats.map((s, i) => (
+                        <div key={i}>
+                          <p className="text-xl md:text-2xl font-black text-amber-400">{s.value}</p>
+                          <p className="text-[11px] text-slate-300 mt-1">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             );
+          }
 
           case "richText":
             return (
               <section key={block.id} className="py-10">
                 <div className="max-w-3xl mx-auto px-4">
                   {d.heading && <h2 className="text-xl md:text-2xl font-black text-slate-800 mb-4 text-center">{d.heading}</h2>}
-                  {d.body && (
+                  {d.body && (d.collapsible ? (
+                    <details>
+                      <summary className="cursor-pointer text-blue-700 font-bold text-sm mb-2">{d.summaryLabel || "詳しく見る"} ▼</summary>
+                      <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed mt-3" dangerouslySetInnerHTML={{ __html: d.body }} />
+                    </details>
+                  ) : (
                     <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: d.body }} />
-                  )}
+                  ))}
                 </div>
               </section>
             );
@@ -224,7 +239,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                     {entry.body && (
                       <details className="mt-2">
                         <summary className="cursor-pointer text-blue-700 font-bold text-sm">詳しく見る ▼</summary>
-                        <div className="text-slate-700 leading-relaxed whitespace-pre-wrap mt-3">{entry.body}</div>
+                        <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed mt-3" dangerouslySetInnerHTML={{ __html: entry.body }} />
                       </details>
                     )}
                     <div className="mt-5 text-center">
