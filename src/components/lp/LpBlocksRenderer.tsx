@@ -1,7 +1,8 @@
 // @/src/components/lp/LpBlocksRenderer.tsx
-// ブロック形式LPの公開側レンダラ（フェーズ1）
+// ブロック形式LPの公開側レンダラ（フェーズ1+）
 // blocks(Json配列)を上から順に描画する。価格・名称は予約マスターから解決したresolvedを参照する。
 import LeadForm from "@/components/lp/LeadForm";
+import ServicePageBooking from "@/components/booking/ServicePageBooking";
 
 type MasterItem = { title: string; price: number; workContent?: string | null };
 export type ResolvedMaster = {
@@ -21,6 +22,7 @@ type Block = {
 type Props = {
   blocks: Block[];
   resolved: ResolvedMaster;
+  bookingForms?: Record<string, any>; // categoryId -> bookingData({mains,...})
   lpTitle: string;
   slug: string;
 };
@@ -46,7 +48,7 @@ function ctaHref(data: any): string {
   return v || "#lead";
 }
 
-export default function LpBlocksRenderer({ blocks, resolved, lpTitle, slug }: Props) {
+export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
   return (
@@ -56,20 +58,37 @@ export default function LpBlocksRenderer({ blocks, resolved, lpTitle, slug }: Pr
         switch (block.type) {
           case "hero":
             return (
-              <section key={block.id} className="relative overflow-hidden bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 text-white">
-                {d.imageUrl && (
-                  <img src={d.imageUrl} alt={d.title || lpTitle} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
+              <section key={block.id} className="relative overflow-hidden">
+                {d.imageUrl ? (
+                  <>
+                    <img src={d.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-[#022047]/60" aria-hidden />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500" aria-hidden />
                 )}
-                <div className="relative z-10 max-w-3xl mx-auto px-4 py-16 md:py-24 text-center">
-                  {d.eyebrow && <p className="inline-block bg-white/20 rounded-full px-4 py-1 text-xs md:text-sm font-bold mb-4">{d.eyebrow}</p>}
-                  <h1 className="text-3xl md:text-5xl font-black leading-tight drop-shadow mb-4">{d.title || lpTitle}</h1>
-                  {d.subtitle && <p className="text-sm md:text-lg text-white/90 mb-4 leading-relaxed">{d.subtitle}</p>}
-                  {d.priceLead && (
-                    <p className="inline-block bg-yellow-400 text-red-700 text-base md:text-2xl font-black px-5 py-2 rounded-full shadow-lg border-2 border-white">{d.priceLead}</p>
+                <div className="relative z-10 max-w-3xl mx-auto px-5 pt-12 pb-10 md:pt-16 md:pb-14 text-white text-center">
+                  {d.eyebrow && (
+                    <p className="inline-block text-xs md:text-sm font-bold bg-white/20 rounded-full px-3 py-1 mb-4">{d.eyebrow}</p>
                   )}
-                  <div className="mt-6">
-                    <a href="#lead" className="inline-block bg-white text-red-600 font-black px-8 py-3 rounded-full shadow-lg hover:bg-red-50 transition-all">無料で相談する</a>
+                  <h1 className="text-2xl md:text-4xl font-black leading-tight mb-3 drop-shadow">{d.title || lpTitle}</h1>
+                  {d.subtitle && <p className="text-sm md:text-base text-blue-50 mb-4 leading-relaxed">{d.subtitle}</p>}
+                  <p className="text-sm font-bold mb-4">
+                    <span className="text-amber-300">★★★★★</span>
+                    <span className="ml-1">お客様満足度の高いサービス</span>
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 mb-5">
+                    {["明朗会計", "地域密着・札幌", "損害保険加入済"].map((b) => (
+                      <span key={b} className="bg-white/15 border border-white/30 rounded-full px-3 py-1 text-xs font-bold">✓ {b}</span>
+                    ))}
                   </div>
+                  {d.priceLead && (
+                    <p className="inline-block bg-amber-400 text-slate-900 font-black text-sm md:text-lg px-4 py-2 rounded-xl mb-6 shadow">{d.priceLead}</p>
+                  )}
+                  <div>
+                    <a href="#lead" className="inline-block bg-white text-blue-700 font-black px-8 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-all">無料で相談・お見積り</a>
+                  </div>
+                  <p className="text-[11px] text-blue-100 mt-3">受付 9:00〜18:00 / お見積り無料</p>
                 </div>
               </section>
             );
@@ -140,6 +159,22 @@ export default function LpBlocksRenderer({ blocks, resolved, lpTitle, slug }: Pr
                 </div>
               </section>
             );
+
+          case "bookingForm": {
+            const bd = bookingForms?.[block.refs?.refId];
+            return (
+              <section key={block.id} id="lead" className="py-12 bg-slate-50 scroll-mt-16">
+                <div className="max-w-5xl mx-auto px-4">
+                  {d.heading && <h2 className="text-2xl font-black text-center text-slate-800 mb-6">{d.heading}</h2>}
+                  {bd ? (
+                    <ServicePageBooking pageTitle={lpTitle} bookingData={bd} />
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 text-center">※予約カテゴリ未設定です。ブロック編集で大分類を選択してください。</div>
+                  )}
+                </div>
+              </section>
+            );
+          }
 
           default:
             return null;

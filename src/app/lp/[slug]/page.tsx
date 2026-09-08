@@ -100,12 +100,14 @@ export default async function LPPage({ params, searchParams }: Props) {
     const menuIds: string[] = [];
     const subMenuIds: string[] = [];
     const optionIds: string[] = [];
+    const formCategoryIds: string[] = [];
     for (const b of rawBlocks) {
       if (b?.type === "masterMenu" && b?.refs?.refId) {
         if (b.refs.refType === "menu") menuIds.push(b.refs.refId);
         else if (b.refs.refType === "subMenu") subMenuIds.push(b.refs.refId);
         else if (b.refs.refType === "option") optionIds.push(b.refs.refId);
       }
+      if (b?.type === "bookingForm" && b?.refs?.refId) formCategoryIds.push(b.refs.refId);
     }
     const [menus, subMenus, options] = await Promise.all([
       menuIds.length ? prisma.bookingMenu.findMany({ where: { id: { in: menuIds } }, select: { id: true, title: true, basePrice: true, workContent: true } }) : Promise.resolve([] as any[]),
@@ -117,6 +119,13 @@ export default async function LPPage({ params, searchParams }: Props) {
       subMenus: Object.fromEntries(subMenus.map((s: any) => [s.id, { title: s.title, price: s.price, workContent: s.workContent }])),
       options: Object.fromEntries(options.map((o: any) => [o.id, { title: o.title, price: o.price, workContent: o.workContent }])),
     };
+    const formCats = formCategoryIds.length
+      ? await prisma.bookingCategory.findMany({ where: { id: { in: formCategoryIds } }, include: { menus: { include: subMenusInclude } } })
+      : [];
+    const bookingForms: Record<string, any> = {};
+    for (const cat of formCats) {
+      bookingForms[cat.id] = bookingSelectionToBookingData([cat as any], []);
+    }
     return (
       <>
         {isPreview && (
@@ -124,7 +133,7 @@ export default async function LPPage({ params, searchParams }: Props) {
             ⚠ プレビュー表示中（このページは公開されていません）
           </div>
         )}
-        <LpBlocksRenderer blocks={rawBlocks} resolved={resolved} lpTitle={lp.title} slug={lp.slug} />
+        <LpBlocksRenderer blocks={rawBlocks} resolved={resolved} bookingForms={bookingForms} lpTitle={lp.title} slug={lp.slug} />
       </>
     );
   }

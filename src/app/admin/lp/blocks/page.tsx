@@ -13,7 +13,8 @@ const BLOCK_TYPES: { type: string; label: string }[] = [
   { type: "image", label: "画像" },
   { type: "masterMenu", label: "メニュー(予約マスター連動)" },
   { type: "cta", label: "CTAボタン" },
-  { type: "leadForm", label: "申込フォーム" },
+  { type: "leadForm", label: "申込フォーム(軽量)" },
+  { type: "bookingForm", label: "カレンダー予約フォーム" },
 ];
 
 function newBlock(type: string): Block {
@@ -25,6 +26,7 @@ function newBlock(type: string): Block {
     case "masterMenu": return { id, type, visible: true, data: { showDesc: true }, refs: { refType: "menu", refId: "" } };
     case "cta": return { id, type, visible: true, data: { label: "お問い合わせはこちら", targetType: "form", targetValue: "" } };
     case "leadForm": return { id, type, visible: true, data: { heading: "無料相談・お見積り", note: "30秒で送信できます" } };
+    case "bookingForm": return { id, type, visible: true, data: { heading: "ご希望日時から仮予約・お見積り" }, refs: { refType: "category", refId: "" } };
     default: return { id, type, visible: true, data: {} };
   }
 }
@@ -82,7 +84,8 @@ function BlocksBuilder() {
         }
       }
     }
-    return { menus, subMenus, options };
+    const categories = (master || []).map((c: any) => ({ id: c.id, title: c.title }));
+    return { menus, subMenus, options, categories };
   }, [master]);
 
   const update = (idx: number, patch: Partial<Block>) =>
@@ -297,6 +300,18 @@ function BlocksBuilder() {
           <input className={inputCls} placeholder="見出し" value={d.heading || ""} onChange={(e) => updateData(idx, { heading: e.target.value })} />
           <input className={inputCls} placeholder="補足文" value={d.note || ""} onChange={(e) => updateData(idx, { note: e.target.value })} />
           <p className="text-[11px] text-gray-400">※軽量リードフォーム（お名前・連絡先・写真添付など）を表示します。</p>
+        </>
+      );
+    }
+    if (b.type === "bookingForm") {
+      return (
+        <>
+          <input className={inputCls} placeholder="見出し" value={d.heading || ""} onChange={(e) => updateData(idx, { heading: e.target.value })} />
+          <select className={inputCls} value={b.refs?.refId || ""} onChange={(e) => updateRefs(idx, { refType: "category", refId: e.target.value })}>
+            <option value="">— 予約カテゴリ(大分類)を選択 —</option>
+            {flat.categories.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+          </select>
+          <p className="text-[11px] text-gray-400">※選んだ大分類のメニューで、カレンダー付きの予約・見積フォームを表示します（価格は予約マスター連動）。</p>
         </>
       );
     }
