@@ -252,7 +252,7 @@ function BlocksBuilder() {
     if (b.type === "blocknote") {
       return (
         <div className="border rounded-lg bg-white">
-          <BlockNoteBody value={d.blocks} onChange={(blocks) => updateData(idx, { blocks })} />
+          <BlockNoteBody value={d.blocks} onChange={({ blocks, html }) => updateData(idx, { blocks, html })} />
           <p className="text-[11px] text-gray-400 p-2">※ブロックを右端へドラッグすると横並び（段組み）にできます。「/」でメニュー、選択で装飾。</p>
         </div>
       );

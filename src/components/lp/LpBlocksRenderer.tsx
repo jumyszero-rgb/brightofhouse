@@ -24,7 +24,6 @@ type Props = {
   blocks: Block[];
   resolved: ResolvedMaster;
   bookingForms?: Record<string, any>; // categoryId -> bookingData({mains,...})
-  blocknoteHtml?: Record<string, string>; // blockId -> HTML (BlockNote本文)
   lpTitle: string;
   slug: string;
 };
@@ -54,7 +53,7 @@ function HeroStars() {
   return <span className="text-amber-400" aria-hidden>★★★★★</span>;
 }
 
-export default function LpBlocksRenderer({ blocks, resolved, bookingForms, blocknoteHtml, lpTitle, slug }: Props) {
+export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
   return (
@@ -272,7 +271,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, block
           }
 
           case "blocknote": {
-            const html = blocknoteHtml?.[block.id] || "";
+            const html = d?.html || "";
             if (!html) return null;
             return (
               <section key={block.id} className="py-8">
