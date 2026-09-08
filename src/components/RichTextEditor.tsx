@@ -153,6 +153,26 @@ const DetailsContent = Node.create({
   },
 });
 
+const ColumnItem = Node.create({
+  name: "column",
+  content: "block+",
+  isolating: true,
+  parseHTML() { return [{ tag: "div[data-column]" }]; },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, { "data-column": "", style: "flex:1 1 180px;min-width:0;" }), 0];
+  },
+});
+
+const ColumnsBlock = Node.create({
+  name: "columnsBlock",
+  group: "block",
+  content: "column+",
+  parseHTML() { return [{ tag: "div[data-columns]" }]; },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, { "data-columns": "", style: "display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;" }), 0];
+  },
+});
+
 const BoxBlock = Node.create({
   name: "boxBlock",
   group: "block",
@@ -295,6 +315,8 @@ export default function RichTextEditor({ value, onChange }: Props) {
       DetailsContent,
       BoxBlock,
       BalloonBlock,
+      ColumnsBlock,
+      ColumnItem,
       RawHtmlBlock,
     ],
 
@@ -543,6 +565,15 @@ export default function RichTextEditor({ value, onChange }: Props) {
     }
   }, [editor]);
 
+  const insertColumns = useCallback((count: number) => {
+    if (!editor) return;
+    const columns = Array.from({ length: count }, () => ({
+      type: "column",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "ここに入力" }] }],
+    }));
+    editor.chain().focus().insertContent({ type: "columnsBlock", content: columns }).run();
+  }, [editor]);
+
   const insertBalloon = useCallback(() => {
     const direction = prompt("吹き出しの向き（left / right）", "left") || "left";
     const name = prompt("名前（空欄でなし）", "") || "";
@@ -690,6 +721,8 @@ export default function RichTextEditor({ value, onChange }: Props) {
         </select>
 
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertBalloon} className="px-2 py-1 text-xs rounded bg-sky-500 text-white font-bold hover:bg-sky-600">💬 吹出</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertColumns(2)} className="px-2 py-1 text-xs rounded bg-teal-500 text-white font-bold hover:bg-teal-600">2カラム</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertColumns(3)} className="px-2 py-1 text-xs rounded bg-teal-500 text-white font-bold hover:bg-teal-600">3カラム</button>
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertDetails} className="px-2 py-1 text-xs rounded bg-amber-500 text-white font-bold hover:bg-amber-600">▼ 折畳</button>
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={removeDetails} className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 border border-amber-300 font-bold">▼ 解除</button>
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={openCtaModal} className="px-2 py-1 text-xs rounded bg-red-600 text-white font-bold hover:bg-red-700">🔥 CTA</button>
