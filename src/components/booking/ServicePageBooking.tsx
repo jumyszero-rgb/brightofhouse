@@ -82,7 +82,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [inquiryOnly, setInquiryOnly] = useState(false);
   // 日程が未定の場合（お問い合わせのみではない・カレンダーは非表示にし選択不要にする）
   const [dateUndecided, setDateUndecided] = useState(false);
-  // 見積を希望するか（駐車場確認の前に置くチェックボックス）
+  // 見積を希望するか（カレンダーの前に置き、チェック時は日程選択を隠す）
   const [wantEstimate, setWantEstimate] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -947,25 +947,36 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </div>
         </section>
         )}
-        {/* 見積希望（カレンダーの前） */}
+        {/* 日程に関する選択（カレンダーの前） */}
         {!inquiryOnly && (
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={wantEstimate}
-                onChange={() => setWantEstimate(!wantEstimate)}
+                onChange={() => { setWantEstimate(!wantEstimate); if (!wantEstimate) setSelectedDate(null); }}
                 className="w-4 h-4 accent-amber-600"
               />
               <span className="text-sm font-bold text-amber-700">見積を希望する</span>
             </label>
-            <p className="text-xs text-amber-700 mt-1.5">※見積をご希望の方は日程の選択はご不要です。</p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dateUndecided}
+                onChange={() => { setDateUndecided(!dateUndecided); if (!dateUndecided) setSelectedDate(null); }}
+                className="w-4 h-4 accent-purple-600"
+              />
+              <span className="text-sm font-bold text-purple-700">日程未定（相談したい）</span>
+            </label>
+            <p className="text-xs text-amber-700">※見積希望・日程未定の場合は、日程の選択はご不要です。</p>
           </div>
         )}
 
         {/* 2. カレンダー選択 */}
         {!inquiryOnly && (
         <section>
+          {!dateUndecided && !wantEstimate && (
+          <>
           <div className="flex flex-wrap justify-between items-end mb-4 gap-4">
             <h4 className="flex items-center gap-2 font-bold text-lg text-slate-800">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
@@ -977,22 +988,6 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <button type="button" onClick={nextWeek} className="px-3 py-1 bg-slate-200 rounded-lg text-sm font-bold hover:bg-slate-300">翌週 →</button>
             </div>
           </div>
-
-          <label className="flex items-center gap-2 cursor-pointer mb-3">
-            <input
-              type="checkbox"
-              checked={dateUndecided}
-              onChange={() => {
-                setDateUndecided(!dateUndecided);
-                if (!dateUndecided) setSelectedDate(null);
-              }}
-              className="w-4 h-4 accent-purple-600"
-            />
-            <span className="text-sm font-bold text-purple-700">日程未定（相談したい・カレンダー選択は不要）</span>
-          </label>
-
-          {!dateUndecided && (
-          <>
           <div ref={calendarRef} className="overflow-x-auto overflow-y-auto max-h-[480px] -mx-4 md:mx-0 scroll-smooth">
             <table className="w-full border-collapse min-w-[600px]">
               <thead>

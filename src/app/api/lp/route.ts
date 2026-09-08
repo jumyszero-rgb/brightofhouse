@@ -291,6 +291,29 @@ export async function PUT(request: NextRequest) {
   } catch (error) { return NextResponse.json({ error: "Update failed" }, { status: 500 }); }
 }
 
+// ブロックエディタ専用: blocks / templateStyle / status のみを更新する（他フィールドは変更しない）
+export async function PATCH(request: NextRequest) {
+  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const body = await request.json();
+    const { id, blocks, templateStyle, status } = body || {};
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+    const data: any = {};
+    if (blocks !== undefined) data.blocks = blocks;
+    if (templateStyle !== undefined) data.templateStyle = templateStyle;
+    if (status !== undefined) data.status = status;
+
+    const updated = await prisma.landingPage.update({ where: { id }, data });
+    if (updated.status === "PUBLISHED") {
+      await notifyIndexNow([`/${updated.category === "AREA" ? "area" : "lp"}/${updated.slug}`]);
+    }
+    return NextResponse.json(updated);
+  } catch (error) {
+    return NextResponse.json({ error: "Patch failed" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {

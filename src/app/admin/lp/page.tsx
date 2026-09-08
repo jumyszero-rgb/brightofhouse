@@ -87,6 +87,7 @@ export default function AdminLPList() {
           <div className="flex gap-4">
             <Link href="/admin" className="text-sm bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">メニューへ戻る</Link>
             <Link href="/admin/lp/edit" className="text-sm bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">＋ 新規LP作成</Link>
+            <Link href="/admin/lp/blocks" className="text-sm bg-fuchsia-600 text-white px-4 py-2 rounded font-bold hover:bg-fuchsia-700">＋ ブロックLP作成</Link>
           </div>
         </div>
 
@@ -118,6 +119,7 @@ export default function AdminLPList() {
                   <td className="p-4 text-right space-x-2 whitespace-nowrap">
                     <a href={`/lp/${lp.slug}?preview=true`} target="_blank" className="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold hover:bg-amber-200">プレビュー</a>
                     <Link href={`/admin/lp/edit?id=${lp.id}`} className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200">編集</Link>
+                    <Link href={`/admin/lp/blocks?id=${lp.id}`} className="bg-fuchsia-100 text-fuchsia-700 px-3 py-1 rounded text-xs font-bold hover:bg-fuchsia-200">ブロック編集</Link>
                     <button onClick={() => handleDuplicate(lp)} disabled={duplicating === lp.id} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-xs font-bold hover:bg-emerald-200 disabled:opacity-50">{duplicating === lp.id ? "複製中..." : "複製"}</button>
                     <button onClick={() => handleDelete(lp.id)} className="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">削除</button>
                   </td>
