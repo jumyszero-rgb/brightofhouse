@@ -8,12 +8,15 @@ interface BeforeAfterSliderProps {
   beforeSrc: string;
   afterSrc: string;
   alt: string;
+  /** 先頭など「最初に見える1枚」だけ true にする。他は遅延読み込みされ、一覧の初期表示が軽くなる */
+  priority?: boolean;
 }
 
 export default function BeforeAfterSlider({
   beforeSrc,
   afterSrc,
   alt,
+  priority = false,
 }: BeforeAfterSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
@@ -61,8 +64,9 @@ export default function BeforeAfterSlider({
         src={afterSrc}
         alt={`After: ${alt}`}
         fill
+        sizes="(max-width: 1024px) 100vw, 600px"
         className="object-cover"
-        priority
+        priority={priority}
       />
       
       {/* ラベル: After */}
@@ -79,8 +83,9 @@ export default function BeforeAfterSlider({
           src={beforeSrc}
           alt={`Before: ${alt}`}
           fill
+          sizes="(max-width: 1024px) 100vw, 600px"
           className="object-cover"
-          priority
+          priority={priority}
         />
         {/* ラベル: Before */}
         <div className="absolute top-4 left-4 bg-black/50 text-white text-xs px-2 py-1 rounded-md z-10">

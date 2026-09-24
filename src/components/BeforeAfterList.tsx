@@ -74,7 +74,7 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
       {/* リスト表示 (グリッドレイアウトでサイズ調整) */}
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-12">
-          {filteredItems.map((item) => (
+          {filteredItems.map((item, index) => (
             <section key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-slate-800 border-l-4 border-blue-500 pl-3">
@@ -91,6 +91,7 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
                   beforeSrc={item.beforeUrl}
                   afterSrc={item.afterUrl}
                   alt={item.title}
+                  priority={index === 0}
                 />
               </div>
               
