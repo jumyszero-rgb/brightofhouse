@@ -87,6 +87,11 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">R2への画像アップロード（自動WebP変換）と、アップ済み画像の一覧・URLコピー・削除を行います。</p>
           </Link>
 
+          <Link href="/admin/shortcodes" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-fuchsia-500">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">ショートコード管理</h2>
+            <p className="text-gray-600 text-sm">よく使うHTML（バナー等）を登録し、ブログ・LP本文に [[キー]] で貼れるようにします。</p>
+          </Link>
+
           <Link href="/admin/areas" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-teal-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">対応エリア管理</h2>
             <p className="text-gray-600 text-sm">地域カテゴリごとの対応エリアを編集します。</p>

@@ -9,6 +9,7 @@ import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
 import LpBlocksRenderer from "@/components/lp/LpBlocksRenderer";
+import { getShortcodeMap, applyShortcodes } from "@/lib/shortcodes";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -126,6 +127,17 @@ export default async function LPPage({ params, searchParams }: Props) {
     for (const cat of formCats) {
       bookingForms[cat.id] = bookingSelectionToBookingData([cat as any], []);
     }
+    // 本文中の [[key]] ショートコードを展開（richText本文 / blocknote HTML）
+    const scMap = await getShortcodeMap();
+    const renderBlocks = rawBlocks.map((b: any) => {
+      if (b?.type === "richText" && b?.data?.body) {
+        return { ...b, data: { ...b.data, body: applyShortcodes(b.data.body, scMap) } };
+      }
+      if (b?.type === "blocknote" && b?.data?.html) {
+        return { ...b, data: { ...b.data, html: applyShortcodes(b.data.html, scMap) } };
+      }
+      return b;
+    });
     return (
       <>
         {isPreview && (
@@ -133,7 +145,7 @@ export default async function LPPage({ params, searchParams }: Props) {
             ⚠ プレビュー表示中（このページは公開されていません）
           </div>
         )}
-        <LpBlocksRenderer blocks={rawBlocks} resolved={resolved} bookingForms={bookingForms} lpTitle={lp.title} slug={lp.slug} />
+        <LpBlocksRenderer blocks={renderBlocks} resolved={resolved} bookingForms={bookingForms} lpTitle={lp.title} slug={lp.slug} />
       </>
     );
   }

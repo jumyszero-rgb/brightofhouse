@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { expandShortcodes } from "@/lib/shortcodes";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,6 +44,9 @@ export default async function BlogPostPage({ params }: Props) {
   });
 
   if (!post) notFound();
+
+  // 本文中の [[key]] ショートコードを展開
+  const contentHtml = await expandShortcodes(post.content);
 
   // 関連記事：同カテゴリの記事を最大6件取得（自分自身を除く）
   let relatedPosts: any[] = [];
@@ -134,7 +138,7 @@ export default async function BlogPostPage({ params }: Props) {
       <article className="max-w-3xl mx-auto px-4 py-12">
         <div
           className="ql-content prose prose-slate prose-base md:prose-lg max-w-none text-slate-700 leading-loose"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
 
 
