@@ -35,12 +35,14 @@ export default function BlogBlockNote({ value, onChange }: Props) {
   });
   const loaded = useRef(false);
 
-  // 初回のみ、既存HTMLをBlockNoteのブロックに変換して読み込む
+  // 既存HTMLをBlockNoteのブロックに変換して読み込む。
+  // 記事データはマウント後に非同期で入るため、value が「空→中身あり」に
+  // 変わった最初のタイミングで一度だけ取り込む（以降のonChange反映では再取り込みしない）。
   useEffect(() => {
     if (loaded.current) return;
-    loaded.current = true;
     const html = (value || "").trim();
-    if (!html) return;
+    if (!html) return; // データ到着まで待つ
+    loaded.current = true;
     (async () => {
       try {
         const blocks = await editor.tryParseHTMLToBlocks(html);
@@ -52,7 +54,7 @@ export default function BlogBlockNote({ value, onChange }: Props) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
+  }, [value, editor]);
 
   const handleChange = async () => {
     let html = "";
