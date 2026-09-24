@@ -137,7 +137,7 @@ export default async function BlogPostPage({ params }: Props) {
       {/* 記事本文 */}
       <article className="max-w-3xl mx-auto px-4 py-12">
         <div
-          className="ql-content prose prose-slate prose-base md:prose-lg max-w-none text-slate-700 leading-loose"
+          className="bn-content ql-content prose prose-slate prose-base md:prose-lg max-w-none text-slate-700 leading-loose"
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
 

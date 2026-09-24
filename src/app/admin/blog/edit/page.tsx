@@ -3,8 +3,14 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import RichTextEditor from "@/components/RichTextEditor";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+// BlockNote（Notion風エディタ）はクライアント専用。SSRを無効にして読み込む。
+const BlogBlockNote = dynamic(() => import("@/components/BlogBlockNote"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-sm text-gray-400 border rounded-lg">エディタ読み込み中...</div>,
+});
 
 type BlogCategory = { id: string; name: string; slug: string; order: number; _count?: { posts: number } };
 
@@ -220,7 +226,7 @@ function BlogEditForm() {
               </button>
             </div>
 
-            <RichTextEditor key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+            <BlogBlockNote key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
           </div>
 
           {/* SEO設定エリア */}
