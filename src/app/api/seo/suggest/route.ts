@@ -37,21 +37,7 @@ JSON形式で出力してください:
 }
 `;
 
-    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
-    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
-    const geminiUrl = `${process.env.GEMINI_PROXY_URL}/${geminiApiVersion}/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: "application/json" }
-      })
-    });
-
-    const result = await response.json();
-    let aiText = result.candidates[0].content.parts[0].text;
+    let aiText = await generateText(prompt, { maxTokens: 2048, json: true });
     aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     return NextResponse.json(JSON.parse(aiText));

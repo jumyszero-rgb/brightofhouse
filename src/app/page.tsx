@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import AfterImageMarquee from "@/components/AfterImageMarquee";
 import PromotionVideoGallery from "@/components/PromotionVideoGallery";
 import TopPriceSection from "@/components/TopPriceSection";
+import PopularPlans from "@/components/top/PopularPlans";
 import ServiceArea from "@/components/ServiceArea";
 import Link from "next/link";
 
@@ -161,6 +162,20 @@ export default async function Home() {
     orderBy: { createdAt: "desc" },
     take: 3,
   });
+
+  // 6分野カードのリンク先：サービス一覧の該当カテゴリへ（タイトル一致でアンカー、無ければ /service）
+  const serviceCategories = await prisma.serviceCategory.findMany({
+    select: { id: true, title: true },
+  });
+  const norm = (s: string) => s.replace(/[\s　・＆&]/g, "");
+  const catHref = (title: string) => {
+    const t = norm(title);
+    const hit = serviceCategories.find((c) => {
+      const ct = norm(c.title);
+      return ct === t || ct.includes(t) || t.includes(ct);
+    });
+    return hit ? `/service#cat-${hit.id}` : "/service";
+  };
 
   // --- 構造化データ ---
   const localBusinessJsonLd = {
@@ -328,7 +343,7 @@ export default async function Home() {
               {SERVICE_CATS.map((c) => (
                 <Link
                   key={c.title}
-                  href="/service"
+                  href={catHref(c.title)}
                   className="group relative rounded-2xl overflow-hidden min-h-[190px] flex items-end text-white shadow-[0_10px_24px_rgba(15,30,46,.12)]"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center text-5xl" aria-hidden>
@@ -358,7 +373,9 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* ===== 人気の作業・おすすめプラン（第1弾は既存の料金セクション） ===== */}
+        {/* ===== 人気の作業・おすすめプラン（予約マスター連動・画像付き） ===== */}
+        <PopularPlans />
+        {/* 従来の単品価格アピール */}
         <TopPriceSection />
 
         {/* ===== ビフォーアフター ===== */}

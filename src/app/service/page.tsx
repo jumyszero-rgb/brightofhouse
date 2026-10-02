@@ -83,6 +83,10 @@ export default async function ServicePage() {
     select: { slug: true, linkTitle: true, title: true },
   });
 
+  // ヒーロー背景画像（admin設定・未設定ならグラデーション）
+  const heroRow = await prisma.pageHero.findUnique({ where: { key: "service" } }).catch(() => null);
+  const heroImage = heroRow?.imageUrl || null;
+
   // ★ 構造化データ: Service
   const serviceJsonLd = {
     "@context": "https://schema.org",
@@ -124,6 +128,13 @@ export default async function ServicePage() {
       <main className="min-h-screen bg-white text-[#0f1e2e]">
         {/* ===== ヒーロー ===== */}
         <header className="relative overflow-hidden bg-gradient-to-br from-[#0a568f] via-[#0e7ad1] to-[#12b5a6] text-white">
+          {heroImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={heroImage} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#0a568f]/70 to-[#12b5a6]/50" aria-hidden />
+            </>
+          )}
           <div
             className="absolute inset-0 opacity-20"
             style={{

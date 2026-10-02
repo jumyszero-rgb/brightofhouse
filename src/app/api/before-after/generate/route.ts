@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+import { generateText } from "@/lib/ai";
 
 async function checkAuth() {
   const cookieStore = await cookies();
@@ -45,25 +46,7 @@ ${afterText}
 }
 `;
 
-    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
-    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
-    const geminiUrl = `${process.env.GEMINI_PROXY_URL}/${geminiApiVersion}/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: "application/json" }
-      })
-    });
-
-    const result = await response.json();
-    if (!result.candidates || !result.candidates[0]) {
-      throw new Error("AIからの応答が不正です");
-    }
-
-    let aiText = result.candidates[0].content.parts[0].text;
+    let aiText = await generateText(prompt, { maxTokens: 2048, json: true });
     aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     const data = JSON.parse(aiText);

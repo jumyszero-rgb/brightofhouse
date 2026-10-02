@@ -76,7 +76,7 @@ function QtyDiscountEditor({ value, onChange }: { value: QtyDiscountRules; onCha
 
 type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; subMenuId: string | null; menuId: string | null };
 type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; menuId: string; options: BookingOption[] };
-type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
+type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; imageUrl: string | null; topFeaturedOrder: number | null; order: number; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
 type BookingCategory = { id: string; title: string; order: number; setDiscountRules: SetDiscountRules; menus: BookingMenu[] };
 
 function newSetDiscountRules(): NonNullable<SetDiscountRules> {
@@ -474,6 +474,52 @@ export default function AdminBookingMasterPage() {
                             <input type="number" min={0} className="w-32 p-1 border rounded text-black text-sm" value={editData.webSpecialPrice ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, webSpecialPrice: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
                           </div>
                           <SetDiscountEditor value={editData.setDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, setDiscountRules: v }))} />
+
+                          {/* トップ「人気の作業」掲載（画像＋掲載順） */}
+                          <div className="bg-amber-50 border border-amber-200 rounded p-2 flex flex-col gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-amber-700">トップ「人気の作業」に掲載</span>
+                              <span className="text-xs text-gray-600">掲載順（小さいほど上・最小が人気No.1／空欄で非掲載）:</span>
+                              <input
+                                type="number"
+                                min={1}
+                                className="w-20 p-1 border rounded text-black text-sm"
+                                value={editData.topFeaturedOrder ?? ""}
+                                onChange={(e) => setEditData((prev: any) => ({ ...prev, topFeaturedOrder: e.target.value === "" ? null : parseInt(e.target.value) || null }))}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-gray-600">カード画像:</span>
+                              {editData.imageUrl && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={editData.imageUrl} alt="" className="h-12 rounded border" />
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="text-xs"
+                                onChange={async (e) => {
+                                  const f = e.target.files?.[0];
+                                  if (!f) return;
+                                  const fd = new FormData();
+                                  fd.append("file", f);
+                                  try {
+                                    const res = await fetch("/api/media", { method: "POST", body: fd });
+                                    const d = await res.json();
+                                    if (d.url) setEditData((prev: any) => ({ ...prev, imageUrl: d.url }));
+                                    else alert("アップロードに失敗しました");
+                                  } catch {
+                                    alert("アップロードに失敗しました");
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                              {editData.imageUrl && (
+                                <button type="button" onClick={() => setEditData((prev: any) => ({ ...prev, imageUrl: null }))} className="text-xs text-red-600 font-bold">画像削除</button>
+                              )}
+                            </div>
+                          </div>
+
                           <div className="ml-auto flex gap-2 mt-2">
                             <button onClick={saveEdit} className="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold">保存</button>
                             <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-3 py-1 rounded text-xs font-bold">中止</button>

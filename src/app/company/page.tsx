@@ -31,6 +31,10 @@ export default async function CompanyPage() {
     mapCode: null,
   };
 
+  // ヒーロー背景画像（admin設定・未設定なら通常ヘッダー）
+  const heroRow = await prisma.pageHero.findUnique({ where: { key: "company" } }).catch(() => null);
+  const heroImage = heroRow?.imageUrl || null;
+
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -45,13 +49,26 @@ export default async function CompanyPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 py-20 px-4 sm:px-8">
+    <main className="min-h-screen bg-slate-50">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-16">
+
+      {heroImage ? (
+        <section className="relative overflow-hidden text-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroImage} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#0a568f]/65 to-[#12b5a6]/45" aria-hidden />
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-8 py-20 text-center">
+            <h1 className="text-3xl sm:text-5xl font-black drop-shadow-sm">
+              会社概要
+              <span className="block text-base font-medium text-white/85 mt-2 tracking-widest">Company Profile</span>
+            </h1>
+          </div>
+        </section>
+      ) : (
+        <div className="text-center pt-20 pb-0 px-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-4">
             会社概要
             <span className="block text-lg font-normal text-slate-500 mt-2">
@@ -59,6 +76,9 @@ export default async function CompanyPage() {
             </span>
           </h1>
         </div>
+      )}
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-16">
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-12">
           <dl className="divide-y divide-slate-100">

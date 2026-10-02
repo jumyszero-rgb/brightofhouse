@@ -7,6 +7,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
+import { generateText } from "@/lib/ai";
 
 async function checkAuth() {
   const cookieStore = await cookies();
@@ -127,41 +128,8 @@ ${existingTitles ? existingTitles : "過去記事はありません。自由に�
 }
 `;
 
-    const geminiModel = process.env.GEMINI_MODEL_NAME || "gemini-pro";
-    const geminiApiVersion = process.env.GEMINI_API_VERSION || "v1";
-
-    const geminiUrl = `${process.env.GEMINI_PROXY_URL}/${geminiApiVersion}/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          response_mime_type: "application/json",
-          response_schema: {
-            type: "OBJECT",
-            properties: {
-              title: { type: "STRING" },
-              slug: { type: "STRING" },
-              blog: { type: "STRING" },
-              insta: { type: "STRING" },
-              x: { type: "STRING" },
-              google: { type: "STRING" }
-            },
-            required: ["title", "slug", "blog", "insta", "x", "google"]
-          }
-        }
-      })
-    });
-
-    const result = await response.json();
-
-    if (!result.candidates || !result.candidates[0]) {
-      throw new Error("AIからの応答が不正です: " + JSON.stringify(result).substring(0, 500));
-    }
-
-    let aiText = result.candidates[0].content.parts[0].text;
+    // Claude(Anthropic) で生成。JSONのみを返すよう指示（title/slug/blog/insta/x/google）。
+    let aiText = await generateText(prompt, { maxTokens: 8192, json: true });
     console.log("AI raw response length:", aiText.length);
 
     const data = robustJsonParse(aiText);

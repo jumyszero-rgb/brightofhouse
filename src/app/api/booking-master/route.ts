@@ -79,6 +79,8 @@ export async function POST(request: NextRequest) {
           discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
           discountRounding: body.discountRounding || "NONE",
           webSpecialPrice: body.webSpecialPrice != null && body.webSpecialPrice !== "" ? Number(body.webSpecialPrice) : null,
+          imageUrl: body.imageUrl || null,
+          topFeaturedOrder: body.topFeaturedOrder != null && body.topFeaturedOrder !== "" ? Number(body.topFeaturedOrder) : null,
           order: body.order,
           categoryId: body.categoryId,
         },
@@ -169,6 +171,8 @@ export async function PUT(request: NextRequest) {
           discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
           discountRounding: data.discountRounding || "NONE",
           webSpecialPrice: data.webSpecialPrice != null && data.webSpecialPrice !== "" ? Number(data.webSpecialPrice) : null,
+          imageUrl: data.imageUrl ?? undefined,
+          topFeaturedOrder: data.topFeaturedOrder === "" ? null : (data.topFeaturedOrder != null ? Number(data.topFeaturedOrder) : undefined),
           order: data.order,
         },
       }));

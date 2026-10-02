@@ -21,6 +21,11 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">AIブログ生成などで使うAI（Claude/OpenAI/Gemini）の選択とAPIキーを設定します。</p>
           </Link>
 
+          <Link href="/admin/page-heroes" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-pink-500">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">ページ別ヒーロー画像</h2>
+            <p className="text-gray-600 text-sm">サービス一覧・会社概要など各ページ上部の背景画像を設定します。</p>
+          </Link>
+
           <Link href="/admin/top-menu" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-yellow-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">トップ人気メニュー</h2>
             <p className="text-gray-600 text-sm">トップページの人気メニューカードを編集します。</p>
