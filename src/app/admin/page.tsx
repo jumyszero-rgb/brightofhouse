@@ -1,13 +1,17 @@
 // @/src/app/admin/page.tsx
 import Link from "next/link";
+import AiSetupGuide from "@/components/admin/AiSetupGuide";
 
 export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100 p-8 text-black">
       <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 gap-3 flex-wrap">
           <h1 className="text-3xl font-bold text-gray-800">管理画面ダッシュボード</h1>
-          <Link href="/" className="text-sm text-blue-600 hover:underline">サイトを確認する ➝</Link>
+          <div className="flex items-center gap-3">
+            <AiSetupGuide />
+            <Link href="/" className="text-sm text-blue-600 hover:underline">サイトを確認する ➝</Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
