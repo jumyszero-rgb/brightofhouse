@@ -207,7 +207,6 @@ export default async function ServicePage() {
                   title={category.title}
                   accent={accent}
                   count={category.items.length}
-                  defaultOpen={i === 0}
                 >
                   <div className="space-y-6">
                     {category.items.map((item) => (

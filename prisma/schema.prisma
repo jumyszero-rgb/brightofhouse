@@ -62,13 +62,6 @@ model PromotionVideo {
   createdAt  DateTime @default(now())
 }
 
-model GalleryImage {
-  id        String   @id @default(uuid())
-  imageUrl  String
-  title     String?
-  createdAt DateTime @default(now())
-}
-
 model ServiceMenu {
   id          String   @id @default(uuid())
   title       String
