@@ -39,8 +39,33 @@ export default function ContactPage() {
 
 
 
+        {/* 営業・勧誘目的のお問い合わせお断り */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 mb-8">
+          <p className="text-sm font-bold text-slate-700 mb-3">
+            営業・ご提案目的のお問い合わせについて
+          </p>
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed mb-3">
+            平素より格別のご高配を賜り、誠にありがとうございます。
+            大変恐れ入りますが、当社では現在、下記に関する営業・ご提案・勧誘を目的としたご連絡はお受けしておりません。
+            あらかじめご了承くださいますようお願い申し上げます。
+          </p>
+          <ul className="text-xs sm:text-sm text-slate-500 leading-relaxed space-y-1.5 pl-4 list-disc marker:text-slate-300">
+            <li>
+              SEO・MEO・AIO対策、Web集客・広告運用（AIを活用した広告、SNS広告などを含む）に関するご提案
+            </li>
+            <li>ホームページ制作、Webアプリ・システム開発に関するご提案</li>
+            <li>
+              マッチングサイト・ビジネスマッチング・各種プラットフォームサービスへのご登録・ご参加のお誘い
+            </li>
+          </ul>
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed mt-3">
+            上記に該当するご連絡につきましては、恐縮ながら返信を控えさせていただく場合がございます。
+            何卒ご理解を賜りますようお願い申し上げます。
+          </p>
+        </div>
+
         <ContactForm />
-        
+
       </div>
     </main>
   );

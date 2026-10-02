@@ -47,7 +47,16 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               北海道ブライトオブハウス
             </h3>
             <p className="text-sm leading-relaxed mb-4">
-              運営：合同会社むすびえむ
+              運営：合同会社むすびえむ（
+              <a
+                href="https://musubiemu.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white underline underline-offset-2"
+              >
+                musubiemu.com
+              </a>
+              ）
               <br />
               所在地：〒003-0005 北海道札幌市白石区東札幌五条二丁目6番10
               <br />

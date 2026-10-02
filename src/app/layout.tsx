@@ -1,13 +1,13 @@
 // @/src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { M_PLUS_Rounded_1c } from "next/font/google";
+import { Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
-const mPlusRounded = M_PLUS_Rounded_1c({
+const zenMaru = Zen_Maru_Gothic({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "800", "900"],
+  weight: ["400", "500", "700", "900"],
   display: "swap",
 });
 
@@ -61,7 +61,7 @@ export default function RootLayout({
           href="/rss.xml"
         />
       </head>
-      <body className={`${mPlusRounded.className} text-slate-800 pb-16 md:pb-0`}>
+      <body className={`${zenMaru.className} text-slate-800 pb-16 md:pb-0`}>
         {/* chrome（Header/footer等）は SiteShell が pathname で出し分ける */}
         <SiteShell>{children}</SiteShell>
 

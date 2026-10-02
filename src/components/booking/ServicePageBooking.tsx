@@ -1071,6 +1071,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </table>
           </div>
 
+          {/* 記号の凡例＋満枠時の相談導線 */}
+          <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-600 text-center">
+              <span className="font-bold text-emerald-500">○</span> 空きあり
+              <span className="font-bold text-amber-500">▲</span> 要相談
+              <span className="font-bold text-slate-400">×</span> 現在受付不可
+            </p>
+            <p className="text-xs text-slate-600 text-center mt-2 leading-relaxed">
+              ご希望の枠が <span className="font-bold text-slate-400">×</span> でも、状況により日程を調整できる場合がございます。
+              その際は下の<span className="font-bold text-purple-700">「日程未定（相談したい）」</span>にチェックのうえ、お問い合わせください。
+            </p>
+          </div>
+
           {selectedDate && (
             <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <p className="font-bold text-blue-700 text-center">

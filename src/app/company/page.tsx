@@ -76,7 +76,13 @@ export default async function CompanyPage() {
             </div>
             <div className="flex flex-col sm:flex-row p-6 hover:bg-slate-50 transition-colors">
               <dt className="sm:w-40 font-bold text-slate-700 mb-2 sm:mb-0 flex-shrink-0">電話番号</dt>
-              <dd className="text-slate-600">{data.tel}</dd>
+              <dd className="text-slate-600">
+                {data.tel}
+                <span className="block text-xs text-slate-400 mt-1.5 leading-relaxed">
+                  ※恐れ入りますが、営業・勧誘を目的としたお電話はご遠慮ください。
+                  サービスに関するご相談・お見積りのお客様専用のお電話となっております。
+                </span>
+              </dd>
             </div>
             <div className="flex flex-col sm:flex-row p-6 hover:bg-slate-50 transition-colors">
               <dt className="sm:w-40 font-bold text-slate-700 mb-2 sm:mb-0 flex-shrink-0">事業内容</dt>
@@ -85,6 +91,19 @@ export default async function CompanyPage() {
             <div className="flex flex-col sm:flex-row p-6 hover:bg-slate-50 transition-colors">
               <dt className="sm:w-40 font-bold text-slate-700 mb-2 sm:mb-0 flex-shrink-0">営業時間</dt>
               <dd className="text-slate-600">{data.businessHours}</dd>
+            </div>
+            <div className="flex flex-col sm:flex-row p-6 hover:bg-slate-50 transition-colors">
+              <dt className="sm:w-40 font-bold text-slate-700 mb-2 sm:mb-0 flex-shrink-0">運営会社サイト</dt>
+              <dd className="text-slate-600">
+                <a
+                  href="https://musubiemu.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0e7ad1] font-medium hover:underline break-all"
+                >
+                  musubiemu.com
+                </a>
+              </dd>
             </div>
           </dl>
         </div>

@@ -8,6 +8,9 @@ import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
 import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
 import { extractToc } from "@/lib/extractToc";
+import { splitArticle } from "@/lib/splitArticle";
+import ArticleSections from "@/components/ArticleSections";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -85,6 +88,8 @@ export default async function ServiceDetailPage({
 
   // 本文の見出し(H2/H3)から目次を生成し、各見出しにアンカー用のidを付与する
   const { html: contentHtml, toc } = extractToc(page.content || "");
+  // 本文をH3(無ければH2)ごとに分割（見出し常時表示＋本文2行→続きを読む）
+  const article = splitArticle(contentHtml);
 
   // 連動するServiceItemの価格・所要時間を常に自動反映（bookingDataの有無に関わらず表示）
   const linkedItem = page.serviceItem;
@@ -222,11 +227,11 @@ export default async function ServiceDetailPage({
           </div>
         )}
 
-        <nav className="bg-slate-50 border-b border-slate-200">
+        <nav className="bg-[#f4f8fb] border-b border-[#e7ecf1]">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center">
             <Link
               href="/service"
-              className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1"
+              className="text-sm font-bold text-[#0e7ad1] hover:underline flex items-center gap-1"
             >
               <span>←</span> サービス一覧に戻る
             </Link>
@@ -234,15 +239,19 @@ export default async function ServiceDetailPage({
         </nav>
 
         {/* ヒーロー */}
-        <div className="relative w-full py-16 md:py-24 bg-slate-900 text-white flex items-center justify-center overflow-hidden">
+        <div className="relative w-full py-16 md:py-24 text-white flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#0a568f] via-[#0e7ad1] to-[#12b5a6]">
           {page.heroImage && (
             <Image
               src={page.heroImage}
               alt={page.title}
               fill
-              className="object-cover opacity-40"
+              className="object-cover opacity-45"
               priority
             />
+          )}
+          {/* 画像がある場合の可読性確保オーバーレイ */}
+          {page.heroImage && (
+            <div className="absolute inset-0 bg-gradient-to-t from-[#08203280] to-[#08203233]" aria-hidden />
           )}
           <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
             <h1 className="text-3xl md:text-5xl font-black mb-4 drop-shadow-md">
@@ -256,7 +265,7 @@ export default async function ServiceDetailPage({
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="#booking"
-                className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-700 transition-all w-64"
+                className="bg-[#f5a524] text-[#3a2a02] font-black py-3 px-8 rounded-full shadow-lg hover:brightness-105 transition-all w-64"
               >
                 仮予約・お見積り
               </Link>
@@ -408,16 +417,23 @@ export default async function ServiceDetailPage({
           )}
 
           {page.content && (
-            <div
-              className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-20"
-              dangerouslySetInnerHTML={{ __html: contentHtml }}
-            />
+            article.sections.length > 0 ? (
+              <ArticleSections
+                preambleHtml={article.preambleHtml}
+                sections={article.sections}
+                className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose"
+              />
+            ) : (
+              <div
+                className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-16"
+                dangerouslySetInnerHTML={{ __html: contentHtml }}
+              />
+            )
           )}
 
           {/* ビフォーアフター（このページに紐づく施工事例） */}
           {page.beforeAfters.length > 0 && (
-            <section className="mb-16">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">施工事例（ビフォーアフター）</h2>
+            <CollapsibleSection title="施工事例（ビフォーアフター）" accent="#12b5a6" count={page.beforeAfters.length}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {page.beforeAfters.map((ba) => (
                   <div key={ba.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
@@ -444,13 +460,12 @@ export default async function ServiceDetailPage({
                   他の施工事例もっと見る →
                 </Link>
               </div>
-            </section>
+            </CollapsibleSection>
           )}
 
           {/* お客様の声 */}
           {page.testimonials.length > 0 && (
-            <section className="mb-16">
-              <h2 className="text-xl font-black text-slate-800 mb-6">お客様の声</h2>
+            <CollapsibleSection title="お客様の声" accent="#f5a524" count={page.testimonials.length}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {page.testimonials.map((t) => (
                   <div key={t.id} className="bg-amber-50 border border-amber-100 rounded-xl p-5">
@@ -465,13 +480,12 @@ export default async function ServiceDetailPage({
                   </div>
                 ))}
               </div>
-            </section>
+            </CollapsibleSection>
           )}
 
           {/* FAQ */}
           {page.faqs.length > 0 && (
-            <section className="mb-16">
-              <h2 className="text-xl font-black text-slate-800 mb-6">よくあるご質問</h2>
+            <CollapsibleSection title="よくあるご質問" accent="#7c5cff" count={page.faqs.length}>
               <div className="space-y-3">
                 {page.faqs.map((faq) => (
                   <div key={faq.id} className="bg-slate-50 rounded-xl p-5 border border-slate-200">
@@ -483,7 +497,7 @@ export default async function ServiceDetailPage({
                   </div>
                 ))}
               </div>
-            </section>
+            </CollapsibleSection>
           )}
 
           {/* 予約・問い合わせ */}
@@ -494,14 +508,14 @@ export default async function ServiceDetailPage({
                 bookingData={effectiveBookingData}
               />
             ) : (
-              <div className="bg-blue-50 rounded-3xl p-8 md:p-16 text-center border-2 border-blue-100 shadow-xl relative overflow-hidden">
-                <div className="absolute -top-10 -right-10 text-blue-100 text-9xl font-black opacity-50">
+              <div className="relative overflow-hidden rounded-3xl p-8 md:p-16 text-center text-white shadow-xl bg-gradient-to-r from-[#0a568f] to-[#12b5a6]">
+                <div className="absolute -top-10 -right-10 text-white/10 text-9xl font-black">
                   CONTACT
                 </div>
-                <h3 className="relative z-10 text-2xl md:text-4xl font-black text-slate-800 mb-6">
+                <h3 className="relative z-10 text-2xl md:text-4xl font-black mb-6">
                   お見積り・ご相談
                 </h3>
-                <p className="relative z-10 text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+                <p className="relative z-10 text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
                   お客様のご要望に合わせて柔軟に対応いたします。
                   <br />
                   まずはお気軽にお問い合わせください。
@@ -509,17 +523,17 @@ export default async function ServiceDetailPage({
                 <div className="relative z-10 flex flex-col items-center gap-6">
                   <Link
                     href="/contact"
-                    className="inline-block bg-blue-600 text-white text-xl font-bold py-5 px-12 rounded-full shadow-lg hover:bg-blue-700 transition-all w-full md:w-auto"
+                    className="inline-block bg-[#f5a524] text-[#3a2a02] text-xl font-black py-5 px-12 rounded-full shadow-lg hover:brightness-105 transition-all w-full md:w-auto"
                   >
                     お問い合わせはこちら ➝
                   </Link>
-                  <div className="pt-6 border-t border-blue-200 w-full max-w-md">
-                    <p className="text-xs text-slate-400 mb-1">
+                  <div className="pt-6 border-t border-white/30 w-full max-w-md">
+                    <p className="text-xs text-white/80 mb-1">
                       お電話でのご相談はこちら
                     </p>
                     <a
                       href={`tel:${phoneNumber.replace(/-/g, "")}`}
-                      className="text-2xl font-black text-slate-700 hover:text-blue-600 transition-colors tracking-widest font-mono"
+                      className="text-2xl font-black text-white hover:text-white/90 transition-colors tracking-widest font-mono"
                     >
                       {phoneNumber}
                     </a>
