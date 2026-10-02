@@ -16,12 +16,13 @@ export default function AdminHeroPage() {
     btn1Link: "",
     btn2Text: "",
     btn2Link: "",
+    heroImage: "",
   });
 
   useEffect(() => {
     fetch("/api/hero")
       .then((res) => res.json())
-      .then((data) => setFormData(data));
+      .then((data) => setFormData({ ...data, heroImage: data.heroImage || "" }));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,6 +89,47 @@ export default function AdminHeroPage() {
                 <option value="md:h-screen">全画面 (100%)</option>
               </select>
             </div>
+          </div>
+
+          {/* ヒーロー背景画像 */}
+          <div className="border rounded-lg p-4 bg-slate-50">
+            <label className="block text-sm font-bold text-gray-700 mb-2">ヒーロー背景画像（任意）</label>
+            {formData.heroImage && (
+              <div className="relative mb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={formData.heroImage} alt="" className="w-full h-40 object-cover rounded" />
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, heroImage: "" }))}
+                  className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded"
+                >
+                  削除
+                </button>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const fd = new FormData();
+                fd.append("file", f);
+                try {
+                  const res = await fetch("/api/media", { method: "POST", body: fd });
+                  const data = await res.json();
+                  if (data.url) setFormData((p) => ({ ...p, heroImage: data.url }));
+                  else alert("アップロードに失敗しました");
+                } catch {
+                  alert("アップロードに失敗しました");
+                }
+                e.target.value = "";
+              }}
+              className="text-xs"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              トップのヒーロー背景に表示されます（未設定ならグラデーション背景）。自動でWebP変換されます。
+            </p>
           </div>
 
           {/* テキスト設定 */}

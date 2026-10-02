@@ -42,9 +42,9 @@ export default function BottomNav() {
         LINE相談
       </a>
 
-      {/* 無料見積り */}
+      {/* 無料見積り（サービス全体ページへ） */}
       <Link
-        href="/contact"
+        href="/service"
         className="flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-black leading-tight text-[#3a2a02] bg-[#f5a524] hover:brightness-105"
       >
         <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

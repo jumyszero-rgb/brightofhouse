@@ -2,7 +2,6 @@
 import prisma from "@/lib/prisma";
 import { cheapestBookingMenu } from "@/lib/bookingMenuToBookingData";
 import type { Metadata } from "next";
-import HomeClient from "@/components/HomeClient";
 import AfterImageMarquee from "@/components/AfterImageMarquee";
 import PromotionVideoGallery from "@/components/PromotionVideoGallery";
 import TopPriceSection from "@/components/TopPriceSection";
@@ -12,7 +11,6 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// ★ 追加: トップページ専用のmetadata
 export const metadata: Metadata = {
   title:
     "札幌の水回りクリーニング・ハウスクリーニング｜北海道ブライトオブハウス",
@@ -23,7 +21,9 @@ export const metadata: Metadata = {
   },
 };
 
-// ★ 追加: FAQデータ（トップページ用）
+const PHONE = "0120-792-684";
+
+// FAQデータ（トップページ用）
 const topFaqs = [
   {
     question: "水回りクリーニングの作業時間はどのくらいですか？",
@@ -49,6 +49,88 @@ const topFaqs = [
     question: "急ぎの依頼にも対応できますか？",
     answer:
       "空き状況によりますが、できる限り柔軟に対応いたします。お急ぎの場合はまずお電話（0120-792-684）でご相談ください。",
+  },
+];
+
+// 6つの得意分野（固定のマーケティングカード。リンクはサービス一覧へ）
+const SERVICE_CATS = [
+  {
+    title: "ハウスクリーニング",
+    color: "#ffd34e",
+    emoji: "🏠",
+    desc: "空室、入退去時の清掃に格安で対応！お部屋まるごと、プロの技術でリセット！在居中のお部屋にも対応！",
+  },
+  {
+    title: "水回りクリーニング",
+    color: "#4fd6e6",
+    emoji: "💧",
+    desc: "浴室・キッチン・トイレ・洗面の水アカやカビを徹底洗浄。単品はもちろん、セットならまとめてお得に対応します！",
+  },
+  {
+    title: "床ワックス＆剥離",
+    color: "#ffab4d",
+    emoji: "✨",
+    desc: "古くくすんだ床のワックスを剥離して丁寧に塗り直し。見違えるツヤが復活し、汚れの付着も防ぎます！",
+  },
+  {
+    title: "壁の再生",
+    color: "#b79cff",
+    emoji: "🧱",
+    desc: "壁紙の黄ばみ・黒ずみ・タバコのヤニに。貼り替えずに再生できるからコストを大幅カット。まずはご相談を！",
+  },
+  {
+    title: "消臭・除菌",
+    color: "#69db7c",
+    emoji: "🌿",
+    desc: "ペット臭・タバコ・生活臭やゴミ屋敷後のニオイまで。専用の消臭・除菌でお部屋の空気そのものをリセット！",
+  },
+  {
+    title: "ゴミ屋敷片付け・遺品整理",
+    color: "#ff8f8f",
+    emoji: "🚚",
+    desc: "大量のお片付けから搬出・清掃までワンストップで対応。プライバシー厳守。※片付けは札幌市内限定です。",
+  },
+];
+
+// お悩み（誘導）
+const PAINS = [
+  { icon: "😓", text: "自分で掃除しても汚れが落ちない" },
+  { icon: "🕒", text: "忙しくて掃除の時間がとれない" },
+  { icon: "🏚️", text: "退去・空室で原状回復を急いでいる" },
+  { icon: "💸", text: "大手に頼むと高い…でも品質は落としたくない" },
+];
+
+// 選ばれる理由（6項目・インラインSVGアイコン）
+const REASONS: { title: string; desc: string; path: string }[] = [
+  {
+    title: "明朗会計・追加料金なし",
+    desc: "見積り無料。作業前に必ず金額を明示します。",
+    path: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z M7 7h.01",
+  },
+  {
+    title: "プロの技術と機材",
+    desc: "市販品では落ちない汚れも根本から除去します。",
+    path: "M14.7 6.3a4 4 0 0 0-5.66 5.66l-6.34 6.34a2 2 0 1 0 2.83 2.83l6.34-6.34a4 4 0 0 0 5.66-5.66l-3 3-2.83-2.83 3-3z",
+  },
+  {
+    title: "札幌最安水準の価格",
+    desc: "大手より圧倒的に安い価格設定。「安かろう悪かろう」ではありません。低価格でもプロの仕上がりをお約束します。",
+    path: "M23 18 13.5 8.5 8.5 13.5 1 6 M17 18h6v-6",
+  },
+  {
+    title: "損害賠償保険に加入",
+    desc: "万一の際も補償があるので安心してお任せいただけます。",
+    path: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2.5 2.5L16 9.5",
+  },
+  {
+    title: "スタッフの対応品質",
+    desc: "丁寧・誠実な接客とプライバシー厳守を徹底しています。",
+    path: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  },
+  {
+    title: "口コミ★4.9（200件超）",
+    desc: "大手口コミサイトで200件を超えるレビュー、総合評価★4.9。多くのお客様にご満足いただいている実績があります。",
+    path: "M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z",
   },
 ];
 
@@ -80,18 +162,6 @@ export default async function Home() {
     take: 3,
   });
 
-  // ★ 追加: サービスカテゴリを取得（サービスリンクセクション用）
-  const servicePages = await prisma.servicePage.findMany({
-    where: { status: "PUBLISHED", noIndex: false, showOnHome: true },
-    select: {
-      slug: true, title: true, catchphrase: true, cardIcon: true,
-      bookingMenus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } },
-      bookingCategories: { select: { menus: { select: { basePrice: true, priceNote: true, discountPercent: true, discountRounding: true, webSpecialPrice: true } } } },
-    },
-    orderBy: { createdAt: "asc" },
-    take: 12,
-  });
-
   // --- 構造化データ ---
   const localBusinessJsonLd = {
     "@context": "https://schema.org",
@@ -109,23 +179,11 @@ export default async function Home() {
       postalCode: "003-0005",
       addressCountry: "JP",
     },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: 43.061,
-      longitude: 141.385,
-    },
+    geo: { "@type": "GeoCoordinates", latitude: 43.061, longitude: 141.385 },
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",
-        dayOfWeek: [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ],
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
         opens: "09:00",
         closes: "18:00",
       },
@@ -138,209 +196,209 @@ export default async function Home() {
     },
   };
 
-  // ★ 追加: FAQ構造化データ
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: topFaqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: faq.answer,
-      },
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
     })),
   };
 
-  const defaultSettings = {
-    title: "北海道ブライトオブハウス",
-    subtitle: "水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃",
-    mobileHeight: "h-[50vh]",
-    pcHeight: "md:h-[65vh]",
-    btn1Text: "仮予約・お見積り・ご相談",
-    btn1Link: "/service",
-    btn2Text: "料金を見る",
-    btn2Link: "/service",
-  };
+  const heroTitle = settings?.title || "北海道ブライトオブハウス";
+  const heroSubtitle =
+    settings?.subtitle || "水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃";
+  const btn1Text = settings?.btn1Text || "無料で相談・見積り";
+  const btn1Link = settings?.btn1Link || "/service";
+  const heroImage = (settings as any)?.heroImage as string | undefined;
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(localBusinessJsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <HomeClient settings={settings || defaultSettings}>
-        {/* 2. 選ばれる3つの理由 */}
-        <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800">
-                北海道ブライトオブハウスが選ばれる理由
-              </h2>
-              <p className="text-sm text-slate-500 mt-2">
-                安さ・実績・品質で、札幌のお客様に選ばれ続けています
-              </p>
+      <main className="bg-white text-[#0f1e2e]">
+        {/* ===== ヒーロー ===== */}
+        <section className="relative overflow-hidden text-white">
+          {/* 背景：admin画像があれば使用、無ければグラデーション */}
+          {heroImage ? (
+            <>
+              <img
+                src={heroImage}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#081e32]/60 to-[#081e32]/30" aria-hidden />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0a568f] via-[#0e7ad1] to-[#12b5a6]" aria-hidden />
+          )}
+          <div className="relative max-w-5xl mx-auto px-5 py-16 md:py-24">
+            <p className="text-xs md:text-sm font-bold tracking-[.2em] text-white/85 mb-3">
+              札幌・近郊のハウスクリーニング
+            </p>
+            <h1 className="text-3xl md:text-5xl font-black leading-tight drop-shadow-sm">
+              {heroTitle}
+            </h1>
+            <p className="mt-4 text-sm md:text-lg text-white/90 font-medium max-w-2xl">
+              {heroSubtitle}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href={btn1Link}
+                className="bg-[#f5a524] text-[#3a2a02] font-black py-3.5 px-8 rounded-full shadow-lg hover:brightness-105 transition-all"
+              >
+                {btn1Text}
+              </Link>
+              <a
+                href={`tel:${PHONE.replace(/-/g, "")}`}
+                className="bg-white/15 backdrop-blur-sm border border-white/40 text-white font-bold py-3.5 px-8 rounded-full hover:bg-white/25 transition-all"
+              >
+                📞 {PHONE}
+              </a>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl border border-blue-100 text-center">
-                <div className="text-5xl mb-4">💰</div>
-                <h3 className="text-xl font-black text-blue-700 mb-3">
-                  札幌最安水準の価格
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  大手より圧倒的に安い価格設定。「安かろう悪かろう」ではありません。低価格でもプロの仕上がりをお約束します。
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-50 to-white p-8 rounded-2xl border border-amber-100 text-center">
-                <div className="text-5xl mb-4">⭐</div>
-                <h3 className="text-xl font-black text-amber-700 mb-3">
-                  口コミ★4.9（200件超）
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  大手口コミサイトで200件を超えるレビュー、総合評価★4.9。多くのお客様にご満足いただいている実績があります。
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-50 to-white p-8 rounded-2xl border border-emerald-100 text-center">
-                <div className="text-5xl mb-4">✨</div>
-                <h3 className="text-xl font-black text-emerald-700 mb-3">
-                  プロの技術で安心品質
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  専用機材とプロ用洗剤を使い、市販品では落ちない頑固な汚れも徹底除去。仕上がりに自信があります。
-                </p>
-              </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
+                見積り無料・追加料金なし
+              </span>
+              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
+                ⭐ 口コミ★4.9（200件超）
+              </span>
+              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
+                💰 札幌最安水準
+              </span>
             </div>
           </div>
         </section>
 
-        {/* 3. 人気メニュー・料金 */}
+        {/* ===== 実績バー ===== */}
+        <section className="bg-[#0a568f] text-white">
+          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/15">
+            {[
+              { b: "年間300件+", s: "施工実績" },
+              { b: "★4.9", s: "口コミ評価" },
+              { b: "最短即日", s: "スピード対応" },
+              { b: "年中無休", s: "受付対応" },
+            ].map((x, i) => (
+              <div key={i} className="text-center py-5 px-2">
+                <div className="text-xl md:text-2xl font-black">{x.b}</div>
+                <div className="text-[11px] md:text-xs text-white/80 mt-1">{x.s}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== お悩み → 誘導 ===== */}
+        <section className="py-14 md:py-16 px-4 bg-[#f4f8fb]">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-8">
+              <p className="text-xs font-bold tracking-[.15em] text-[#0e7ad1]">YOUR TROUBLES</p>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">こんなお悩みありませんか？</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {PAINS.map((p, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-[#e7ecf1] p-4 md:p-5 text-center shadow-[0_6px_16px_rgba(15,30,46,.05)]">
+                  <div className="text-3xl md:text-4xl mb-2">{p.icon}</div>
+                  <p className="text-xs md:text-sm font-bold text-slate-700 leading-snug">{p.text}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-center mt-7 text-lg md:text-xl font-black text-slate-800">
+              その悩み、<span className="text-[#0e7ad1]">これで解決します。</span>
+            </p>
+          </div>
+        </section>
+
+        {/* ===== 6つの得意分野 ===== */}
+        <section className="py-14 md:py-16 px-4 bg-white">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-9">
+              <p className="text-xs font-bold tracking-[.15em] text-[#0e7ad1]">SERVICE</p>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">6つの得意分野</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {SERVICE_CATS.map((c) => (
+                <Link
+                  key={c.title}
+                  href="/service"
+                  className="group relative rounded-2xl overflow-hidden min-h-[190px] flex items-end text-white shadow-[0_10px_24px_rgba(15,30,46,.12)]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center text-5xl" aria-hidden>
+                    {c.emoji}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#081e32]/90 via-[#081e32]/40 to-[#081e32]/10" aria-hidden />
+                  <div className="relative p-4 md:p-5">
+                    <h3
+                      className="text-lg md:text-xl font-black mb-1.5"
+                      style={{
+                        color: c.color,
+                        WebkitTextStroke: "1.2px #0b1622",
+                        paintOrder: "stroke fill",
+                        textShadow: "0 2px 6px rgba(0,0,0,.55)",
+                      } as React.CSSProperties}
+                    >
+                      {c.title}
+                    </h3>
+                    <p className="text-[13px] leading-snug opacity-95">{c.desc}</p>
+                    <span className="inline-block mt-3 bg-white text-[#14324d] font-bold text-[13px] px-4 py-1.5 rounded-full group-hover:brightness-105">
+                      詳しく見る →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== 人気の作業・おすすめプラン（第1弾は既存の料金セクション） ===== */}
         <TopPriceSection />
 
-        {/* ★ 追加: サービス一覧リンク（内部リンク網の強化） */}
-        {servicePages.length > 0 && (
-          <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-10">
-                <h2 className="text-2xl md:text-3xl font-black text-slate-800">
-                  サービス一覧
-                </h2>
-                <p className="text-sm text-slate-500 mt-2">
-                  各サービスの詳細・料金はこちらからご確認いただけます
-                </p>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {servicePages.map((sp) => {
-                  const cheapest = cheapestBookingMenu([...sp.bookingMenus, ...sp.bookingCategories.flatMap((c) => c.menus)]);
-                  return (
-                  <Link
-                    key={sp.slug}
-                    href={`/service/${sp.slug}`}
-                    className="group bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl p-4 md:p-5 transition-all"
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="text-xl md:text-2xl leading-none flex-shrink-0" aria-hidden>
-                        {sp.cardIcon || "🧹"}
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-slate-800 group-hover:text-blue-600 text-sm md:text-base leading-snug transition-colors">
-                          {sp.title}
-                        </h3>
-                        {sp.catchphrase && (
-                          <p className="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-2">
-                            {sp.catchphrase}
-                          </p>
-                        )}
-                        {cheapest && (cheapest.basePrice > 0 || cheapest.priceNote) && (
-                          <p className="text-[10px] md:text-xs font-bold text-blue-600 mt-1">
-                            {cheapest.priceNote && <span className="mr-0.5">{cheapest.priceNote}</span>}
-                            {cheapest.basePrice > 0 && (
-                              (cheapest.discountPercent || cheapest.webSpecialPrice != null) ? (
-                                <>
-                                  <span className="text-slate-400 line-through mr-1">¥{cheapest.basePrice.toLocaleString()}</span>
-                                  <span className="text-red-600">¥{cheapest.effectivePrice.toLocaleString()}〜</span>
-                                </>
-                              ) : (
-                                <>¥{cheapest.basePrice.toLocaleString()}〜</>
-                              )
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                  );
-                })}
-              </div>
-              <div className="text-center mt-6">
-                <Link
-                  href="/service"
-                  className="text-sm font-bold text-blue-600 hover:underline"
-                >
-                  サービス・料金表の一覧を見る →
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 4. ビフォーアフター */}
+        {/* ===== ビフォーアフター ===== */}
         {afterImages.length > 0 && <AfterImageMarquee images={afterImages} />}
 
         {/* プロモーション動画 */}
         <PromotionVideoGallery videos={videos} />
 
-        {/* 5. 口コミ実績バナー */}
-        <section className="bg-gradient-to-r from-slate-800 to-slate-900 py-12 px-4 text-white">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="text-yellow-400 text-3xl">★★★★★</span>
+        {/* ===== 選ばれる理由（6項目） ===== */}
+        <section className="py-14 md:py-16 px-4 bg-[#f4f8fb]">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <p className="text-xs font-bold tracking-[.15em] text-[#0e7ad1]">WHY US</p>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">選ばれる理由</h2>
             </div>
-            <p className="text-4xl md:text-5xl font-black mb-2">
-              4.9
-              <span className="text-lg font-normal text-slate-300 ml-2">
-                / 5.0
-              </span>
-            </p>
-            <p className="text-slate-300 text-sm mb-6">
-              大手口コミサイトでの総合評価（200件超の実績）
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a
-                href="https://www.google.com/maps/place/北海道ブライトオブハウス"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white text-slate-800 px-6 py-3 rounded-full font-bold text-sm hover:bg-slate-100 transition-colors inline-flex items-center gap-2"
-              >
-                <span>📍</span> Googleクチコミを見る
-              </a>
-              <Link
-                href="/before-after"
-                className="bg-white/10 border border-white/30 text-white px-6 py-3 rounded-full font-bold text-sm hover:bg-white/20 transition-colors inline-flex items-center gap-2"
-              >
-                <span>✨</span> ビフォーアフターを見る
-              </Link>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {REASONS.map((r) => (
+                <div key={r.title} className="text-center px-2">
+                  <div className="w-[88px] h-[88px] md:w-24 md:h-24 rounded-full bg-white mx-auto mb-4 flex items-center justify-center shadow-[0_6px_16px_rgba(14,122,209,.12)]">
+                    <svg viewBox="0 0 24 24" className="w-11 h-11 md:w-12 md:h-12" fill="none" stroke="#0e7ad1" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                      {r.path.split(" M").map((seg, idx) => (
+                        <path key={idx} d={idx === 0 ? seg : `M${seg}`} />
+                      ))}
+                    </svg>
+                  </div>
+                  <h3 className="text-base md:text-lg font-black text-slate-800 mb-1.5">{r.title}</h3>
+                  <p className="text-[13px] text-slate-500 leading-relaxed">{r.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* 6. キャンペーン情報 */}
+        {/* ===== キャンペーン情報 ===== */}
         {featuredLPs.length > 0 && (
           <section className="bg-white py-10 px-4 border-b border-slate-100 text-black">
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center gap-2 mb-6">
-                <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
-                  HOT
-                </span>
-                <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                  キャンペーン情報
-                </h2>
+                <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">HOT</span>
+                <h2 className="text-xl font-bold text-slate-800 tracking-tight">キャンペーン情報</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {featuredLPs.map((lp) => (
@@ -350,15 +408,9 @@ export default async function Home() {
                     className="group relative flex flex-col justify-center bg-gradient-to-br from-red-500 to-orange-500 p-5 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all overflow-hidden text-white"
                   >
                     <div className="relative z-10">
-                      <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full mb-2 inline-block uppercase">
-                        Campaign
-                      </span>
-                      <h3 className="font-black text-lg leading-tight mb-1 group-hover:underline">
-                        {lp.linkTitle || lp.title}
-                      </h3>
-                      <p className="text-xs opacity-90 line-clamp-1">
-                        {lp.catchphrase}
-                      </p>
+                      <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full mb-2 inline-block uppercase">Campaign</span>
+                      <h3 className="font-black text-lg leading-tight mb-1 group-hover:underline">{lp.linkTitle || lp.title}</h3>
+                      <p className="text-xs opacity-90 line-clamp-1">{lp.catchphrase}</p>
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 group-hover:translate-x-2 transition-transform">
                       <span className="text-4xl font-bold">➝</span>
@@ -370,25 +422,16 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 7. 最新ブログ */}
+        {/* ===== 最新ブログ ===== */}
         {latestPosts.length > 0 && (
-          <section className="bg-slate-50 py-16 px-4 border-b border-slate-200 text-black">
+          <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
             <div className="max-w-6xl mx-auto">
               <div className="flex justify-between items-end mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">
-                    最新のブログ
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    プロの知恵袋とお知らせ
-                  </p>
+                  <h2 className="text-2xl font-bold text-slate-800">最新のブログ</h2>
+                  <p className="text-xs text-slate-500 mt-1">プロの知恵袋とお知らせ</p>
                 </div>
-                <Link
-                  href="/blog"
-                  className="text-sm font-bold text-blue-600 hover:underline"
-                >
-                  ブログ一覧 ➝
-                </Link>
+                <Link href="/blog" className="text-sm font-bold text-blue-600 hover:underline">ブログ一覧 ➝</Link>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {latestPosts.map((post) => (
@@ -410,63 +453,48 @@ export default async function Home() {
           </section>
         )}
 
-        {/* ★ 追加: FAQ セクション */}
+        {/* ===== FAQ ===== */}
         <section className="bg-white py-16 px-4 border-b border-slate-100 text-black">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800">
-                よくあるご質問
-              </h2>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800">よくあるご質問</h2>
             </div>
             <div className="space-y-4">
               {topFaqs.map((faq, i) => (
-                <div
-                  key={i}
-                  className="bg-slate-50 rounded-xl p-5 md:p-6 border border-slate-200"
-                >
+                <div key={i} className="bg-slate-50 rounded-xl p-5 md:p-6 border border-slate-200">
                   <h3 className="font-bold text-slate-800 text-base md:text-lg mb-2 flex gap-2">
                     <span className="text-blue-600 flex-shrink-0">Q.</span>
                     {faq.question}
                   </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed pl-6">
-                    {faq.answer}
-                  </p>
+                  <p className="text-sm text-slate-600 leading-relaxed pl-6">{faq.answer}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 8. CTA帯 */}
-        <section className="bg-gradient-to-r from-blue-600 to-blue-700 py-10 px-4 text-white">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-xl md:text-2xl font-black mb-2">
-              まずはお気軽にご相談ください
-            </h2>
-            <p className="text-blue-100 text-sm mb-6">
-              お見積りは無料です。お電話またはネットからどうぞ。
+        {/* ===== CTA帯 ===== */}
+        <section className="relative overflow-hidden text-white">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a568f] to-[#12b5a6]" aria-hidden />
+          <div className="relative max-w-3xl mx-auto px-4 py-14 md:py-16 text-center">
+            <h2 className="text-2xl md:text-3xl font-black">まずは無料で相談・お見積り</h2>
+            <p className="mt-3 text-white/90 text-sm md:text-base">
+              お電話・フォーム・LINEでお気軽にどうぞ。しつこい営業は一切ございません。
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a
-                href="tel:0120-792-684"
-                className="bg-white text-blue-700 px-8 py-4 rounded-full font-black text-lg hover:bg-blue-50 transition-colors shadow-lg inline-flex items-center gap-2"
-              >
-                📞 0120-792-684
-              </a>
-              <Link
-                href="/service"
-                className="bg-white/10 border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white/20 transition-colors"
-              >
-                ネットで見積・予約
-              </Link>
-            </div>
-            <p className="text-blue-200 text-xs mt-3">
-              受付時間 9:00〜18:00（年中無休）
-            </p>
+            <a href={`tel:${PHONE.replace(/-/g, "")}`} className="block mt-6 text-3xl md:text-4xl font-black tracking-wider">
+              📞 {PHONE}
+            </a>
+            <p className="text-xs text-white/80 mt-1">受付 9:00〜18:00（年中無休）</p>
+            <Link
+              href="/service"
+              className="inline-block mt-6 bg-[#f5a524] text-[#3a2a02] font-black py-4 px-12 rounded-full shadow-lg hover:brightness-105 transition-all text-lg"
+            >
+              フォームで無料見積り
+            </Link>
           </div>
         </section>
 
-        {/* 対応エリア（テキスト案内＋地域リンクを統合） */}
+        {/* 対応エリア */}
         <ServiceArea
           regionalLinks={regionalLPs.map((lp) => ({
             id: lp.id,
@@ -474,7 +502,7 @@ export default async function Home() {
             title: lp.linkTitle || lp.title,
           }))}
         />
-      </HomeClient>
+      </main>
     </>
   );
 }

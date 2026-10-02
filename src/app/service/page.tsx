@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -195,23 +196,19 @@ export default async function ServicePage() {
             </div>
           </nav>
 
-          {/* カテゴリ別 サービスカード */}
-          <div className="space-y-16">
+          {/* カテゴリ別 サービスカード（カテゴリごとに開閉） */}
+          <div className="space-y-3">
             {enrichedCategories.map((category, i) => {
               const accent = ACCENTS[i % ACCENTS.length];
               return (
-                <section
+                <CollapsibleSection
                   key={category.id}
-                  id={`cat-${category.id}`}
-                  className="scroll-mt-24"
+                  anchorId={`cat-${category.id}`}
+                  title={category.title}
+                  accent={accent}
+                  count={category.items.length}
+                  defaultOpen={i === 0}
                 >
-                  <h2
-                    className="text-xl md:text-2xl font-black text-slate-800 pl-4 mb-8 border-l-8 rounded-sm"
-                    style={{ borderColor: accent }}
-                  >
-                    {category.title}
-                  </h2>
-
                   <div className="space-y-6">
                     {category.items.map((item) => (
                       <div
@@ -305,7 +302,7 @@ export default async function ServicePage() {
                       </div>
                     ))}
                   </div>
-                </section>
+                </CollapsibleSection>
               );
             })}
           </div>

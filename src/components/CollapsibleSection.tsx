@@ -1,12 +1,13 @@
 // @/src/components/CollapsibleSection.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * 見出しクリックで開閉する折りたたみセクション（アコーディオン）。
  * - 中身は常にDOMに存在（display切替のみ）→ SEO/クロールに影響なし
- * - 施工事例・お客様の声・FAQ など、長くなりがちなブロックを畳むのに使用
+ * - 施工事例・お客様の声・FAQ・サービスカテゴリ など、長くなりがちなブロックを畳むのに使用
+ * - anchorId を渡すと、同じidへの#リンク（カテゴリメニュー等）で自動展開＋スクロール
  */
 export default function CollapsibleSection({
   title,
@@ -14,17 +15,38 @@ export default function CollapsibleSection({
   defaultOpen = false,
   accent = "#0e7ad1",
   count,
+  anchorId,
+  scrollMarginClass = "scroll-mt-24",
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
   accent?: string;
   count?: number;
+  anchorId?: string;
+  scrollMarginClass?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
+  // 同じidへの#リンクで自動展開＋スクロール
+  useEffect(() => {
+    if (!anchorId) return;
+    const check = () => {
+      const hash = decodeURIComponent((window.location.hash || "").replace(/^#/, ""));
+      if (hash && hash === anchorId) {
+        setOpen(true);
+        requestAnimationFrame(() => {
+          document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, [anchorId]);
+
   return (
-    <section className="mb-6">
+    <section id={anchorId} className={`mb-6 ${anchorId ? scrollMarginClass : ""}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
