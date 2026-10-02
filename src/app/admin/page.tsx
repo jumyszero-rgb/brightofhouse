@@ -16,6 +16,11 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
+          <Link href="/admin/ai-settings" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-purple-500">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">AI設定</h2>
+            <p className="text-gray-600 text-sm">AIブログ生成などで使うAI（Claude/OpenAI/Gemini）の選択とAPIキーを設定します。</p>
+          </Link>
+
           <Link href="/admin/top-menu" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-yellow-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">トップ人気メニュー</h2>
             <p className="text-gray-600 text-sm">トップページの人気メニューカードを編集します。</p>

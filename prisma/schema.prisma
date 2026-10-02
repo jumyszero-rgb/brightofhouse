@@ -54,6 +54,19 @@ model HeroSettings {
   pcHeight     String   @default("md:h-[65vh]")
 }
 
+// AI生成（ブログ等）のプロバイダ・APIキー設定。管理画面から編集。
+model AiSettings {
+  id              String   @id @default("main")
+  provider        String   @default("claude") // claude | openai | gemini
+  anthropicApiKey String?
+  anthropicModel  String?
+  openaiApiKey    String?
+  openaiModel     String?
+  geminiApiKey    String?
+  geminiModel     String?
+  updatedAt       DateTime @updatedAt
+}
+
 model PromotionVideo {
   id         String   @id @default(uuid())
   title      String
