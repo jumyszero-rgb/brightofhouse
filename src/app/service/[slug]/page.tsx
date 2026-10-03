@@ -420,7 +420,7 @@ export default async function ServiceDetailPage({
 
           {page.content && (
             <div
-              className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-16"
+              className="bn-content ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-16"
               dangerouslySetInnerHTML={{ __html: contentHtml }}
             />
           )}
