@@ -54,6 +54,18 @@ model HeroSettings {
   pcHeight     String   @default("md:h-[65vh]")
 }
 
+// トップの「得意分野」カード（admin編集・増減/並び替え/背景画像可）
+model ServiceFeature {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  color       String?  // タイトル色（#hex・未設定は既定色）
+  imageUrl    String?  // 背景画像（未設定はグラデーション）
+  link        String?  // 遷移先（未設定は /service）
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
 // 各ページのヒーロー背景画像（admin編集）。key=ページ識別子（service/company 等）
 model PageHero {
   key       String   @id

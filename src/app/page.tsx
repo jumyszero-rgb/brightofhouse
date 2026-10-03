@@ -177,6 +177,20 @@ export default async function Home() {
     return hit ? `/service#cat-${hit.id}` : "/service";
   };
 
+  // 得意分野カード：DB(ServiceFeature)があればそれを、無ければ既定の6分野を使う
+  const dbFeatures = await prisma.serviceFeature.findMany({ orderBy: { order: "asc" } }).catch(() => []);
+  const features =
+    dbFeatures.length > 0
+      ? dbFeatures.map((f) => ({
+          title: f.title,
+          color: f.color || "#ffd34e",
+          emoji: "",
+          desc: f.description || "",
+          imageUrl: f.imageUrl || null,
+          href: f.link || catHref(f.title),
+        }))
+      : SERVICE_CATS.map((c) => ({ ...c, imageUrl: null as string | null, href: catHref(c.title) }));
+
   // --- 構造化データ ---
   const localBusinessJsonLd = {
     "@context": "https://schema.org",
@@ -340,15 +354,22 @@ export default async function Home() {
               <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">6つの得意分野</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {SERVICE_CATS.map((c) => (
+              {features.map((c) => (
                 <Link
                   key={c.title}
-                  href={catHref(c.title)}
+                  href={c.href}
                   className="group relative rounded-2xl overflow-hidden min-h-[190px] flex items-end text-white shadow-[0_10px_24px_rgba(15,30,46,.12)]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center text-5xl" aria-hidden>
-                    {c.emoji}
-                  </div>
+                  {c.imageUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center text-5xl" aria-hidden>
+                      {c.emoji}
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#081e32]/90 via-[#081e32]/40 to-[#081e32]/10" aria-hidden />
                   <div className="relative p-4 md:p-5">
                     <h3
