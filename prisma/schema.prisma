@@ -397,6 +397,7 @@ model ServicePage {
   testimonials      Testimonial[]
   bookingMenus      BookingMenu[]
   bookingCategories BookingCategory[]
+  bookingCategoryOrder String[]       @default([]) // 連動大分類の表示順（category idの配列）
   displayMenuIds    String[]          @default([])
   beforeAfters      BeforeAfter[]
   testimonialSourceForLps LandingPage[] @relation("LpTestimonialServicePages")

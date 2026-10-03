@@ -94,7 +94,13 @@ export default async function ServiceDetailPage({
   // 連動するServiceItemの価格・所要時間を常に自動反映（bookingDataの有無に関わらず表示）
   const linkedItem = page.serviceItem;
   const linkedMenus = page.bookingMenus;
-  const linkedCategories = page.bookingCategories;
+  // 連動大分類を保存順(bookingCategoryOrder)で並べる（未設定分は後ろ）
+  const _catOrder: string[] = (page as any).bookingCategoryOrder || [];
+  const linkedCategories = [...page.bookingCategories].sort((a, b) => {
+    const ia = _catOrder.indexOf(a.id);
+    const ib = _catOrder.indexOf(b.id);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
   // 表示用: 大分類経由のメニューも直接リンクのメニューと同列に扱う。
   // displayMenuIdsで絞り込まれていればその項目のみ、未設定(空)なら全件を「現在の料金」欄に表示する
   // （予約フォーム自体は絞り込まず、連動した項目すべてが常に選択可能）。

@@ -4,8 +4,11 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import RichTextEditor from "@/components/RichTextEditor";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+// ブログと同じ BlockNote エディタ（SSR不可のため動的読み込み）
+const BlogBlockNote = dynamic(() => import("@/components/BlogBlockNote"), { ssr: false });
 import BookingDataEditor, {
   newMain,
   newSetDiscount,
@@ -106,7 +109,16 @@ function EditForm() {
       if (data.heroImage) setPreviewImage(data.heroImage);
 
       setBookingMenuIds((data.bookingMenus || []).map((m: any) => m.id));
-      setBookingCategoryIds((data.bookingCategories || []).map((c: any) => c.id));
+      {
+        // 連動大分類は保存済みの順序(bookingCategoryOrder)で並べる（未保存分は後ろに）
+        const linkedIds: string[] = (data.bookingCategories || []).map((c: any) => c.id);
+        const savedOrder: string[] = Array.isArray(data.bookingCategoryOrder) ? data.bookingCategoryOrder : [];
+        const ordered = [
+          ...savedOrder.filter((id: string) => linkedIds.includes(id)),
+          ...linkedIds.filter((id: string) => !savedOrder.includes(id)),
+        ];
+        setBookingCategoryIds(ordered);
+      }
       setDisplayMenuIds(data.displayMenuIds || []);
       setFaqs((data.faqs || []).map((f: any) => ({ id: f.id || crypto.randomUUID(), question: f.question, answer: f.answer })));
       setTestimonials((data.testimonials || []).map((t: any) => ({ id: t.id || crypto.randomUUID(), authorLabel: t.authorLabel, rating: t.rating ?? null, body: t.body, isActive: t.isActive })));
@@ -312,11 +324,27 @@ function EditForm() {
 
             {bookingCategoryIds.length > 0 && (
               <ul className="space-y-1 mb-2">
-                {bookingCategoryIds.map((id) => {
+                {bookingCategoryIds.map((id, idx) => {
                   const cat = bookingCategories.find((c: any) => c.id === id);
+                  const move = (dir: "up" | "down") => {
+                    const j = dir === "up" ? idx - 1 : idx + 1;
+                    if (j < 0 || j >= bookingCategoryIds.length) return;
+                    setBookingCategoryIds(prev => {
+                      const next = [...prev];
+                      [next[idx], next[j]] = [next[j], next[idx]];
+                      return next;
+                    });
+                  };
                   return (
                     <li key={id} className="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm">
-                      <span>{cat?.title || "（読み込み中...）"}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="flex flex-col leading-none">
+                          <button type="button" onClick={() => move("up")} disabled={idx === 0} className="text-[10px] text-emerald-700 disabled:opacity-30 hover:bg-emerald-50 px-1 rounded">▲</button>
+                          <button type="button" onClick={() => move("down")} disabled={idx === bookingCategoryIds.length - 1} className="text-[10px] text-emerald-700 disabled:opacity-30 hover:bg-emerald-50 px-1 rounded">▼</button>
+                        </span>
+                        <span className="text-xs font-bold text-emerald-700">{idx + 1}.</span>
+                        <span>{cat?.title || "（読み込み中...）"}</span>
+                      </span>
                       <button type="button" onClick={() => setBookingCategoryIds(prev => prev.filter(x => x !== id))} className="text-red-500 text-xs font-bold hover:underline">削除</button>
                     </li>
                   );
@@ -536,7 +564,7 @@ function EditForm() {
       </div>
       <div>
         <label className="block text-sm font-bold mb-1">詳細説明</label>
-        <RichTextEditor key={editId} value={formData.content} onChange={val => setFormData(prev => ({ ...prev, content: val }))} />
+        <BlogBlockNote key={editId} value={formData.content} onChange={val => setFormData(prev => ({ ...prev, content: val }))} />
       </div>
 
       {/* FAQ */}
