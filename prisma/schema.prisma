@@ -49,6 +49,9 @@ model HeroSettings {
   btn2Text     String   @default("料金を見る")
   btn2Link     String   @default("/service")
   heroImage    String?  // トップのヒーロー背景画像（admin編集・未設定ならグラデーション）
+  buttons      Json?    // ヒーローのボタン配列 [{text, link}]
+  badges       Json?    // ボタン下のバッジ文言 ["...", ...]
+  stats        Json?    // 実績バー [{big, sub}]
   updatedAt    DateTime @updatedAt
   mobileHeight String   @default("h-[50vh]")
   pcHeight     String   @default("md:h-[65vh]")

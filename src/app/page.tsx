@@ -238,9 +238,30 @@ export default async function Home() {
   const heroTitle = settings?.title || "北海道ブライトオブハウス";
   const heroSubtitle =
     settings?.subtitle || "水回りクリーニング / ハウスクリーニング / ゴミ屋敷清掃";
-  const btn1Text = settings?.btn1Text || "無料で相談・見積り";
-  const btn1Link = settings?.btn1Link || "/service";
   const heroImage = (settings as any)?.heroImage as string | undefined;
+
+  // ボタン・バッジ・実績バーは admin 設定があれば使用、無ければ既定
+  const heroButtons: { text: string; link: string }[] =
+    Array.isArray((settings as any)?.buttons) && (settings as any).buttons.length > 0
+      ? (settings as any).buttons
+      : [
+          { text: settings?.btn1Text || "無料で相談・見積り", link: settings?.btn1Link || "/contact" },
+          { text: "サービス・料金を見る", link: "/service" },
+          { text: `📞 ${PHONE}`, link: `tel:${PHONE.replace(/-/g, "")}` },
+        ];
+  const heroBadges: string[] =
+    Array.isArray((settings as any)?.badges) && (settings as any).badges.length > 0
+      ? (settings as any).badges
+      : ["見積り無料・追加料金なし", "⭐ 口コミ★4.9（200件超）", "💰 札幌最安水準"];
+  const heroStats: { big: string; sub: string }[] =
+    Array.isArray((settings as any)?.stats) && (settings as any).stats.length > 0
+      ? (settings as any).stats
+      : [
+          { big: "年間300件+", sub: "施工実績" },
+          { big: "★4.9", sub: "口コミ評価" },
+          { big: "最短即日", sub: "スピード対応" },
+          { big: "年中無休", sub: "受付対応" },
+        ];
 
   return (
     <>
@@ -281,49 +302,44 @@ export default async function Home() {
               {heroSubtitle}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href={btn1Link}
-                className="bg-[#f5a524] text-[#3a2a02] font-black py-3.5 px-8 rounded-full shadow-lg hover:brightness-105 transition-all"
-              >
-                {btn1Text}
-              </Link>
-              <a
-                href={`tel:${PHONE.replace(/-/g, "")}`}
-                className="bg-white/15 backdrop-blur-sm border border-white/40 text-white font-bold py-3.5 px-8 rounded-full hover:bg-white/25 transition-all"
-              >
-                📞 {PHONE}
-              </a>
+              {heroButtons.map((b, i) => {
+                const primary = i === 0;
+                const cls = primary
+                  ? "bg-[#f5a524] text-[#3a2a02] font-black py-3.5 px-8 rounded-full shadow-lg hover:brightness-105 transition-all"
+                  : "bg-white/15 backdrop-blur-sm border border-white/40 text-white font-bold py-3.5 px-8 rounded-full hover:bg-white/25 transition-all";
+                const isTel = (b.link || "").startsWith("tel:");
+                return isTel ? (
+                  <a key={i} href={b.link} className={cls}>{b.text}</a>
+                ) : (
+                  <Link key={i} href={b.link || "/"} className={cls}>{b.text}</Link>
+                );
+              })}
             </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
-                見積り無料・追加料金なし
-              </span>
-              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
-                ⭐ 口コミ★4.9（200件超）
-              </span>
-              <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
-                💰 札幌最安水準
-              </span>
-            </div>
+            {heroBadges.length > 0 && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {heroBadges.map((b, i) => (
+                  <span key={i} className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
+                    {b}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
         {/* ===== 実績バー ===== */}
-        <section className="bg-[#0a568f] text-white">
-          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/15">
-            {[
-              { b: "年間300件+", s: "施工実績" },
-              { b: "★4.9", s: "口コミ評価" },
-              { b: "最短即日", s: "スピード対応" },
-              { b: "年中無休", s: "受付対応" },
-            ].map((x, i) => (
-              <div key={i} className="text-center py-5 px-2">
-                <div className="text-xl md:text-2xl font-black">{x.b}</div>
-                <div className="text-[11px] md:text-xs text-white/80 mt-1">{x.s}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {heroStats.length > 0 && (
+          <section className="bg-[#0a568f] text-white">
+            <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/15">
+              {heroStats.map((x, i) => (
+                <div key={i} className="text-center py-5 px-2">
+                  <div className="text-xl md:text-2xl font-black">{x.big}</div>
+                  <div className="text-[11px] md:text-xs text-white/80 mt-1">{x.sub}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ===== お悩み → 誘導 ===== */}
         <section className="py-14 md:py-16 px-4 bg-[#f4f8fb]">
