@@ -16,8 +16,11 @@ type Feature = {
 
 const COLOR_PRESETS = ["#0e7ad1", "#12b5a6", "#e5860b", "#7c5cff", "#16a34a", "#e0575b", "#ffd34e"];
 
+type LinkTarget = { label: string; href: string };
+
 export default function AdminServiceFeaturesPage() {
   const [items, setItems] = useState<Feature[]>([]);
+  const [targets, setTargets] = useState<LinkTarget[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -27,6 +30,10 @@ export default function AdminServiceFeaturesPage() {
   };
   useEffect(() => {
     load();
+    fetch("/api/link-targets")
+      .then((r) => r.json())
+      .then((d) => setTargets(Array.isArray(d) ? d : []))
+      .catch(() => {});
   }, []);
 
   const setField = (id: string, field: keyof Feature, value: any) => {
@@ -163,8 +170,33 @@ export default function AdminServiceFeaturesPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">遷移先（任意・未設定は /service）</label>
-                  <input className="w-full p-2 border rounded text-sm" placeholder="/service や /service/xxx" value={f.link || ""} onChange={(e) => setField(f.id, "link", e.target.value)} />
+                  <label className="block text-xs font-bold text-gray-500 mb-1">リンク先サービス（未設定は /service）</label>
+                  <select
+                    className="w-full p-2 border rounded text-sm"
+                    value={targets.some((t) => t.href === f.link) ? (f.link || "") : (f.link ? "__manual__" : "")}
+                    onChange={(e) => {
+                      if (e.target.value === "__manual__") {
+                        setField(f.id, "link", "/"); // 手動入力欄を表示（この値を編集）
+                        return;
+                      }
+                      setField(f.id, "link", e.target.value || null);
+                    }}
+                  >
+                    <option value="">（未設定：/service）</option>
+                    {targets.map((t) => (
+                      <option key={t.href} value={t.href}>{t.label}</option>
+                    ))}
+                    <option value="__manual__">手動で入力…</option>
+                  </select>
+                  {/* 一覧に無いURLを手動指定したい場合 */}
+                  {f.link && !targets.some((t) => t.href === f.link) && (
+                    <input
+                      className="w-full p-2 border rounded text-sm mt-1"
+                      placeholder="/service/xxx など"
+                      value={f.link || ""}
+                      onChange={(e) => setField(f.id, "link", e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
 
