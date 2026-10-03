@@ -127,12 +127,12 @@ export default function AdminServiceFeaturesPage() {
     <div className="min-h-screen bg-gray-100 p-8 text-black">
       <div className="max-w-3xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">トップ「得意分野」カード管理</h1>
+          <h1 className="text-2xl font-bold text-gray-800">トップ「おすすめ作業」カード管理</h1>
           <Link href="/admin" className="text-sm text-gray-500 hover:underline">← 戻る</Link>
         </div>
 
         <p className="text-sm text-gray-600 mb-4">
-          トップページの「得意分野」カードを自由に追加・編集・削除・並び替えできます。背景画像・タイトル色・遷移先も設定可能です。
+          トップページの「おすすめ作業」カードを自由に追加・編集・削除・並び替えできます。背景画像・タイトル色・遷移先も設定可能です。
           <br />
           <span className="text-xs text-gray-400">※1件も無い場合は、既定の6分野が表示されます。</span>
         </p>

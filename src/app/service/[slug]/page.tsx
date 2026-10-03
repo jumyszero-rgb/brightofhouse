@@ -8,8 +8,6 @@ import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
 import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
 import { extractToc } from "@/lib/extractToc";
-import { splitArticle } from "@/lib/splitArticle";
-import ArticleSections from "@/components/ArticleSections";
 import CollapsibleSection from "@/components/CollapsibleSection";
 
 export const dynamic = "force-dynamic";
@@ -88,8 +86,6 @@ export default async function ServiceDetailPage({
 
   // 本文の見出し(H2/H3)から目次を生成し、各見出しにアンカー用のidを付与する
   const { html: contentHtml, toc } = extractToc(page.content || "");
-  // 本文をH3(無ければH2)ごとに分割（見出し常時表示＋本文2行→続きを読む）
-  const article = splitArticle(contentHtml);
 
   // 連動するServiceItemの価格・所要時間を常に自動反映（bookingDataの有無に関わらず表示）
   const linkedItem = page.serviceItem;
@@ -423,18 +419,10 @@ export default async function ServiceDetailPage({
           )}
 
           {page.content && (
-            article.sections.length > 0 ? (
-              <ArticleSections
-                preambleHtml={article.preambleHtml}
-                sections={article.sections}
-                className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose"
-              />
-            ) : (
-              <div
-                className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-16"
-                dangerouslySetInnerHTML={{ __html: contentHtml }}
-              />
-            )
+            <div
+              className="ql-content prose prose-lg md:prose-xl max-w-none text-slate-700 leading-loose mb-16"
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
+            />
           )}
 
           {/* ビフォーアフター（このページに紐づく施工事例） */}

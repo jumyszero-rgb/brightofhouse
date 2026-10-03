@@ -351,7 +351,7 @@ export default async function Home() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-9">
               <p className="text-xs font-bold tracking-[.15em] text-[#0e7ad1]">SERVICE</p>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">6つの得意分野</h2>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mt-2">おすすめ作業</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {features.map((c) => (

@@ -27,8 +27,8 @@ export default function AdminDashboard() {
           </Link>
 
           <Link href="/admin/service-features" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-teal-500">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">トップ「得意分野」カード</h2>
-            <p className="text-gray-600 text-sm">トップの得意分野カードを追加・編集・削除・並び替え。背景画像・色・リンクも設定できます。</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">トップ「おすすめ作業」カード</h2>
+            <p className="text-gray-600 text-sm">トップのおすすめ作業カードを追加・編集・削除・並び替え。背景画像・色・リンクも設定できます。</p>
           </Link>
 
           <Link href="/admin/top-menu" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-yellow-500">
