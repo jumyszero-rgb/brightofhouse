@@ -5,6 +5,9 @@
 import {
   getMizumawariContent,
   MIZUMAWARI_ITEM_KEYS,
+  HOUSE_CONTENT,
+  AKISHITSU_CONTENT,
+  KOUATSU_CONTENT,
 } from "@/lib/lpContent";
 import type { LpContent } from "@/lib/lpContent";
 
@@ -16,9 +19,9 @@ export type ImportableLp = {
   content: LpContent;
 };
 
-// 取り込み可能な静的LPの一覧（広告で使っている水回り5本）。
+// 取り込み可能な静的LPの一覧（広告で使っている水回り個別5本＋セット＋house/akishitsu/kouatsu）。
 export function getImportableLps(): ImportableLp[] {
-  return (MIZUMAWARI_ITEM_KEYS as string[]).map((item) => {
+  const items: ImportableLp[] = (MIZUMAWARI_ITEM_KEYS as string[]).map((item) => {
     const content = getMizumawariContent(item);
     return {
       key: `mizumawari-${item}`,
@@ -28,6 +31,40 @@ export function getImportableLps(): ImportableLp[] {
       content,
     };
   });
+
+  const setContent = getMizumawariContent("set");
+  const others: ImportableLp[] = [
+    {
+      key: "mizumawari-set",
+      slug: "mizumawari-set",
+      title: setContent.serviceLabel || "水回りクリーニング（セット）",
+      url: "/lp/mizumawari",
+      content: setContent,
+    },
+    {
+      key: "house",
+      slug: "house",
+      title: HOUSE_CONTENT.serviceLabel || "ハウスクリーニング（在居中）",
+      url: "/lp/house",
+      content: HOUSE_CONTENT,
+    },
+    {
+      key: "akishitsu",
+      slug: "akishitsu",
+      title: AKISHITSU_CONTENT.serviceLabel || "空室クリーニング",
+      url: "/lp/akishitsu",
+      content: AKISHITSU_CONTENT,
+    },
+    {
+      key: "kouatsu",
+      slug: "kouatsu",
+      title: KOUATSU_CONTENT.serviceLabel || "排水管高圧洗浄",
+      url: "/lp/kouatsu",
+      content: KOUATSU_CONTENT,
+    },
+  ];
+
+  return [...items, ...others];
 }
 
 // LpContent → LandingPage.create() に渡すデータ（RICHテンプレ・下書き）。

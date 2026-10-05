@@ -1,71 +1,47 @@
 // @/src/app/lp/mizumawari/page.tsx
 import type { Metadata } from "next";
-import prisma from "@/lib/prisma";
 import LpTemplate from "@/components/lp/LpTemplate";
+import LandingPageView from "@/components/lp/LandingPageView";
 import { getMizumawariContent } from "@/lib/lpContent";
-import { landingPageToLpContent } from "@/lib/lpRichContent";
-import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
+import { getDbLpBySlug } from "@/lib/lpRoute";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const DB_SLUG = "mizumawari-set";
+const STATIC_TITLE = "札幌の水回りクリーニング｜キッチン・浴室・トイレ";
+const STATIC_DESC =
+  "札幌の水回りクリーニング。キッチン・浴室・レンジフード・洗面・トイレを単品でもセットでも。お見積り無料。";
 
-const subMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-  options: { orderBy: { order: "asc" as const } },
-} as const;
+type Props = { searchParams: Promise<{ preview?: string }> };
 
-async function getDbLp() {
-  return prisma.landingPage.findUnique({
-    where: { slug: DB_SLUG },
-    include: {
-      bookingMenus: { include: subMenusInclude },
-      bookingCategories: { include: { menus: { include: subMenusInclude } } },
-      beforeAfters: { orderBy: { createdAt: "desc" as const } },
-      menuOptionRefs: true,
-      menuSubMenuRefs: true,
-      menuItemRefs: true,
-      testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
-      faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
-    },
-  });
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const lp = await getDbLp();
-  if (lp && lp.status === "PUBLISHED") {
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
+  const lp = await getDbLpBySlug(DB_SLUG);
+  if (lp && (lp.status === "PUBLISHED" || isPreview)) {
     return {
       title: lp.title,
-      description: lp.metaDescription || lp.catchphrase || "北海道ブライトオブハウスのお得な水回りクリーニング情報です。",
-      ...(lp.noIndex !== false ? { robots: { index: false, follow: true } } : {}),
+      description: lp.metaDescription || lp.catchphrase || STATIC_DESC,
+      robots: { index: false, follow: true },
       alternates: { canonical: lp.canonicalUrl || "/lp/mizumawari" },
     };
   }
   return {
-    title: "札幌の水回りクリーニング｜キッチン・浴室・トイレ",
-    description:
-      "札幌の水回りクリーニング。キッチン・浴室・レンジフード・洗面・トイレを単品でもセットでも。お見積り無料。",
+    title: STATIC_TITLE,
+    description: STATIC_DESC,
     robots: { index: false, follow: true },
     alternates: { canonical: "/lp/mizumawari" },
   };
 }
 
-export default async function Page() {
-  const lp = await getDbLp();
+export default async function Page({ searchParams }: Props) {
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
+  const lp = await getDbLpBySlug(DB_SLUG);
 
-  // 管理画面(DB)側を公開済みにするまでは、従来の静的コンテンツをそのまま表示する
-  if (!lp || lp.status !== "PUBLISHED") {
-    return <LpTemplate content={getMizumawariContent("set")} />;
+  if (lp && (lp.status === "PUBLISHED" || isPreview)) {
+    return <LandingPageView lp={lp} isPreview={isPreview && lp.status !== "PUBLISHED"} />;
   }
-
-  const effectiveBookingData =
-    lp.bookingMenus.length > 0 || lp.bookingCategories.length > 0
-      ? bookingSelectionToBookingData(lp.bookingCategories, lp.bookingMenus)
-      : (lp.bookingData as any);
-
-  return <LpTemplate content={landingPageToLpContent(lp)} bookingData={effectiveBookingData} />;
+  return <LpTemplate content={getMizumawariContent("set")} />;
 }
