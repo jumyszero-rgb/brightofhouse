@@ -285,6 +285,23 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
             );
           }
 
+          case "html": {
+            const html = d?.html || "";
+            if (!html) return null;
+            const full = d?.fullWidth === true;
+            return (
+              <section key={block.id} className={full ? "" : "py-8"}>
+                {full ? (
+                  <div className="lp-html-block" dangerouslySetInnerHTML={{ __html: html }} />
+                ) : (
+                  <div className="max-w-3xl mx-auto px-4">
+                    <div className="lp-html-block" dangerouslySetInnerHTML={{ __html: html }} />
+                  </div>
+                )}
+              </section>
+            );
+          }
+
           default:
             return null;
         }

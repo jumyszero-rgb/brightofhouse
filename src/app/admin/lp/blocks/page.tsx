@@ -16,8 +16,8 @@ type Block = { id: string; type: string; visible?: boolean; data: any; refs?: an
 
 const BLOCK_TYPES: { type: string; label: string }[] = [
   { type: "hero", label: "ヒーロー" },
-  { type: "richText", label: "見出し＋本文" },
-  { type: "blocknote", label: "本文(BlockNote・段組み)" },
+  { type: "blocknote", label: "テキスト(本文・BlockNote)" },
+  { type: "html", label: "HTML(自由埋め込み)" },
   { type: "image", label: "画像" },
   { type: "seasonal", label: "季節のおすすめ(月替り)" },
   { type: "masterMenu", label: "メニュー(予約マスター連動)" },
@@ -38,6 +38,7 @@ function newBlock(type: string): Block {
     case "cta": return { id, type, visible: true, data: { label: "お問い合わせはこちら", targetType: "form", targetValue: "" } };
     case "leadForm": return { id, type, visible: true, data: { heading: "無料相談・お見積り", note: "30秒で送信できます" } };
     case "bookingForm": return { id, type, visible: true, data: { heading: "ご希望日時から仮予約・お見積り" }, refs: { refType: "category", refId: "" } };
+    case "html": return { id, type, visible: true, data: { html: "", fullWidth: false } };
     default: return { id, type, visible: true, data: {} };
   }
 }
@@ -54,6 +55,8 @@ function BlocksBuilder() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [editMonths, setEditMonths] = useState<Record<string, number>>({});
+  // masterMenuブロックの絞り込み選択（ブロックidごとに 大分類/中分類 を保持）
+  const [mmFilter, setMmFilter] = useState<Record<string, { cat?: string; menu?: string }>>({});
 
   // 新規作成用
   const [newTitle, setNewTitle] = useState("");
@@ -320,22 +323,69 @@ function BlocksBuilder() {
     }
     if (b.type === "masterMenu") {
       const refType = b.refs?.refType || "menu";
-      const list = refType === "menu" ? flat.menus : refType === "subMenu" ? flat.subMenus : flat.options;
+      const refId = b.refs?.refId || "";
+      // 現在選択中の項目ラベル（絞り込みと無関係に表示）
+      const currentLabel =
+        refType === "menu" ? flat.menus.find((x) => x.id === refId)?.label
+        : refType === "subMenu" ? flat.subMenus.find((x) => x.id === refId)?.label
+        : flat.options.find((x) => x.id === refId)?.label;
+      const f = mmFilter[b.id] || {};
+      const cat = (master || []).find((c: any) => c.id === f.cat);
+      const menu = (cat?.menus || []).find((m: any) => m.id === f.menu);
+      // 選択中分類の配下の「中分類本体・小分類・オプション」をまとめてリスト化
+      const leaves: { kind: string; id: string; label: string; price: number }[] = [];
+      if (menu) {
+        leaves.push({ kind: "menu", id: menu.id, label: `${menu.title}（中分類そのもの）`, price: menu.basePrice });
+        for (const o of menu.options || []) leaves.push({ kind: "option", id: o.id, label: `${o.title}（オプション）`, price: o.price });
+        for (const s of menu.subMenus || []) {
+          leaves.push({ kind: "subMenu", id: s.id, label: `${s.title}（小分類）`, price: s.price });
+          for (const o of s.options || []) leaves.push({ kind: "option", id: o.id, label: `${s.title} > ${o.title}`, price: o.price });
+        }
+      }
       return (
         <>
-          <div className="flex gap-2">
-            <select className="p-2 border rounded-lg text-sm" value={refType} onChange={(e) => updateRefs(idx, { refType: e.target.value, refId: "" })}>
-              <option value="menu">中分類</option>
-              <option value="subMenu">小分類</option>
-              <option value="option">オプション</option>
+          {currentLabel && (
+            <p className="text-xs bg-emerald-50 border border-emerald-200 rounded px-2 py-1">選択中：<b>{currentLabel}</b></p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <select className="p-2 border rounded-lg text-sm" value={f.cat || ""} onChange={(e) => setMmFilter((prev) => ({ ...prev, [b.id]: { cat: e.target.value, menu: "" } }))}>
+              <option value="">① 大分類を選択</option>
+              {(master || []).map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
-            <select className="flex-1 p-2 border rounded-lg text-sm" value={b.refs?.refId || ""} onChange={(e) => updateRefs(idx, { refId: e.target.value })}>
-              <option value="">— 項目を選択 —</option>
-              {list.map((it) => <option key={it.id} value={it.id}>{it.label}（¥{it.price?.toLocaleString?.() ?? it.price}）</option>)}
+            <select className="p-2 border rounded-lg text-sm disabled:bg-slate-100" disabled={!f.cat} value={f.menu || ""} onChange={(e) => setMmFilter((prev) => ({ ...prev, [b.id]: { ...prev[b.id], menu: e.target.value } }))}>
+              <option value="">② 中分類を選択</option>
+              {(cat?.menus || []).map((m: any) => <option key={m.id} value={m.id}>{m.title}</option>)}
             </select>
           </div>
+          {menu && (
+            <select className="w-full p-2 border rounded-lg text-sm" value={refId ? `${refType}:${refId}` : ""} onChange={(e) => {
+              const v = e.target.value;
+              if (!v) { updateRefs(idx, { refId: "" }); return; }
+              const [kind, id] = v.split(":");
+              updateRefs(idx, { refType: kind, refId: id });
+            }}>
+              <option value="">③ 項目を選択</option>
+              {leaves.map((l) => <option key={`${l.kind}:${l.id}`} value={`${l.kind}:${l.id}`}>{l.label}（¥{(l.price || 0).toLocaleString()}）</option>)}
+            </select>
+          )}
           <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={d.showDesc !== false} onChange={(e) => updateData(idx, { showDesc: e.target.checked })} />作業内容の説明も表示する</label>
           <p className="text-[11px] text-gray-400">※価格・名称は予約マスターの最新値で表示されます（ここでは保存しません）。</p>
+        </>
+      );
+    }
+    if (b.type === "html") {
+      return (
+        <>
+          <p className="text-[11px] text-gray-500">HTMLをそのまま埋め込みます（&lt;style&gt;可）。BlockNoteで出せない表現やLP用の作り込みパーツに。</p>
+          <textarea
+            className="w-full p-2 border rounded-lg text-xs font-mono bg-slate-50"
+            rows={10}
+            spellCheck={false}
+            placeholder="<style>...</style> と HTML を貼り付け"
+            value={d.html || ""}
+            onChange={(e) => updateData(idx, { html: e.target.value })}
+          />
+          <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={d.fullWidth === true} onChange={(e) => updateData(idx, { fullWidth: e.target.checked })} />全幅で表示する（左右の余白なし）</label>
         </>
       );
     }
