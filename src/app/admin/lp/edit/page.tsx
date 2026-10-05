@@ -46,7 +46,7 @@ function EditForm() {
   const [categoryToAdd, setCategoryToAdd] = useState("");
 
   // ===== リッチLPテンプレート =====
-  const [templateStyle, setTemplateStyle] = useState<"SIMPLE" | "RICH">("SIMPLE");
+  const [templateStyle, setTemplateStyle] = useState<"SIMPLE" | "RICH" | "HTML">("SIMPLE");
   const [richFields, setRichFields] = useState({
     heroEyebrow: "", heroSubtitle: "", heroPriceLead: "", serviceLabel: "",
     menuIntro: "", campaignBadge: "", setNote: "",
@@ -109,7 +109,7 @@ function EditForm() {
         setBookingMenuIds((data.bookingMenus || []).map((m: any) => m.id));
         setBookingCategoryIds((data.bookingCategories || []).map((c: any) => c.id));
 
-        setTemplateStyle(data.templateStyle === "RICH" ? "RICH" : "SIMPLE");
+        setTemplateStyle(data.templateStyle === "RICH" ? "RICH" : data.templateStyle === "HTML" ? "HTML" : "SIMPLE");
         setRichFields({
           heroEyebrow: data.heroEyebrow || "",
           heroSubtitle: data.heroSubtitle || "",
@@ -361,7 +361,13 @@ function EditForm() {
 
         <div className="pb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">本文</label>
-          <RichTextEditor key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+          {templateStyle === "HTML" ? (
+            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded p-3">
+              「全面HTML」モードでは、この本文欄は使いません。下の「🎨 リッチLPテンプレート」内の<strong>HTMLソース欄</strong>に貼り付けてください。
+            </p>
+          ) : (
+            <RichTextEditor key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+          )}
         </div>
 
         {/* SEO設定エリア */}
@@ -519,7 +525,27 @@ function EditForm() {
                 <input type="radio" checked={templateStyle === "RICH"} onChange={() => setTemplateStyle("RICH")} className="w-4 h-4 accent-fuchsia-600" />
                 <span className="text-sm font-bold">詳細（セールスLP構成）</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={templateStyle === "HTML"} onChange={() => setTemplateStyle("HTML")} className="w-4 h-4 accent-fuchsia-600" />
+                <span className="text-sm font-bold">全面HTML（1枚もの貼り付け）</span>
+              </label>
             </div>
+            {templateStyle === "HTML" && (
+              <div className="mt-3 bg-white border border-fuchsia-200 rounded-lg p-3">
+                <p className="text-xs text-fuchsia-700 mb-2 font-bold">
+                  「全面HTML」は、上の「本文」欄ではなく下の<strong>HTMLソース欄</strong>に貼り付けたHTMLを<strong>そのまま全幅表示</strong>します（オレンジ帯ヒーロー・白カード枠なし）。1枚もののデザインLPを貼る用です。
+                </p>
+                <label className="block text-xs font-bold text-gray-700 mb-1">HTMLソース（&lt;style&gt;含めて丸ごと貼り付け）</label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData(p => ({ ...p, content: e.target.value }))}
+                  rows={16}
+                  spellCheck={false}
+                  placeholder="<style>...</style> と本文HTMLをそのまま貼り付け"
+                  className="w-full p-3 border border-fuchsia-300 rounded font-mono text-xs text-black bg-slate-50"
+                />
+              </div>
+            )}
           </div>
 
           {templateStyle === "RICH" && (

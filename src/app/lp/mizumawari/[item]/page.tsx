@@ -3,17 +3,19 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import LpTemplate from "@/components/lp/LpTemplate";
+import LandingPageView from "@/components/lp/LandingPageView";
 import {
   getMizumawariContent,
   MIZUMAWARI_ITEM_KEYS,
 } from "@/lib/lpContent";
-import { landingPageToLpContent } from "@/lib/lpRichContent";
-import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Props = { params: Promise<{ item: string }> };
+type Props = {
+  params: Promise<{ item: string }>;
+  searchParams: Promise<{ preview?: string }>;
+};
 
 const subMenusInclude = {
   subMenus: {
@@ -39,12 +41,14 @@ async function getDbLp(item: string) {
   });
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { item } = await params;
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
   if (!(MIZUMAWARI_ITEM_KEYS as string[]).includes(item)) return {};
 
   const lp = await getDbLp(item);
-  if (lp && lp.status === "PUBLISHED") {
+  if (lp && (lp.status === "PUBLISHED" || isPreview)) {
     return {
       title: lp.title,
       description: lp.metaDescription || lp.catchphrase || "",
@@ -62,21 +66,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params, searchParams }: Props) {
   const { item } = await params;
+  const { preview } = await searchParams;
+  const isPreview = preview === "true";
   if (!(MIZUMAWARI_ITEM_KEYS as string[]).includes(item)) notFound();
 
   const lp = await getDbLp(item);
 
-  // 管理画面(DB)側を公開済みにするまでは、従来の静的コンテンツをそのまま表示する
-  if (!lp || lp.status !== "PUBLISHED") {
-    return <LpTemplate content={getMizumawariContent(item)} />;
+  // DB側が「公開済み」またはプレビュー時は、テンプレ設定（SIMPLE/RICH/BLOCKS/HTML）に従って描画。
+  // それ以外（未作成・下書き）は従来どおりの静的コンテンツを表示する。
+  if (lp && (lp.status === "PUBLISHED" || isPreview)) {
+    return <LandingPageView lp={lp} isPreview={isPreview && lp.status !== "PUBLISHED"} />;
   }
 
-  const effectiveBookingData =
-    lp.bookingMenus.length > 0 || lp.bookingCategories.length > 0
-      ? bookingSelectionToBookingData(lp.bookingCategories, lp.bookingMenus)
-      : (lp.bookingData as any);
-
-  return <LpTemplate content={landingPageToLpContent(lp)} bookingData={effectiveBookingData} />;
+  return <LpTemplate content={getMizumawariContent(item)} />;
 }

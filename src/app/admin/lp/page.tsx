@@ -6,15 +6,43 @@ import Link from "next/link";
 
 export default function AdminLPList() {
   const[lps, setLps] = useState<any[]>([]);
+  const [imports, setImports] = useState<any[]>([]);
+  const [importing, setImporting] = useState<string | null>(null);
 
   const fetchLPs = async () => {
     const res = await fetch("/api/lp");
     if (res.ok) setLps(await res.json());
   };
 
+  const fetchImports = async () => {
+    const res = await fetch("/api/lp/import-static");
+    if (res.ok) setImports(await res.json());
+  };
+
   useEffect(() => {
     fetchLPs();
+    fetchImports();
   },[]);
+
+  const handleImport = async (key: string) => {
+    if (!confirm("この広告LPを「下書き」として編集可能にします。\n※公開するまで現在の広告表示は変わりません。よろしいですか？")) return;
+    setImporting(key);
+    try {
+      const res = await fetch("/api/lp/import-static", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        window.location.href = `/admin/lp/edit?id=${data.id}`;
+      } else {
+        alert("取り込みに失敗しました: " + (data.error || "不明なエラー"));
+      }
+    } finally {
+      setImporting(null);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("本当に削除しますか？画像も消去されます。")) return;
@@ -90,6 +118,42 @@ export default function AdminLPList() {
             <Link href="/admin/lp/blocks" className="text-sm bg-fuchsia-600 text-white px-4 py-2 rounded font-bold hover:bg-fuchsia-700">＋ ブロックLP作成</Link>
           </div>
         </div>
+
+        {/* 広告用の静的LP（コード埋め込み）を編集できるようにDBへ取り込む */}
+        {imports.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-8">
+            <h2 className="text-base font-bold text-amber-900 mb-1">広告LP（水回り）を編集できるようにする</h2>
+            <p className="text-xs text-amber-700 mb-4">
+              下記は今コードに直書きされていて管理画面で編集できない広告LPです。「取り込む」で現在の内容のまま<strong>下書き</strong>として作成します（公開するまで広告表示は変わりません）。取り込み後に編集 →
+              <code className="mx-1">?preview=true</code>で確認 → 公開、でURLそのまま編集版に切り替わります。
+            </p>
+            <div className="space-y-2">
+              {imports.map((im) => (
+                <div key={im.key} className="bg-white rounded border border-amber-100 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-gray-800 break-all">{im.title}</p>
+                    <a href={im.url} target="_blank" className="text-xs text-blue-500 hover:underline break-all">{im.url}</a>
+                  </div>
+                  <div className="flex flex-wrap gap-2 sm:justify-end shrink-0">
+                    {im.imported ? (
+                      <>
+                        <span className={`px-3 py-1.5 rounded text-xs font-bold ${im.status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}>
+                          {im.status === "PUBLISHED" ? "公開中（DB編集版）" : "取り込み済み（下書き）"}
+                        </span>
+                        <a href={`${im.url}?preview=true`} target="_blank" className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-amber-200">プレビュー</a>
+                        <Link href={`/admin/lp/edit?id=${im.id}`} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-200">編集</Link>
+                      </>
+                    ) : (
+                      <button onClick={() => handleImport(im.key)} disabled={importing === im.key} className="bg-amber-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-amber-700 disabled:opacity-50">
+                        {importing === im.key ? "取り込み中..." : "取り込む（編集可能化）"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           {lps.map((lp) => (
