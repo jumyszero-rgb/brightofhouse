@@ -46,6 +46,11 @@ export default function AdminDashboard() {
             <p className="text-gray-600 text-sm">各サービスの深掘り解説ページを作成・編集します。</p>
           </Link>
 
+          <Link href="/admin/service-items" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-cyan-600">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">サービス項目（一覧の見出し）管理</h2>
+            <p className="text-gray-600 text-sm">サービス一覧の見出し（連動するサービス項目）を追加・削除・並べ替えします。</p>
+          </Link>
+
           <Link href="/admin/services" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-cyan-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">サービス・料金表</h2>
             <p className="text-gray-600 text-sm">詳細な料金表（アコーディオン形式）を編集します。</p>
