@@ -11,6 +11,8 @@ export default function BlogListClient() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   // カテゴリ取得
   useEffect(() => {
@@ -50,6 +52,16 @@ export default function BlogListClient() {
     }, 300);
     return () => clearTimeout(handler);
   }, [searchTerm, activeCategory]);
+
+  // 検索・カテゴリを変えたら1ページ目に戻す
+  useEffect(() => { setPage(1); }, [searchTerm, activeCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+  const visiblePosts = posts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const goPage = (p: number) => {
+    setPage(Math.min(totalPages, Math.max(1, p)));
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleCategoryClick = (slug: string) => {
     const newCat = activeCategory === slug ? "" : slug;
@@ -121,43 +133,74 @@ export default function BlogListClient() {
         ) : posts.length === 0 ? (
           <p className="text-center text-slate-500 py-20">該当する記事が見つかりませんでした。</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {posts.map((post) => {
+          <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visiblePosts.map((post) => {
               const coverImg = post.thumbnail || (post.content?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1]) || "";
               return (
-              <Link key={post.id} href={`/blog/${post.slug}`} className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
+              <Link key={post.id} href={`/blog/${post.slug}`} className="group relative block aspect-square rounded-2xl overflow-hidden shadow-sm border border-slate-200">
                 {coverImg ? (
-                  <div className="h-44 w-full overflow-hidden bg-slate-100">
-                    <img src={coverImg} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
+                  <img src={coverImg} alt={post.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
-                  <div className="h-44 w-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-5xl">🧹</div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-indigo-200 flex items-center justify-center text-6xl">🧹</div>
                 )}
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </span>
-                    {post.category && (
-                      <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                        {post.category.name}
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-3">
+                {/* 文字を重ねるための黒グラデーション */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/5" />
+                {/* カテゴリ（上） */}
+                {post.category && (
+                  <span className="absolute top-3 left-3 text-[11px] font-bold bg-white/90 text-indigo-700 px-2.5 py-1 rounded-full shadow-sm">
+                    {post.category.name}
+                  </span>
+                )}
+                {/* タイトル・日付（下） */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <span className="text-[11px] font-medium opacity-90">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </span>
+                  <h2 className="text-base md:text-lg font-bold leading-snug line-clamp-3 drop-shadow mt-1 group-hover:underline">
                     {post.title}
                   </h2>
-                  <div className="text-slate-500 text-sm line-clamp-3 mb-4 opacity-80"
-                    dangerouslySetInnerHTML={{ __html: post.content.replace(/<[^>]*>?/gm, '').substring(0, 100) }}
-                  />
-                  <span className="text-blue-600 text-sm font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
-                    続きを読む <span>→</span>
-                  </span>
                 </div>
               </Link>
               );
             })}
           </div>
+
+          {/* ページング（6件ずつ） */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-12">
+              <button
+                onClick={() => goPage(page - 1)}
+                disabled={page <= 1}
+                className="px-4 py-2 rounded-full text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← 前へ
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => goPage(p)}
+                    className={`w-9 h-9 rounded-full text-sm font-bold transition-all ${
+                      p === page
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => goPage(page + 1)}
+                disabled={page >= totalPages}
+                className="px-4 py-2 rounded-full text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                次へ →
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </main>
