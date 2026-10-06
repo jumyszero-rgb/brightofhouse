@@ -419,7 +419,7 @@ export default function AdminBookingMasterPage() {
                       <input type="text" placeholder="中分類 (例: キッチンクリーニング)" className="flex-1 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.title : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, title: e.target.value })} />
                     </div>
                     <div className="flex gap-2 items-center">
-                      <input type="number" placeholder="基本料金(円)" className="w-32 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.basePrice || "" : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, basePrice: parseInt(e.target.value) || 0 })} />
+                      <input type="number" placeholder="通常価格(円)" className="w-32 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.basePrice || "" : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, basePrice: parseInt(e.target.value) || 0 })} />
                       <input type="text" placeholder="価格の注釈 (例: ゴミ屋敷レベルは+3300円〜)" className="flex-1 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.priceNote : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, priceNote: e.target.value })} />
                     </div>
                     <div className="flex gap-2 items-center">
@@ -454,7 +454,7 @@ export default function AdminBookingMasterPage() {
                             <input className="flex-1 p-1 border rounded text-black text-sm font-bold" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} placeholder="中分類名" />
                           </div>
                           <div className="flex gap-2 items-center flex-wrap">
-                            <span className="text-xs font-bold text-gray-500">基本料金:</span><input type="number" className="w-24 p-1 border rounded text-black text-sm" value={editData.basePrice || 0} onChange={(e) => setEditData((prev:any) => ({...prev, basePrice: parseInt(e.target.value) || 0}))} />
+                            <span className="text-xs font-bold text-gray-500">通常価格:</span><input type="number" className="w-24 p-1 border rounded text-black text-sm" value={editData.basePrice || 0} onChange={(e) => setEditData((prev:any) => ({...prev, basePrice: parseInt(e.target.value) || 0}))} />
                             <span className="text-xs font-bold text-gray-500">注釈:</span><input type="text" className="flex-1 p-1 border rounded text-black text-sm" value={editData.priceNote || ""} onChange={(e) => setEditData((prev:any) => ({...prev, priceNote: e.target.value}))} placeholder="(例: +3300円〜)" />
                             <span className="text-xs font-bold text-gray-500">最短(分):</span><input type="number" className="w-16 p-1 border rounded text-black text-sm" value={editData.durationMin || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMin: parseInt(e.target.value) || 0}))} />
                             <span className="text-xs font-bold text-gray-500">最長(分):</span><input type="number" className="w-16 p-1 border rounded text-black text-sm" value={editData.durationMax || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMax: parseInt(e.target.value) || 0}))} />

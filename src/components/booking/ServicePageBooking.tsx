@@ -532,7 +532,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               {fi.price > 0 && (
                 <span className="text-sm pl-7 sm:pl-0">
                   {fi.originalPrice != null && (
-                    <span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span>
+                    <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span></>
                   )}
                   <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}</span>
                 </span>
@@ -686,7 +686,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               {main.price > 0 && (
                 <span>
                   {main.originalPrice != null && (
-                    <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
+                    <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
                   )}
                   <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
                 </span>
@@ -802,7 +802,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           {main.price > 0 && (
             <span className="pl-7 sm:pl-0">
               {main.originalPrice != null && (
-                <span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span>
+                <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
               )}
               <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
             </span>
