@@ -1,7 +1,7 @@
 // @/src/components/RichTextEditor.tsx
 "use client";
 
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -17,6 +17,24 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { Node, mergeAttributes, Extension } from "@tiptap/core";
+
+// 文字数カウント（空白・改行を除く）。
+// 公開ページでブラウザのConsoleを使って数えた方法と同じ基準になるよう、HTMLタグを除いた本文テキストを数える。
+// サーバー描画でも動くよう、DOMParserは使わず正規表現で処理する（追加パッケージ不要）。
+function countChars(html: string): number {
+  if (!html) return 0;
+  const text = html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&[a-zA-Z0-9#]+;/g, "x");
+  return Array.from(text.replace(/\s/g, "")).length;
+}
+
+function formatNumber(n: number): string {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -287,6 +305,9 @@ export default function RichTextEditor({ value, onChange }: Props) {
   const [showCtaModal, setShowCtaModal] = useState(false);
   const [ctaBlocks, setCtaBlocks] = useState<any[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // 文字数（ビジュアル/HTMLどちらのモードでも value から計算）
+  const charCount = useMemo(() => countChars(value || ""), [value]);
 
   const editor = useEditor({
     immediatelyRender: false,  // ← この行を追加
@@ -773,6 +794,14 @@ export default function RichTextEditor({ value, onChange }: Props) {
         <EditorContent editor={editor} />
       )}
 
+      {/* 文字数カウンター（空白・改行を除く。画像キャプションや表の文字も含む） */}
+      <div className="sticky bottom-0 flex items-center justify-end gap-2 px-3 py-1.5 bg-slate-50 border-t text-xs text-slate-600">
+        <span>
+          文字数 <span className="font-bold text-slate-900 text-sm">{formatNumber(charCount)}</span> 字
+        </span>
+        <span className="text-slate-400">（空白・改行を除く）</span>
+      </div>
+
       <style jsx global>{`
         .tiptap { min-height: 250px; padding: 16px; font-size: 16px; color: #000; outline: none; }
         .tiptap p { margin-bottom: 0.8em; }
@@ -854,4 +883,3 @@ export default function RichTextEditor({ value, onChange }: Props) {
     </div>
   );
 }
-
