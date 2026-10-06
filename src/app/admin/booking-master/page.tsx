@@ -1,7 +1,7 @@
 // @/src/app/admin/booking-master/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 
@@ -152,6 +152,15 @@ export default function AdminBookingMasterPage() {
 
   // 折りたたみ用ステート（価格入力時、全部展開されていると見づらいため大分類・中分類を個別に折りたためるようにする）
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  // 初回読み込み時は全大分類を折り畳んだ状態にする（作業しやすくするため）
+  const didInitCollapse = useRef(false);
+  useEffect(() => {
+    if (!didInitCollapse.current && categories.length > 0) {
+      setCollapsedCats(new Set(categories.map((c) => c.id)));
+      didInitCollapse.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories]);
   const [collapsedMenus, setCollapsedMenus] = useState<Set<string>>(new Set());
   const toggleCatCollapse = (id: string) => setCollapsedCats(prev => {
     const next = new Set(prev);
@@ -373,9 +382,23 @@ export default function AdminBookingMasterPage() {
           </button>
         </div>
 
+        {/* 大分類の目次（クリックでその大分類へジャンプ） */}
+        {categories.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-lg p-3 mb-6 sticky top-2 z-30 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 mr-2"># 大分類へジャンプ：</span>
+            <div className="inline-flex flex-wrap gap-2 align-middle">
+              {categories.map((cat) => (
+                <a key={cat.id} href={`#cat-${cat.id}`} className="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors">
+                  {cat.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-12">
           {categories.map((cat, catIdx) => (
-            <div key={cat.id} className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div key={cat.id} id={`cat-${cat.id}`} className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden scroll-mt-24">
               
               {/* 【1階層目】大分類ヘッダー */}
               <div className="bg-slate-800 p-4 text-white flex justify-between items-center">
