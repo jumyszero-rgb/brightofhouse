@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.metaDescription || "",
       type: "article",
       url: `https://brightofhouse.jp/blog/${post.slug}`,
+      ...(post.thumbnail && { images: [{ url: post.thumbnail }] }),
     },
   };
 }
@@ -47,6 +48,10 @@ export default async function BlogPostPage({ params }: Props) {
 
   // 本文中の [[key]] ショートコードを展開
   const contentHtml = await expandShortcodes(post.content);
+
+  // タイトル背景に使う画像：アイキャッチ(thumbnail)優先、無ければ本文の最初の画像
+  const firstBodyImage = contentHtml.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || null;
+  const headerBg = post.thumbnail || firstBodyImage;
 
   // 関連記事：同カテゴリの記事を最大6件取得（自分自身を除く）
   let relatedPosts: any[] = [];
@@ -109,26 +114,30 @@ export default async function BlogPostPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }}
       />
-      {/* ナビゲーション */}
-      <div className="bg-slate-50 border-b border-slate-200 pt-10 pb-16 px-4">
-        <div className="max-w-3xl mx-auto">
-          <Link href="/blog" className="text-sm text-blue-600 hover:underline mb-6 inline-block font-bold transition-colors">
+      {/* ナビゲーション＋タイトル（アイキャッチ or 本文最初の画像があれば背景に・無ければ通常背景） */}
+      <div
+        className={`relative border-b border-slate-200 pt-10 pb-16 px-4 ${headerBg ? "text-white" : "bg-slate-50"}`}
+        style={headerBg ? { backgroundImage: `url(${headerBg})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
+        {headerBg && <div className="absolute inset-0 bg-black/50" aria-hidden />}
+        <div className="relative max-w-3xl mx-auto">
+          <Link href="/blog" className={`text-sm mb-6 inline-block font-bold transition-colors ${headerBg ? "text-white/90 hover:text-white" : "text-blue-600 hover:underline"}`}>
             ← お掃除ブログ一覧へ戻る
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <time className="text-slate-500 text-sm font-medium bg-white px-3 py-1 rounded-full border border-slate-200">
+            <time className={`text-sm font-medium px-3 py-1 rounded-full border ${headerBg ? "bg-white/20 border-white/30 text-white" : "text-slate-500 bg-white border-slate-200"}`}>
               {new Date(post.createdAt).toLocaleDateString("ja-JP")}
             </time>
             {post.category && (
               <Link
                 href={`/blog?category=${post.category.slug}`}
-                className="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full hover:bg-indigo-200 transition-colors"
+                className={`text-xs font-bold px-3 py-1 rounded-full transition-colors ${headerBg ? "bg-white/20 text-white hover:bg-white/30" : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"}`}
               >
                 {post.category.name}
               </Link>
             )}
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold text-slate-900 leading-tight">
+          <h1 className={`text-2xl md:text-4xl font-bold leading-tight ${headerBg ? "text-white drop-shadow" : "text-slate-900"}`}>
             {post.title}
           </h1>
         </div>
