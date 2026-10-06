@@ -461,6 +461,8 @@ model BookingMenu {
   discountPercent  Float?
   discountRounding String           @default("NONE")
   webSpecialPrice  Int?
+  maxQty           Int?             // 個数上限（未設定/1なら数量選択を表示しない）
+  qtyDiscountRules Json?            // 数量値引き（{enabled, rules:[{count,value}], rounding}）
   imageUrl         String?          // トップ「人気の作業」カード用の画像（任意）
   topFeaturedOrder Int?             // トップ掲載順（小さいほど上位・最小が人気No.1／未設定は非掲載）
   category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -486,6 +488,8 @@ model BookingSubMenu {
   discountPercent  Float?
   discountRounding String          @default("NONE")
   webSpecialPrice  Int?
+  maxQty           Int?            // 個数上限（未設定/1なら数量選択を表示しない）
+  qtyDiscountRules Json?           // 数量値引き（{enabled, rules:[{count,value}], rounding}）
   options          BookingOption[]
   menu             BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   landingPages     LandingPage[]

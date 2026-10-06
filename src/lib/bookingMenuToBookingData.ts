@@ -44,6 +44,8 @@ type BookingSubMenuForMenu = {
   discountPercent: number | null;
   discountRounding: string;
   webSpecialPrice: number | null;
+  maxQty: number | null;
+  qtyDiscountRules: unknown;
   options: BookingOptionForMenu[];
 };
 
@@ -60,6 +62,8 @@ type BookingMenuForConvert = {
   discountPercent: number | null;
   discountRounding: string;
   webSpecialPrice: number | null;
+  maxQty: number | null;
+  qtyDiscountRules: unknown;
   subMenus: BookingSubMenuForMenu[];
   // 小分類を経由せず中分類に直接ぶら下がるオプション（小分類が無い中分類でも数量選択できるようにする）。
   options: BookingOptionForMenu[];
@@ -135,6 +139,8 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
     // そのためメニュー自身は常に単体で選択可能（hasBaseSelection）にし、
     // 小分類・中分類直下オプションは基本料金の下に追加できる項目として別枠で表示する。
     hasBaseSelection: hasSubMenus || hasDirectOptions,
+    maxQty: menu.maxQty ?? undefined,
+    qtyDiscount: (menu.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
     comment: menu.recommendPoint || "",
     workContent: menu.workContent || "",
     cautionNote: menu.cautionNote || "",
@@ -149,6 +155,8 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
           workContent: sm.workContent || "",
           comment: sm.recommendPoint || "",
           cautionNote: sm.cautionNote || "",
+          maxQty: sm.maxQty ?? undefined,
+          qtyDiscount: (sm.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
         }))
       : [],
     options: [

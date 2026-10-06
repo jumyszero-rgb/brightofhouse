@@ -138,8 +138,8 @@ export default function AdminBookingMasterPage() {
 
   // 新規追加用ステート
   const [newCatTitle, setNewCatTitle] = useState("");
-  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" });
-  const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" });
+  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" });
+  const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" });
   const[newOption, setNewOption] = useState<{ subMenuId: string; menuId: string; title: string; price: number; durationMin: number; durationMax: number; workContent: string; cautionNote: string; recommendPoint: string; onSiteEstimate: string; maxQty: string; discountPercent: string; discountRounding: string; qtyDiscountRules: QtyDiscountRules }>({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null });
 
   // 編集用ステート
@@ -431,14 +431,15 @@ export default function AdminBookingMasterPage() {
                     </div>
                   </div>
                   <textarea placeholder="作業内容 (改行で箇条書き)" rows={3} className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.workContent : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, workContent: e.target.value })} />
-                  <input type="text" placeholder="おすすめポイント (任意)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.recommendPoint : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, recommendPoint: e.target.value })} />
+                  <textarea rows={2} placeholder="おすすめポイント (任意・改行OK)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.recommendPoint : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, recommendPoint: e.target.value })} />
                   <textarea placeholder="注意事項 (任意)" rows={2} className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.cautionNote : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, cautionNote: e.target.value })} />
                   <div className="flex items-center gap-2">
                     <input type="number" min={0} max={99} step={0.1} placeholder="個別値引き% (任意・空欄で無し)" className="w-56 p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.discountPercent : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, discountPercent: e.target.value })} />
                     <RoundingSelect value={(newMenu.categoryId === cat.id ? newMenu.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewMenu({ ...newMenu, categoryId: cat.id, discountRounding })} />
                   </div>
                   <input type="number" min={0} placeholder="WEB特価(円・任意。設定すると%値引きより優先されます)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.webSpecialPrice : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, webSpecialPrice: e.target.value })} />
-                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
+                  <input type="number" min={1} placeholder="個数上限(任意・2以上で予約フォームに数量選択を表示／空欄・1で非表示)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.maxQty : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, maxQty: e.target.value })} />
+                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, maxQty: newMenu.maxQty || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
                 </div>
 
                 {/* 【2階層目】中分類リスト */}
@@ -462,7 +463,7 @@ export default function AdminBookingMasterPage() {
                             </select>
                           </div>
                           <textarea className="w-full p-1 border rounded text-black text-sm" rows={3} value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容" />
-                          <input type="text" className="w-full p-1 border rounded text-black text-sm" value={editData.recommendPoint || ""} onChange={(e) => setEditData((prev:any) => ({...prev, recommendPoint: e.target.value}))} placeholder="おすすめポイント" />
+                          <textarea rows={2} className="w-full p-1 border rounded text-black text-sm" value={editData.recommendPoint || ""} onChange={(e) => setEditData((prev:any) => ({...prev, recommendPoint: e.target.value}))} placeholder="おすすめポイント（改行OK）" />
                           <textarea className="w-full p-1 border rounded text-black text-sm" rows={2} value={editData.cautionNote || ""} onChange={(e) => setEditData((prev:any) => ({...prev, cautionNote: e.target.value}))} placeholder="注意事項" />
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-red-600">個別値引き%(空欄で無し):</span>
@@ -473,6 +474,12 @@ export default function AdminBookingMasterPage() {
                             <span className="text-xs font-bold text-teal-600">WEB特価(円・空欄で無し。設定すると%値引きより優先):</span>
                             <input type="number" min={0} className="w-32 p-1 border rounded text-black text-sm" value={editData.webSpecialPrice ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, webSpecialPrice: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
                           </div>
+                          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded p-2">
+                            <span className="text-xs font-bold text-blue-700">個数上限(空欄/1で数量選択なし):</span>
+                            <input type="number" min={1} className="w-20 p-1 border rounded text-black text-sm" placeholder="例:3" value={editData.maxQty ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, maxQty: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
+                            <span className="text-[10px] text-slate-500">※2以上にすると予約フォームで数量を選べます</span>
+                          </div>
+                          <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                           <SetDiscountEditor value={editData.setDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, setDiscountRules: v }))} />
 
                           {/* トップ「人気の作業」掲載（画像＋掲載順） */}
@@ -604,9 +611,9 @@ export default function AdminBookingMasterPage() {
                                       {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                                     </select>
                                   </div>
-                                  <input type="text" className="w-full p-1 border rounded text-black text-xs" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容" />
-                                  <input type="text" className="w-full p-1 border rounded text-black text-xs" value={editData.recommendPoint || ""} onChange={(e) => setEditData((prev:any) => ({...prev, recommendPoint: e.target.value}))} placeholder="おすすめポイント" />
-                                  <input type="text" className="w-full p-1 border rounded text-black text-xs" value={editData.cautionNote || ""} onChange={(e) => setEditData((prev:any) => ({...prev, cautionNote: e.target.value}))} placeholder="注意事項" />
+                                  <textarea rows={3} className="w-full p-1 border rounded text-black text-xs" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容（改行OK）" />
+                                  <textarea rows={2} className="w-full p-1 border rounded text-black text-xs" value={editData.recommendPoint || ""} onChange={(e) => setEditData((prev:any) => ({...prev, recommendPoint: e.target.value}))} placeholder="おすすめポイント（改行OK）" />
+                                  <textarea rows={2} className="w-full p-1 border rounded text-black text-xs" value={editData.cautionNote || ""} onChange={(e) => setEditData((prev:any) => ({...prev, cautionNote: e.target.value}))} placeholder="注意事項（改行OK）" />
                                   <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-red-600">個別値引き%(空欄で無し):</span>
                                     <input type="number" min={0} max={99} step={0.1} className="w-16 p-1 border rounded text-black text-xs" value={editData.discountPercent ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, discountPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null}))} />
@@ -616,6 +623,11 @@ export default function AdminBookingMasterPage() {
                                     <span className="text-[10px] font-bold text-teal-600">WEB特価(円・空欄で無し):</span>
                                     <input type="number" min={0} className="w-24 p-1 border rounded text-black text-xs" value={editData.webSpecialPrice ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, webSpecialPrice: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
                                   </div>
+                                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded p-1.5">
+                                    <span className="text-[10px] font-bold text-blue-700">個数上限(空欄/1で数量選択なし):</span>
+                                    <input type="number" min={1} className="w-16 p-1 border rounded text-black text-xs" placeholder="例:3" value={editData.maxQty ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, maxQty: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
+                                  </div>
+                                  <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                                   <div className="ml-auto flex gap-1">
                                     <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">保存</button>
                                     <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-2 py-1 rounded text-[10px] font-bold">中止</button>
@@ -670,6 +682,15 @@ export default function AdminBookingMasterPage() {
                               )}
                             </div>
 
+                            {/* 小分類の作業内容・おすすめ・注意事項（保存後もここに表示） */}
+                            {(subMenu.workContent || subMenu.recommendPoint || subMenu.cautionNote) && (
+                              <div className="text-xs text-slate-700 space-y-1">
+                                {subMenu.workContent && <div className="whitespace-pre-wrap bg-white/70 rounded p-2 border border-orange-100"><span className="font-bold text-slate-500">作業内容：</span>{subMenu.workContent}</div>}
+                                {subMenu.recommendPoint && <div className="whitespace-pre-wrap text-pink-600">✨ {subMenu.recommendPoint}</div>}
+                                {subMenu.cautionNote && <div className="whitespace-pre-wrap text-red-600">⚠️ {subMenu.cautionNote}</div>}
+                              </div>
+                            )}
+
                             {/* 【4階層目】極小分類 (サブオプション) リスト */}
                             <div className="pl-6">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
@@ -691,7 +712,7 @@ export default function AdminBookingMasterPage() {
                                           <button onClick={saveEdit} className="bg-green-600 text-white px-1.5 py-0.5 rounded">✓</button>
                                           <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-1.5 py-0.5 rounded">×</button>
                                         </div>
-                                        <input className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (改行で箇条書き、任意)" />
+                                        <textarea rows={2} className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (任意・改行OK)" />
                                         <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                                       </div>
                                     ) : (
@@ -746,7 +767,7 @@ export default function AdminBookingMasterPage() {
                                 <input type="number" placeholder="加算(円)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.price || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", price: parseInt(e.target.value) || 0 })} />
                                 <input type="number" placeholder="最短(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMin || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", durationMin: parseInt(e.target.value) || 0 })} />
                                 <input type="number" placeholder="最長(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.durationMax || "" : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", durationMax: parseInt(e.target.value) || 0 })} />
-                                <input type="text" placeholder="作業内容 (改行で箇条書き、任意)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", workContent: e.target.value })} />
+                                <textarea rows={2} placeholder="作業内容 (任意・改行OK)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", workContent: e.target.value })} />
                                 <select className="p-1.5 border rounded text-black text-xs" value={newOption.subMenuId === subMenu.id ? newOption.onSiteEstimate : "NONE"} onChange={(e) => setNewOption({ ...newOption, subMenuId: subMenu.id, menuId: "", onSiteEstimate: e.target.value })}>
                                   {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                                 </select>
@@ -777,14 +798,15 @@ export default function AdminBookingMasterPage() {
                             </select>
                           </div>
                           <div className="flex gap-2 items-center flex-wrap">
-                            <input type="text" placeholder="作業内容 (任意)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.workContent : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, workContent: e.target.value })} />
-                            <input type="text" placeholder="おすすめポイント (任意)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.recommendPoint : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, recommendPoint: e.target.value })} />
-                            <input type="text" placeholder="注意事項 (任意)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.cautionNote : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, cautionNote: e.target.value })} />
+                            <textarea rows={2} placeholder="作業内容 (任意・改行OK)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.workContent : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, workContent: e.target.value })} />
+                            <textarea rows={2} placeholder="おすすめポイント (任意・改行OK)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.recommendPoint : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, recommendPoint: e.target.value })} />
+                            <textarea rows={2} placeholder="注意事項 (任意・改行OK)" className="flex-1 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.cautionNote : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, cautionNote: e.target.value })} />
                             <input type="number" min={0} max={99} step={0.1} placeholder="個別値引き%(任意)" className="w-36 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.discountPercent : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, discountPercent: e.target.value })} />
                             <RoundingSelect value={(newSubMenu.menuId === menu.id ? newSubMenu.discountRounding : "NONE") as RoundingMode} onChange={(discountRounding) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, discountRounding })} />
                             <input type="number" min={0} placeholder="WEB特価(円・任意。%値引きより優先)" className="w-56 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.webSpecialPrice : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, webSpecialPrice: e.target.value })} />
+                            <input type="number" min={1} placeholder="個数上限(任意・2以上で数量選択表示)" className="w-48 p-2 border rounded text-black text-xs" value={newSubMenu.menuId === menu.id ? newSubMenu.maxQty : ""} onChange={(e) => setNewSubMenu({ ...newSubMenu, menuId: menu.id, maxQty: e.target.value })} />
                           </div>
-                          <button onClick={() => { handleAction("POST", { type: "submenu", menuId: menu.id, title: newSubMenu.title, price: newSubMenu.price, durationMin: newSubMenu.durationMin, durationMax: newSubMenu.durationMax || null, onSiteEstimate: newSubMenu.onSiteEstimate, workContent: newSubMenu.workContent, recommendPoint: newSubMenu.recommendPoint, cautionNote: newSubMenu.cautionNote, discountPercent: newSubMenu.discountPercent || null, discountRounding: newSubMenu.discountRounding, webSpecialPrice: newSubMenu.webSpecialPrice || null, order: menu.subMenus.length }); setNewSubMenu({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "" }); }} className="self-end bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-700">小分類追加</button>
+                          <button onClick={() => { handleAction("POST", { type: "submenu", menuId: menu.id, title: newSubMenu.title, price: newSubMenu.price, durationMin: newSubMenu.durationMin, durationMax: newSubMenu.durationMax || null, onSiteEstimate: newSubMenu.onSiteEstimate, workContent: newSubMenu.workContent, recommendPoint: newSubMenu.recommendPoint, cautionNote: newSubMenu.cautionNote, discountPercent: newSubMenu.discountPercent || null, discountRounding: newSubMenu.discountRounding, webSpecialPrice: newSubMenu.webSpecialPrice || null, maxQty: newSubMenu.maxQty || null, order: menu.subMenus.length }); setNewSubMenu({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" }); }} className="self-end bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-700">小分類追加</button>
                         </div>
                       </div>
 
@@ -811,7 +833,7 @@ export default function AdminBookingMasterPage() {
                                       <button onClick={saveEdit} className="bg-green-600 text-white px-1.5 py-0.5 rounded">✓</button>
                                       <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-1.5 py-0.5 rounded">×</button>
                                     </div>
-                                    <input className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (改行で箇条書き、任意)" />
+                                    <textarea rows={2} className="w-full p-1 border rounded text-black text-[10px]" value={editData.workContent || ""} onChange={(e) => setEditData((prev:any) => ({...prev, workContent: e.target.value}))} placeholder="作業内容 (任意・改行OK)" />
                                     <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                                   </div>
                                 ) : (
@@ -865,7 +887,7 @@ export default function AdminBookingMasterPage() {
                             <input type="number" placeholder="加算(円)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.price || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", price: parseInt(e.target.value) || 0 })} />
                             <input type="number" placeholder="最短(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.durationMin || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", durationMin: parseInt(e.target.value) || 0 })} />
                             <input type="number" placeholder="最長(分)" className="w-16 p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.durationMax || "" : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", durationMax: parseInt(e.target.value) || 0 })} />
-                            <input type="text" placeholder="作業内容 (改行で箇条書き、任意)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", workContent: e.target.value })} />
+                            <textarea rows={2} placeholder="作業内容 (任意・改行OK)" className="w-full p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.workContent : ""} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", workContent: e.target.value })} />
                             <select className="p-1.5 border rounded text-black text-xs" value={newOption.menuId === menu.id ? newOption.onSiteEstimate : "NONE"} onChange={(e) => setNewOption({ ...newOption, menuId: menu.id, subMenuId: "", onSiteEstimate: e.target.value })}>
                               {Object.entries(ON_SITE_ESTIMATE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                             </select>

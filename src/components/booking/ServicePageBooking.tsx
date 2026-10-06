@@ -6,7 +6,7 @@ import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } f
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 
-type FoldItem = { id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string };
+type FoldItem = { id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
 
 type DiscountRule = { count: number; value: number };
 type QtyDiscount = { enabled: boolean; rules: DiscountRule[]; rounding?: RoundingMode };
@@ -27,6 +27,7 @@ type MainService = {
   foldTitle?: string; foldItems?: FoldItem[];
   options?: OptionItem[];
   setDiscount?: SetDiscount;
+  maxQty?: number; qtyDiscount?: QtyDiscount;
   // trueの場合、foldTitleがあってもmain自体(基本料金)を単独で選択できるチェックボックスを表示する。
   // 予約マスターの小分類は基本料金への「追加項目」であり、代替の選択肢ではないため。
   hasBaseSelection?: boolean;
@@ -125,6 +126,26 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     setOptionQuantities(prev => ({ ...prev, [id]: qty }));
   };
 
+  // 中分類(main)・小分類(foldItem)の数量。maxQty>1のときのみ可変、それ以外は常に1（＝従来通り）。
+  // 選択中の項目にのみ使う想定（未選択は合計対象外）。
+  const getUnitQty = (id: string, maxQty?: number | null) => {
+    if (!maxQty || maxQty <= 1) return 1;
+    const q = optionQuantities[id];
+    return q && q > 0 ? q : 1;
+  };
+  const setUnitQty = (id: string, qty: number) => setOptionQuantities(prev => ({ ...prev, [id]: qty }));
+
+  // 数量に応じた段階値引き（%のみ）。オプション・中分類・小分類で共用。
+  const calcQtyDiscount = (price: number, qtyDiscount: QtyDiscount | undefined, qty: number): number => {
+    if (!qtyDiscount?.enabled || qty < 2) return 0;
+    const rules = [...(qtyDiscount.rules || [])].sort((a, b) => b.count - a.count);
+    const matchedRule = rules.find(r => qty >= r.count);
+    if (!matchedRule) return 0;
+    const subtotal = price * qty;
+    const rawFinal = subtotal - (subtotal * matchedRule.value / 100);
+    return subtotal - roundAmount(rawFinal, qtyDiscount.rounding);
+  };
+
   const toggleFoldItem = (id: string) => {
     setSelectedFoldItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -172,9 +193,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const mainSelectedSubtotal = (main: MainService, idx: number): number => {
     if (hasBaseSelection(main)) {
       if (!selectedMains.includes(idx)) return 0;
-      return (main.price || 0) + (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((sum, fi) => sum + (fi.price || 0), 0);
+      return (main.price || 0) * getUnitQty(main.id || "", main.maxQty) + (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((sum, fi) => sum + (fi.price || 0) * getUnitQty(fi.id, fi.maxQty), 0);
     }
-    return (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((sum, fi) => sum + (fi.price || 0), 0);
+    return (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((sum, fi) => sum + (fi.price || 0) * getUnitQty(fi.id, fi.maxQty), 0);
   };
 
   // まとめ割引計算（大分類経由でリンクされた複数メニューを横断した段階値引き。setDiscountとは別枠）
@@ -199,39 +220,44 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const totalGroupDiscount = groupIds.reduce((sum, id) => sum + calcGroupDiscount(id), 0);
 
   // 個数値引き計算（オプション自身の選択数に応じた段階値引き。%のみ）
-  const calcOptionQtyDiscount = (opt: OptionItem, qty: number): number => {
-    if (!opt.qtyDiscount?.enabled || qty < 2) return 0;
-    const rules = [...(opt.qtyDiscount.rules || [])].sort((a, b) => b.count - a.count);
-    const matchedRule = rules.find(r => qty >= r.count);
-    if (!matchedRule) return 0;
-    const subtotal = opt.price * qty;
-    const rawFinal = subtotal - (subtotal * matchedRule.value / 100);
-    return subtotal - roundAmount(rawFinal, opt.qtyDiscount.rounding);
-  };
+  const calcOptionQtyDiscount = (opt: OptionItem, qty: number): number =>
+    calcQtyDiscount(opt.price, opt.qtyDiscount, qty);
 
-  const totalQtyDiscount = mains.flatMap(m => (m.options || [])).reduce((sum, o) => sum + calcOptionQtyDiscount(o, getQty(o.id)), 0);
+  const optionQtyDiscount = mains.flatMap(m => (m.options || [])).reduce((sum, o) => sum + calcOptionQtyDiscount(o, getQty(o.id)), 0);
+  // 中分類(main)自身の数量値引き（選択中・maxQty>1のもの）
+  const mainSelfQtyDiscount = mains.reduce((sum, m, idx) =>
+    (hasBaseSelection(m) && selectedMains.includes(idx))
+      ? sum + calcQtyDiscount(m.price || 0, m.qtyDiscount, getUnitQty(m.id || "", m.maxQty))
+      : sum, 0);
+  // 小分類(foldItem)自身の数量値引き（選択中・maxQty>1のもの）
+  const foldSelfQtyDiscount = mains.reduce((sum, m, idx) =>
+    isFoldActive(m, idx)
+      ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id))
+          .reduce((s, fi) => s + calcQtyDiscount(fi.price || 0, fi.qtyDiscount, getUnitQty(fi.id, fi.maxQty)), 0)
+      : sum, 0);
+  const totalQtyDiscount = optionQtyDiscount + mainSelfQtyDiscount + foldSelfQtyDiscount;
 
   // オプション(追加オプション)が計算対象として有効か（親の中分類が有効 かつ 紐づく小分類が選択済み）
   const isOptionActive = (main: MainService, idx: number, opt: OptionItem): boolean =>
     isFoldActive(main, idx) && (!opt.parentFoldItemId || selectedFoldItemIds.includes(opt.parentFoldItemId));
 
   // 合計計算
-  const mainNoFoldPrice = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0), 0);
-  const mainFoldPrice = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.price || 0), 0) : sum, 0);
+  const mainNoFoldPrice = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.price || 0) * getUnitQty(m.id || "", m.maxQty), 0);
+  const mainFoldPrice = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.price || 0) * getUnitQty(fi.id, fi.maxQty), 0) : sum, 0);
   const mainOptionPrice = mains.reduce((sum, m, idx) => sum + (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).reduce((s, o) => s + o.price * getQty(o.id), 0), 0);
   const legacyNoFoldPrice = legacyOptions.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.price * getQty(o.id), 0);
   const legacyFoldPrice = legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.price * getQty(fi.id), 0);
   const totalPrice = mainNoFoldPrice + mainFoldPrice + mainOptionPrice + legacyNoFoldPrice + legacyFoldPrice - totalSetDiscount - totalQtyDiscount - totalGroupDiscount;
   // 合計時間計算
-  const mainNoFoldMinMin = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0), 0);
-  const mainFoldMinMin = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMin || 0), 0) : sum, 0);
+  const mainNoFoldMinMin = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0) * getUnitQty(m.id || "", m.maxQty), 0);
+  const mainFoldMinMin = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMin || 0) * getUnitQty(fi.id, fi.maxQty), 0) : sum, 0);
   const mainOptionMinMin = mains.reduce((sum, m, idx) => sum + (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).reduce((s, o) => s + o.durationMin * getQty(o.id), 0), 0);
   const legacyNoFoldMinMin = legacyOptions.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.durationMin * getQty(o.id), 0);
   const legacyFoldMinMin = legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.durationMin * getQty(fi.id), 0);
   const totalMinutesMin = mainNoFoldMinMin + mainFoldMinMin + mainOptionMinMin + legacyNoFoldMinMin + legacyFoldMinMin;
 
-  const mainNoFoldMinMax = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMax || 0), 0);
-  const mainFoldMinMax = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMax || 0), 0) : sum, 0);
+  const mainNoFoldMinMax = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMax || 0) * getUnitQty(m.id || "", m.maxQty), 0);
+  const mainFoldMinMax = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMax || 0) * getUnitQty(fi.id, fi.maxQty), 0) : sum, 0);
   const mainOptionMinMax = mains.reduce((sum, m, idx) => sum + (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).reduce((s, o) => s + o.durationMax * getQty(o.id), 0), 0);
   const legacyNoFoldMinMax = legacyOptions.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.durationMax * getQty(o.id), 0);
   const legacyFoldMinMax = legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.durationMax * getQty(fi.id), 0);
@@ -283,10 +309,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       const activeFolds = isFoldActive(m, idx) ? (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)) : [];
       const directOpts = (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o) && !o.parentFoldItemId);
       if (!mainSelected && activeFolds.length === 0 && directOpts.length === 0) return;
-      if (mainSelected) lines.push({ indent: 0, title: m.title, price: m.price });
+      if (mainSelected) { const q = getUnitQty(m.id || "", m.maxQty); lines.push({ indent: 0, title: m.title, qty: q > 1 ? q : undefined, price: m.price }); }
       else if (m.foldTitle) lines.push({ indent: 0, title: m.foldTitle || m.title });
       activeFolds.forEach(fi => {
-        lines.push({ indent: 1, title: fi.title, price: fi.price });
+        const fq = getUnitQty(fi.id, fi.maxQty);
+        lines.push({ indent: 1, title: fi.title, qty: fq > 1 ? fq : undefined, price: fi.price });
         (m.options || [])
           .filter(o => o.parentFoldItemId === fi.id && getQty(o.id) > 0 && isOptionActive(m, idx, o))
           .forEach(o => lines.push({ indent: 2, title: o.title, qty: getQty(o.id), price: o.price }));
@@ -511,6 +538,27 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 </span>
               )}
             </label>
+            {checked && (fi.maxQty || 0) > 1 && (() => {
+              const q = getUnitQty(fi.id, fi.maxQty);
+              const qd = calcQtyDiscount(fi.price || 0, fi.qtyDiscount, q);
+              return (
+                <div className="ml-8 mt-1 flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
+                  <span className="text-xs font-bold text-blue-700">数量</span>
+                  <button type="button" onClick={() => setUnitQty(fi.id, Math.max(1, q - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
+                  <span className="w-5 text-center font-bold text-xs">{q}</span>
+                  <button type="button" onClick={() => setUnitQty(fi.id, Math.min(fi.maxQty || Infinity, q + 1))} disabled={q >= (fi.maxQty || Infinity)} className="w-6 h-6 rounded-full bg-blue-500 text-white font-bold text-xs flex items-center justify-center hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400">＋</button>
+                  <span className="text-[10px] text-slate-400">最大{fi.maxQty}</span>
+                  {qd > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">-¥{qd.toLocaleString()}</span>}
+                  {fi.qtyDiscount?.enabled && (fi.qtyDiscount.rules || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {[...fi.qtyDiscount.rules].sort((a, b) => a.count - b.count).map(rule => (
+                        <span key={rule.count} className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${q >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-200'}`}>{rule.count}個以上で{discountLabel(rule.value, fi.qtyDiscount?.rounding)}引き</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
             {fi.workContent && (
               <ul className="text-xs text-slate-600 ml-8 mt-1 space-y-0.5 list-disc list-outside pl-4">
@@ -550,9 +598,29 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   // 中分類(main)のおすすめ・作業内容・注意事項の描画。3種のrenderMain分岐すべてから共用する。
   // チェック済み(選択中)の場合のみ呼び出す想定 — タイトル行とは別の余白を確保したブロックとして表示する。
   const renderMainDetails = (main: MainService, key: string) => {
-    if (!main.comment && !main.workContent && !main.cautionNote) return null;
+    const showQty = !!main.id && (main.maxQty || 0) > 1;
+    if (!showQty && !main.comment && !main.workContent && !main.cautionNote) return null;
+    const q = getUnitQty(main.id || "", main.maxQty);
+    const qd = calcQtyDiscount(main.price || 0, main.qtyDiscount, q);
     return (
       <div className="space-y-1">
+        {showQty && (
+          <div className="flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
+            <span className="text-xs font-bold text-blue-700">数量</span>
+            <button type="button" onClick={() => setUnitQty(main.id!, Math.max(1, q - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
+            <span className="w-5 text-center font-bold text-xs">{q}</span>
+            <button type="button" onClick={() => setUnitQty(main.id!, Math.min(main.maxQty || Infinity, q + 1))} disabled={q >= (main.maxQty || Infinity)} className="w-6 h-6 rounded-full bg-blue-500 text-white font-bold text-xs flex items-center justify-center hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400">＋</button>
+            <span className="text-[10px] text-slate-400">最大{main.maxQty}</span>
+            {qd > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">-¥{qd.toLocaleString()}</span>}
+            {main.qtyDiscount?.enabled && (main.qtyDiscount.rules || []).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {[...main.qtyDiscount.rules].sort((a, b) => a.count - b.count).map(rule => (
+                  <span key={rule.count} className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${q >= rule.count ? 'bg-red-600 text-white' : 'bg-white text-red-600 border border-red-200'}`}>{rule.count}個以上で{discountLabel(rule.value, main.qtyDiscount?.rounding)}引き</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {main.comment && <p className="text-xs text-slate-500">💬 {main.comment}</p>}
         {main.workContent && (
           <ul className="text-xs text-slate-600 space-y-0.5 list-disc list-outside pl-4">
@@ -814,7 +882,25 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   rendered.push(
                     <div key={`group-${groupId}`} className="border-2 border-slate-200 rounded-xl p-3 bg-slate-50/60">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={groupOpen} onChange={() => toggleGroup(groupId)} className="w-4 h-4 accent-slate-600" />
+                        <input type="checkbox" checked={groupOpen} onChange={() => {
+                          const willClose = groupOpen; // 現在開いている→閉じる操作
+                          toggleGroup(groupId);
+                          if (willClose) {
+                            // 大分類のチェックを外したら、その配下（中分類・小分類・オプション・数量）の選択をすべて解除する
+                            const memberIdxs = groupMembers.map(({ idx: i }) => i);
+                            const memberMains = groupMembers.map(({ m }) => m);
+                            const foldIds = memberMains.flatMap(m => (m.foldItems || []).map(fi => fi.id));
+                            const optIds = memberMains.flatMap(m => (m.options || []).map(o => o.id));
+                            const mainIds = memberMains.map(m => m.id).filter(Boolean) as string[];
+                            setSelectedMains(prev => prev.filter(i => !memberIdxs.includes(i)));
+                            setSelectedFoldItemIds(prev => prev.filter(id => !foldIds.includes(id)));
+                            setOptionQuantities(prev => {
+                              const next = { ...prev };
+                              [...optIds, ...foldIds, ...mainIds].forEach(id => { if (id) delete next[id]; });
+                              return next;
+                            });
+                          }
+                        }} className="w-4 h-4 accent-slate-600" />
                         <span className="text-xs font-bold text-slate-500">📂 {main.groupTitle}</span>
                         {selectedCount > 0 && (
                           <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">選択中{selectedCount}件</span>
