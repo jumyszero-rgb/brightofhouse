@@ -59,9 +59,18 @@ export default function BlogListClient() {
   const totalPages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
   const visiblePosts = posts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const goPage = (p: number) => {
+    // ページ送りで勝手に先頭へスクロールしない（カードの位置を保つ）
     setPage(Math.min(totalPages, Math.max(1, p)));
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // 「↑ 最上部へ」ボタン（一定量スクロールしたら表示）
+  const [showTop, setShowTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleCategoryClick = (slug: string) => {
     const newCat = activeCategory === slug ? "" : slug;
@@ -203,6 +212,17 @@ export default function BlogListClient() {
           </>
         )}
       </div>
+      {/* 最上部へ戻るボタン */}
+      {showTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="最上部へ戻る"
+          className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 flex items-center justify-center text-xl font-bold transition-opacity"
+        >
+          ↑
+        </button>
+      )}
     </main>
   );
 }
