@@ -3,11 +3,21 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
+const FONT_CHOICES: { key: string; label: string; css: string }[] = [
+  { key: "zen-maru", label: "Zen丸ゴシック（やわらか・現行）", css: "'Zen Maru Gothic', sans-serif" },
+  { key: "zen-kaku", label: "Zen角ゴシック（モダン・きりっと）", css: "'Zen Kaku Gothic New', sans-serif" },
+  { key: "noto-sans", label: "Noto Sans JP（標準・読みやすい）", css: "'Noto Sans JP', sans-serif" },
+  { key: "mplus-rounded", label: "M PLUS Rounded（まるみ）", css: "'M PLUS Rounded 1c', sans-serif" },
+  { key: "kosugi-maru", label: "小杉丸ゴシック（カジュアル）", css: "'Kosugi Maru', sans-serif" },
+  { key: "shippori-mincho", label: "しっぽり明朝（上品・明朝体）", css: "'Shippori Mincho', serif" },
+];
+
 export default function AdminSettingsPage() {
   const [robotsTxt, setRobotsTxt] = useState("");
   const [reviewIpBlock, setReviewIpBlock] = useState(true);
   const [calendarStartHour, setCalendarStartHour] = useState(5);
   const [calendarEndHour, setCalendarEndHour] = useState(22);
+  const [fontKey, setFontKey] = useState("zen-maru");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -19,6 +29,7 @@ export default function AdminSettingsPage() {
         setReviewIpBlock(data.reviewIpBlock ?? true);
         setCalendarStartHour(data.calendarStartHour ?? 5);
         setCalendarEndHour(data.calendarEndHour ?? 22);
+        setFontKey(data.fontKey || "zen-maru");
       });
   }, []);
 
@@ -27,7 +38,7 @@ export default function AdminSettingsPage() {
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ robotsTxt, reviewIpBlock, calendarStartHour, calendarEndHour }),
+      body: JSON.stringify({ robotsTxt, reviewIpBlock, calendarStartHour, calendarEndHour, fontKey }),
     });
     if (res.ok) setMessage("✅ 保存しました");
     setLoading(false);
@@ -35,6 +46,17 @@ export default function AdminSettingsPage() {
   };
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  // プレビュー用にフォントを読み込む（この管理画面内だけ）
+  useEffect(() => {
+    const id = "admin-font-preview";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Kosugi+Maru&family=Shippori+Mincho:wght@400;700&display=swap";
+    document.head.appendChild(link);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 text-black">
@@ -53,6 +75,33 @@ export default function AdminSettingsPage() {
               value={robotsTxt}
               onChange={(e) => setRobotsTxt(e.target.value)}
             />
+          </div>
+
+          {/* サイトフォント */}
+          <div className="bg-fuchsia-50 border border-fuchsia-200 rounded-xl p-5">
+            <h2 className="font-bold text-fuchsia-800 mb-1">🔤 サイトフォント</h2>
+            <p className="text-xs text-slate-500 mb-4">サイト全体の文字フォントを変更します。保存後、ページを再読み込みすると反映されます。</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {FONT_CHOICES.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setFontKey(f.key)}
+                  className={`text-left p-3 rounded-lg border-2 transition-colors ${fontKey === f.key ? "border-fuchsia-500 bg-white" : "border-slate-200 bg-white hover:border-fuchsia-300"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`w-4 h-4 rounded-full border-2 shrink-0 ${fontKey === f.key ? "border-fuchsia-500 bg-fuchsia-500" : "border-slate-300"}`} />
+                    <span className="text-xs font-bold text-slate-600">{f.label}</span>
+                  </div>
+                  <div className="text-lg text-slate-900 leading-snug" style={{ fontFamily: f.css }}>
+                    あいうアイウ 北海道ブライトオブハウス
+                  </div>
+                  <div className="text-sm text-slate-500" style={{ fontFamily: f.css }}>
+                    水回りクリーニング 9,800円〜 ABCabc 0123
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* カレンダー表示時間帯 */}

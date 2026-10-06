@@ -220,6 +220,8 @@ model LandingPage {
   faqItems          Json?
   voices            Json?
   steps             Json?
+  // 説明セクション（見出し＋本文＋任意画像）の配列。必要性・当店の売り・作業箇所の説明などを自由に追加。
+  infoSections      Json?
   beforeAfters      BeforeAfter[]
   // 追加メニュー(menuOptions)のうち、予約マスターと連動させたいもの。
   // 価格・名称は保存せず常にマスターの最新値から解決する（menuOptionsは手入力の項目用に残す）。
@@ -347,6 +349,7 @@ model SiteSettings {
   reviewIpBlock     Boolean  @default(true)
   calendarStartHour Int      @default(5)
   calendarEndHour   Int      @default(22)
+  fontKey           String   @default("zen-maru")
   updatedAt         DateTime @updatedAt
 }
 

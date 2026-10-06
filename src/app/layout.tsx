@@ -1,15 +1,10 @@
 // @/src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import { GoogleAnalytics } from "@next/third-parties/google";
-
-const zenMaru = Zen_Maru_Gothic({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  display: "swap",
-});
+import prisma from "@/lib/prisma";
+import { getFontClassName, DEFAULT_FONT_KEY } from "@/lib/fonts";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -44,12 +39,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const gaId = "G-LMELPVPT3Z";
+
+  // サイトフォント（admin で選択・SiteSettings.fontKey）。未設定/取得失敗時は既定フォント。
+  let fontKey = DEFAULT_FONT_KEY;
+  try {
+    const s = await prisma.siteSettings.findUnique({ where: { id: "main" }, select: { fontKey: true } });
+    if (s?.fontKey) fontKey = s.fontKey;
+  } catch {
+    // DB未接続時などは既定フォントで継続
+  }
+  const fontClass = getFontClassName(fontKey);
 
   return (
     <html lang="ja">
@@ -61,7 +66,7 @@ export default function RootLayout({
           href="/rss.xml"
         />
       </head>
-      <body className={`${zenMaru.className} text-slate-800 pb-16 md:pb-0`}>
+      <body className={`${fontClass} text-slate-800 pb-16 md:pb-0`}>
         {/* chrome（Header/footer等）は SiteShell が pathname で出し分ける */}
         <SiteShell>{children}</SiteShell>
 

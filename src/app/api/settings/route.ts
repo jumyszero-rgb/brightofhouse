@@ -25,6 +25,7 @@ export async function GET() {
       reviewIpBlock: true,
       calendarStartHour: 5,
       calendarEndHour: 22,
+      fontKey: "zen-maru",
     });
   } catch (error) {
     return NextResponse.json({ error: "Error" }, { status: 500 });
@@ -42,6 +43,7 @@ export async function PUT(request: NextRequest) {
         ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
         ...(body.calendarStartHour !== undefined && { calendarStartHour: body.calendarStartHour }),
         ...(body.calendarEndHour !== undefined && { calendarEndHour: body.calendarEndHour }),
+        ...(body.fontKey !== undefined && { fontKey: body.fontKey }),
       },
       create: {
         id: "main",
@@ -49,6 +51,7 @@ export async function PUT(request: NextRequest) {
         ...(body.reviewIpBlock !== undefined && { reviewIpBlock: body.reviewIpBlock }),
         ...(body.calendarStartHour !== undefined && { calendarStartHour: body.calendarStartHour }),
         ...(body.calendarEndHour !== undefined && { calendarEndHour: body.calendarEndHour }),
+        ...(body.fontKey !== undefined && { fontKey: body.fontKey }),
       },
     });
     return NextResponse.json(res);
