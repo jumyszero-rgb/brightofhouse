@@ -122,8 +122,17 @@ export default function BlogListClient() {
           <p className="text-center text-slate-500 py-20">該当する記事が見つかりませんでした。</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {posts.map((post) => (
+            {posts.map((post) => {
+              const coverImg = post.thumbnail || (post.content?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1]) || "";
+              return (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
+                {coverImg ? (
+                  <div className="h-44 w-full overflow-hidden bg-slate-100">
+                    <img src={coverImg} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                ) : (
+                  <div className="h-44 w-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-5xl">🧹</div>
+                )}
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">
@@ -146,7 +155,8 @@ export default function BlogListClient() {
                   </span>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
