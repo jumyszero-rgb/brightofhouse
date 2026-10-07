@@ -618,6 +618,19 @@ export default function AdminBookingMasterPage() {
                               {menu.onSiteEstimate !== "NONE" && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{ON_SITE_ESTIMATE_LABEL[menu.onSiteEstimate]}</span>}
                               {menu.recommendPoint && <span className="text-[10px] text-pink-600">✨ {menu.recommendPoint}</span>}
                             </div>
+                            {/* サービス一覧(/service)への表示設定（中分類ごと・その場で保存） */}
+                            <div className="flex items-center gap-2 flex-wrap bg-cyan-50 border border-cyan-200 rounded px-2 py-1.5">
+                              <label className="flex items-center gap-1.5 text-xs font-bold text-cyan-800 cursor-pointer">
+                                <input type="checkbox" checked={!!menu.showOnServiceList} onChange={(e) => handleAction("PUT", { ...menu, type: "menu", showOnServiceList: e.target.checked })} />
+                                サービス一覧に表示
+                              </label>
+                              {menu.showOnServiceList && <span className="text-[10px] font-bold bg-cyan-600 text-white px-2 py-0.5 rounded-full">一覧表示中</span>}
+                              <span className="text-[10px] text-slate-500 ml-1">リンク先の詳細ページ:</span>
+                              <select value={menu.detailPageSlug || ""} onChange={(e) => handleAction("PUT", { ...menu, type: "menu", detailPageSlug: e.target.value || null })} className="p-1 border rounded text-black text-xs max-w-[220px]">
+                                <option value="">（未設定＝問い合わせへ）</option>
+                                {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
+                              </select>
+                            </div>
                           </div>
                           <div className="flex gap-2">
                             <button onClick={() => startEdit(menu, "menu")} className="text-blue-500 text-xs hover:underline font-bold">編集</button>
