@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
           title: body.title,
           order: body.order,
           setDiscountRules: body.setDiscountRules ?? undefined,
+          listPriceNote: body.listPriceNote || null,
         },
       }));
     }
@@ -83,6 +84,8 @@ export async function POST(request: NextRequest) {
           qtyDiscountRules: body.qtyDiscountRules ?? undefined,
           imageUrl: body.imageUrl || null,
           topFeaturedOrder: body.topFeaturedOrder != null && body.topFeaturedOrder !== "" ? Number(body.topFeaturedOrder) : null,
+          showOnServiceList: !!body.showOnServiceList,
+          detailPageSlug: body.detailPageSlug || null,
           order: body.order,
           categoryId: body.categoryId,
         },
@@ -154,6 +157,7 @@ export async function PUT(request: NextRequest) {
           title: data.title,
           order: data.order,
           setDiscountRules: data.setDiscountRules ?? undefined,
+          listPriceNote: data.listPriceNote || null,
         },
       }));
     }
@@ -179,6 +183,8 @@ export async function PUT(request: NextRequest) {
           qtyDiscountRules: data.qtyDiscountRules ?? undefined,
           imageUrl: data.imageUrl ?? undefined,
           topFeaturedOrder: data.topFeaturedOrder === "" ? null : (data.topFeaturedOrder != null ? Number(data.topFeaturedOrder) : undefined),
+          showOnServiceList: data.showOnServiceList != null ? !!data.showOnServiceList : undefined,
+          detailPageSlug: data.detailPageSlug !== undefined ? (data.detailPageSlug || null) : undefined,
           order: data.order,
         },
       }));

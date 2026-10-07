@@ -439,6 +439,7 @@ model BookingCategory {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   setDiscountRules Json?
+  listPriceNote    String?       // サービス一覧の見出し横に出す「〇〇円〜」等（任意・表示専用）
   menus            BookingMenu[]
   servicePages     ServicePage[]
   landingPages     LandingPage[]
@@ -463,8 +464,10 @@ model BookingMenu {
   webSpecialPrice  Int?
   maxQty           Int?             // 個数上限（未設定/1なら数量選択を表示しない）
   qtyDiscountRules Json?            // 数量値引き（{enabled, rules:[{count,value}], rounding}）
-  imageUrl         String?          // トップ「人気の作業」カード用の画像（任意）
+  imageUrl         String?          // トップ「人気の作業」カード用の画像（任意／サービス一覧カードにも流用）
   topFeaturedOrder Int?             // トップ掲載順（小さいほど上位・最小が人気No.1／未設定は非掲載）
+  showOnServiceList Boolean         @default(false) // サービス一覧(/service)に表示するか
+  detailPageSlug   String?          // サービス一覧カードのリンク先サービス詳細ページのslug（未設定は/contact）
   category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subMenus         BookingSubMenu[]
   options          BookingOption[]

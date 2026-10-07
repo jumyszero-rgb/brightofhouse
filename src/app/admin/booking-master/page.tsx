@@ -138,7 +138,7 @@ export default function AdminBookingMasterPage() {
 
   // 新規追加用ステート
   const [newCatTitle, setNewCatTitle] = useState("");
-  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" });
+  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "" });
   const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" });
   const[newOption, setNewOption] = useState<{ subMenuId: string; menuId: string; title: string; price: number; durationMin: number; durationMax: number; workContent: string; cautionNote: string; recommendPoint: string; onSiteEstimate: string; maxQty: string; discountPercent: string; discountRounding: string; qtyDiscountRules: QtyDiscountRules }>({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null });
 
@@ -313,6 +313,15 @@ export default function AdminBookingMasterPage() {
     if (res.ok) setCategories(await res.json());
   };
 
+  // サービス一覧カードのリンク先に使う、サービス詳細ページ一覧
+  const [servicePages, setServicePages] = useState<{ slug: string; title: string }[]>([]);
+  useEffect(() => {
+    fetch("/api/service-pages?all=true")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: any[]) => setServicePages((rows || []).map((p) => ({ slug: p.slug, title: p.title }))))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => { fetchData(); },[]);
 
   // --- 汎用アクション処理 ---
@@ -403,8 +412,9 @@ export default function AdminBookingMasterPage() {
               {/* 【1階層目】大分類ヘッダー */}
               <div className="bg-slate-800 p-4 text-white flex justify-between items-center">
                 {editingId === cat.id ? (
-                  <div className="flex gap-2 flex-1">
-                    <input className="flex-1 p-1 border rounded text-black" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} />
+                  <div className="flex gap-2 flex-1 flex-wrap">
+                    <input className="flex-1 min-w-[160px] p-1 border rounded text-black" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} placeholder="大分類名" />
+                    <input className="w-40 p-1 border rounded text-black" value={editData.listPriceNote || ""} onChange={(e) => setEditData((prev:any) => ({...prev, listPriceNote: e.target.value}))} placeholder="一覧の〇〇円〜(任意)" />
                     <button onClick={saveEdit} className="bg-green-600 text-white px-3 rounded text-sm font-bold">保存</button>
                     <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-3 rounded text-sm font-bold">中止</button>
                   </div>
@@ -462,7 +472,18 @@ export default function AdminBookingMasterPage() {
                   </div>
                   <input type="number" min={0} placeholder="WEB特価(円・任意。設定すると%値引きより優先されます)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.webSpecialPrice : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, webSpecialPrice: e.target.value })} />
                   <input type="number" min={1} placeholder="個数上限(任意・2以上で予約フォームに数量選択を表示／空欄・1で非表示)" className="w-full p-2 border rounded text-black text-sm" value={newMenu.categoryId === cat.id ? newMenu.maxQty : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, maxQty: e.target.value })} />
-                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, maxQty: newMenu.maxQty || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
+                  <div className="bg-cyan-50 border border-cyan-200 rounded p-2 space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-bold text-cyan-800">
+                      <input type="checkbox" checked={newMenu.categoryId === cat.id ? newMenu.showOnServiceList : false} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, showOnServiceList: e.target.checked })} />
+                      サービス一覧（/service）に表示する
+                    </label>
+                    <select value={newMenu.categoryId === cat.id ? newMenu.detailPageSlug : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, detailPageSlug: e.target.value })} className="w-full p-2 border rounded text-black text-sm">
+                      <option value="">リンク先のサービス詳細ページ（任意・未設定は問い合わせへ）</option>
+                      {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
+                    </select>
+                    <p className="text-[10px] text-cyan-700">※一覧カードの画像は、この中分類の「カード画像（imageUrl）」を流用します（無ければアイコン表示）。</p>
+                  </div>
+                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, maxQty: newMenu.maxQty || null, showOnServiceList: newMenu.showOnServiceList, detailPageSlug: newMenu.detailPageSlug || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
                 </div>
 
                 {/* 【2階層目】中分類リスト */}
@@ -503,6 +524,17 @@ export default function AdminBookingMasterPage() {
                             <span className="text-[10px] text-slate-500">※2以上にすると予約フォームで数量を選べます</span>
                           </div>
                           <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
+                          <div className="bg-cyan-50 border border-cyan-200 rounded p-2 space-y-2">
+                            <label className="flex items-center gap-2 text-sm font-bold text-cyan-800">
+                              <input type="checkbox" checked={!!editData.showOnServiceList} onChange={(e) => setEditData((prev: any) => ({ ...prev, showOnServiceList: e.target.checked }))} />
+                              サービス一覧（/service）に表示する
+                            </label>
+                            <select value={editData.detailPageSlug || ""} onChange={(e) => setEditData((prev: any) => ({ ...prev, detailPageSlug: e.target.value }))} className="w-full p-2 border rounded text-black text-sm">
+                              <option value="">リンク先のサービス詳細ページ（任意・未設定は問い合わせへ）</option>
+                              {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
+                            </select>
+                            <p className="text-[10px] text-cyan-700">※一覧カードの画像は下の「カード画像」を流用します（無ければアイコン表示）。</p>
+                          </div>
                           <SetDiscountEditor value={editData.setDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, setDiscountRules: v }))} />
 
                           {/* トップ「人気の作業」掲載（画像＋掲載順） */}
