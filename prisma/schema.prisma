@@ -468,6 +468,7 @@ model BookingMenu {
   topFeaturedOrder Int?             // トップ掲載順（小さいほど上位・最小が人気No.1／未設定は非掲載）
   showOnServiceList Boolean         @default(false) // サービス一覧(/service)に表示するか
   detailPageSlug   String?          // サービス一覧カードのリンク先サービス詳細ページのslug（未設定は/contact）
+  listPriceOverride String?         // サービス一覧カードの価格表記の上書き（任意・空欄なら中分類優先→小分類最安を自動表示）
   category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subMenus         BookingSubMenu[]
   options          BookingOption[]

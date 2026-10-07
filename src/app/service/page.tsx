@@ -27,11 +27,40 @@ export default async function ServicePage() {
       menus: {
         where: { showOnServiceList: true },
         orderBy: { order: "asc" },
+        include: {
+          subMenus: { select: { price: true, webSpecialPrice: true, discountPercent: true, discountRounding: true } },
+        },
       },
     },
   });
   // 表示対象の中分類が1つ以上ある大分類だけ出す
   const categories = categoriesRaw.filter((c) => c.menus.length > 0);
+
+  // カード要約：リンク先の詳細ページ(ServicePage)のキャッチコピー→無ければmetaDescription
+  const detailSlugs = Array.from(
+    new Set(categories.flatMap((c) => c.menus.map((m) => m.detailPageSlug).filter(Boolean)))
+  ) as string[];
+  const detailPages = detailSlugs.length
+    ? await prisma.servicePage.findMany({
+        where: { slug: { in: detailSlugs } },
+        select: { slug: true, catchphrase: true, metaDescription: true },
+      })
+    : [];
+  const summaryBySlug: Record<string, string> = Object.fromEntries(
+    detailPages.map((p) => [p.slug, (p.catchphrase || p.metaDescription || "").trim()])
+  );
+
+  // カード価格：上書き欄があればそれ／無ければ中分類の価格／それも0なら小分類の最安を「〜」表示
+  function cardPrice(menu: { listPriceOverride?: string | null; basePrice: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; subMenus: { price: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string }[] }): { override?: string; price?: number; originalPrice?: number } {
+    if (menu.listPriceOverride && menu.listPriceOverride.trim()) return { override: menu.listPriceOverride.trim() };
+    const own = resolvePrice(menu.basePrice, menu.webSpecialPrice, menu.discountPercent, menu.discountRounding);
+    if (own.price > 0) return { price: own.price, originalPrice: own.originalPrice ?? undefined };
+    const subPrices = (menu.subMenus || [])
+      .map((s) => resolvePrice(s.price, s.webSpecialPrice, s.discountPercent, s.discountRounding).price)
+      .filter((p) => p > 0);
+    if (subPrices.length) return { price: Math.min(...subPrices) };
+    return {};
+  }
 
   // 対応エリア（内部リンク）
   const areaPages = await prisma.landingPage.findMany({
@@ -130,34 +159,42 @@ export default async function ServicePage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                     {category.menus.map((menu) => {
-                      const { price, originalPrice } = resolvePrice(menu.basePrice, menu.webSpecialPrice, menu.discountPercent, menu.discountRounding);
+                      const cp = cardPrice(menu);
                       const href = menu.detailPageSlug ? `/service/${menu.detailPageSlug}` : "/contact";
+                      const summary = menu.detailPageSlug ? (summaryBySlug[menu.detailPageSlug] || "") : "";
                       return (
-                        <Link key={menu.id} href={href} className="group relative block aspect-square rounded-2xl overflow-hidden shadow-sm border border-[#e7ecf1]">
-                          {menu.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={menu.imageUrl} alt={menu.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                            <div className="absolute inset-0 flex items-center justify-center text-5xl" style={{ background: `linear-gradient(135deg, ${accent}22, ${accent}44)` }}>🧹</div>
-                          )}
-                          {/* 文字を重ねる黒グラデーション */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/5" />
-                          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 text-white">
-                            <h3 className="text-sm md:text-base font-bold leading-snug line-clamp-2 drop-shadow">{menu.title}</h3>
-                            {price > 0 && (
-                              <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
-                                {originalPrice != null && (
-                                  <span className="text-[11px] text-white/70 line-through">通常¥{originalPrice.toLocaleString()}</span>
-                                )}
-                                <span className="text-lg md:text-xl font-black text-[#ffd54a]">¥{price.toLocaleString()}</span>
-                                <span className="text-[10px] text-white/80">〜</span>
-                              </div>
+                        <Link key={menu.id} href={href} className="group block rounded-xl overflow-hidden shadow-sm border border-[#e7ecf1] bg-white">
+                          <div className="relative aspect-[4/3]">
+                            {menu.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={menu.imageUrl} alt={menu.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center text-4xl" style={{ background: `linear-gradient(135deg, ${accent}22, ${accent}44)` }}>🧹</div>
+                            )}
+                            {/* 文字を重ねる黒グラデーション */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 p-2 md:p-2.5 text-white">
+                              <h3 className="text-xs md:text-sm font-bold leading-snug line-clamp-2 drop-shadow">{menu.title}</h3>
+                              {cp.override ? (
+                                <div className="mt-0.5 text-sm md:text-base font-black text-[#ffd54a] drop-shadow leading-tight">{cp.override}</div>
+                              ) : cp.price != null ? (
+                                <div className="mt-0.5 flex items-baseline gap-1 flex-wrap">
+                                  {cp.originalPrice != null && (
+                                    <span className="text-[10px] text-white/70 line-through">通常¥{cp.originalPrice.toLocaleString()}</span>
+                                  )}
+                                  <span className="text-base md:text-lg font-black text-[#ffd54a]">¥{cp.price.toLocaleString()}</span>
+                                  <span className="text-[9px] text-white/80">〜</span>
+                                </div>
+                              ) : null}
+                            </div>
+                            {menu.detailPageSlug && (
+                              <span className="absolute top-2 right-2 text-[10px] font-bold bg-white/90 text-slate-700 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">詳しく見る →</span>
                             )}
                           </div>
-                          {menu.detailPageSlug && (
-                            <span className="absolute top-2 right-2 text-[10px] font-bold bg-white/90 text-slate-700 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">詳しく見る →</span>
+                          {summary && (
+                            <p className="px-2.5 py-2 text-[11px] text-slate-500 leading-snug line-clamp-2">{summary}</p>
                           )}
                         </Link>
                       );

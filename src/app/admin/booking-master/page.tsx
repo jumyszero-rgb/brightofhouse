@@ -138,7 +138,7 @@ export default function AdminBookingMasterPage() {
 
   // 新規追加用ステート
   const [newCatTitle, setNewCatTitle] = useState("");
-  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "" });
+  const [newMenu, setNewMenu] = useState({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "", listPriceOverride: "" });
   const [newSubMenu, setNewSubMenu] = useState({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" });
   const[newOption, setNewOption] = useState<{ subMenuId: string; menuId: string; title: string; price: number; durationMin: number; durationMax: number; workContent: string; cautionNote: string; recommendPoint: string; onSiteEstimate: string; maxQty: string; discountPercent: string; discountRounding: string; qtyDiscountRules: QtyDiscountRules }>({ subMenuId: "", menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", maxQty: "", discountPercent: "", discountRounding: "NONE", qtyDiscountRules: null });
 
@@ -481,9 +481,10 @@ export default function AdminBookingMasterPage() {
                       <option value="">リンク先のサービス詳細ページ（任意・未設定は問い合わせへ）</option>
                       {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
                     </select>
-                    <p className="text-[10px] text-cyan-700">※一覧カードの画像は、この中分類の「カード画像（imageUrl）」を流用します（無ければアイコン表示）。</p>
+                    <input type="text" value={newMenu.categoryId === cat.id ? newMenu.listPriceOverride : ""} onChange={(e) => setNewMenu({ ...newMenu, categoryId: cat.id, listPriceOverride: e.target.value })} className="w-full p-2 border rounded text-black text-sm" placeholder="一覧カードの価格表記の上書き（任意・空欄で自動）例: 3,000円〜/箇所" />
+                    <p className="text-[10px] text-cyan-700">※価格は空欄だと「中分類の価格→無ければ小分類の最安〜」を自動表示。上書き欄に入れるとその文字をそのまま表示します。画像はこの中分類の「カード画像」を流用（無ければアイコン）。</p>
                   </div>
-                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, maxQty: newMenu.maxQty || null, showOnServiceList: newMenu.showOnServiceList, detailPageSlug: newMenu.detailPageSlug || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
+                  <button onClick={() => { handleAction("POST", { type: "menu", categoryId: cat.id, title: newMenu.title, basePrice: newMenu.basePrice, priceNote: newMenu.priceNote, workContent: newMenu.workContent, cautionNote: newMenu.cautionNote, recommendPoint: newMenu.recommendPoint, onSiteEstimate: newMenu.onSiteEstimate, durationMin: newMenu.durationMin, durationMax: newMenu.durationMax || null, discountPercent: newMenu.discountPercent || null, discountRounding: newMenu.discountRounding, webSpecialPrice: newMenu.webSpecialPrice || null, maxQty: newMenu.maxQty || null, showOnServiceList: newMenu.showOnServiceList, detailPageSlug: newMenu.detailPageSlug || null, listPriceOverride: newMenu.listPriceOverride || null, order: cat.menus.length }); setNewMenu({ categoryId: "", title: "", basePrice: 0, priceNote: "", workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", durationMin: 60, durationMax: 0, discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "", showOnServiceList: false, detailPageSlug: "", listPriceOverride: "" }); }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow-sm">中分類を追加</button>
                 </div>
 
                 {/* 【2階層目】中分類リスト */}
@@ -533,7 +534,8 @@ export default function AdminBookingMasterPage() {
                               <option value="">リンク先のサービス詳細ページ（任意・未設定は問い合わせへ）</option>
                               {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
                             </select>
-                            <p className="text-[10px] text-cyan-700">※一覧カードの画像は下の「カード画像」を流用します（無ければアイコン表示）。</p>
+                            <input type="text" value={editData.listPriceOverride || ""} onChange={(e) => setEditData((prev: any) => ({ ...prev, listPriceOverride: e.target.value }))} className="w-full p-2 border rounded text-black text-sm" placeholder="一覧カードの価格表記の上書き（任意・空欄で自動）例: 3,000円〜/箇所" />
+                            <p className="text-[10px] text-cyan-700">※価格は空欄だと「中分類の価格→無ければ小分類の最安〜」を自動表示。上書き欄に入れるとその文字をそのまま表示します。画像は下の「カード画像」を流用（無ければアイコン）。</p>
                           </div>
                           <SetDiscountEditor value={editData.setDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, setDiscountRules: v }))} />
 

@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
           topFeaturedOrder: body.topFeaturedOrder != null && body.topFeaturedOrder !== "" ? Number(body.topFeaturedOrder) : null,
           showOnServiceList: !!body.showOnServiceList,
           detailPageSlug: body.detailPageSlug || null,
+          listPriceOverride: body.listPriceOverride || null,
           order: body.order,
           categoryId: body.categoryId,
         },
@@ -185,6 +186,7 @@ export async function PUT(request: NextRequest) {
           topFeaturedOrder: data.topFeaturedOrder === "" ? null : (data.topFeaturedOrder != null ? Number(data.topFeaturedOrder) : undefined),
           showOnServiceList: data.showOnServiceList != null ? !!data.showOnServiceList : undefined,
           detailPageSlug: data.detailPageSlug !== undefined ? (data.detailPageSlug || null) : undefined,
+          listPriceOverride: data.listPriceOverride !== undefined ? (data.listPriceOverride || null) : undefined,
           order: data.order,
         },
       }));
