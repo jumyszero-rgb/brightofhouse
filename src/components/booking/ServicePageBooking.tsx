@@ -6,13 +6,13 @@ import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } f
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 
-type FoldItem = { id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
+type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
 
 type DiscountRule = { count: number; value: number };
 type QtyDiscount = { enabled: boolean; rules: DiscountRule[]; rounding?: RoundingMode };
 
 type OptionItem = {
-  id: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number;
+  id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number;
   maxQty: number; workContent?: string; comment?: string; parentFoldItemId?: string; qtyDiscount?: QtyDiscount;
 };
 
@@ -22,7 +22,7 @@ type SetDiscount = { enabled: boolean; type: "amount" | "percent"; rules: Discou
 const discountLabel = (value: number, rounding?: RoundingMode) => `${rounding && rounding !== "NONE" ? "約" : ""}${value}%`;
 
 type MainService = {
-  id?: string; title: string; price: number; originalPrice?: number; durationMin: number; durationMax: number;
+  id?: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number;
   workContent?: string; comment?: string; cautionNote?: string;
   foldTitle?: string; foldItems?: FoldItem[];
   options?: OptionItem[];
@@ -248,6 +248,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const legacyNoFoldPrice = legacyOptions.filter(o => !o.foldTitle).reduce((sum, o) => sum + o.price * getQty(o.id), 0);
   const legacyFoldPrice = legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).reduce((sum, fi) => sum + fi.price * getQty(fi.id), 0);
   const totalPrice = mainNoFoldPrice + mainFoldPrice + mainOptionPrice + legacyNoFoldPrice + legacyFoldPrice - totalSetDiscount - totalQtyDiscount - totalGroupDiscount;
+  // 選択中に「〜(最低価格・見積で変動)」の項目があれば、合計も最低額の意味で「〜」を付ける
+  const totalHasFrom =
+    mains.some((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx) && !!m.from) ||
+    mains.some((m, idx) => isFoldActive(m, idx) && (m.foldItems || []).some((fi) => selectedFoldItemIds.includes(fi.id) && !!fi.from)) ||
+    mains.some((m, idx) => (m.options || []).some((o) => getQty(o.id) > 0 && isOptionActive(m, idx, o) && !!o.from));
   // 合計時間計算
   const mainNoFoldMinMin = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0) * getUnitQty(m.id || "", m.maxQty), 0);
   const mainFoldMinMin = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMin || 0) * getUnitQty(fi.id, fi.maxQty), 0) : sum, 0);
@@ -461,7 +466,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 {opt.originalPrice != null && (
                   <span className="text-slate-400 line-through mr-1">+¥{opt.originalPrice.toLocaleString()}</span>
                 )}
-                <span className="font-bold text-slate-600">+¥{opt.price.toLocaleString()}</span>
+                <span className="font-bold text-slate-600">+¥{opt.price.toLocaleString()}{opt.from && "〜"}</span>
               </span>
             )}
           </div>
@@ -534,7 +539,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   {fi.originalPrice != null && (
                     <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span></>
                   )}
-                  <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}</span>
+                  <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}{fi.from && "〜"}</span>
                 </span>
               )}
             </label>
@@ -688,7 +693,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   {main.originalPrice != null && (
                     <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
                   )}
-                  <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+                  <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}{main.from && "〜"}</span>
                 </span>
               )}
             </div>
@@ -804,7 +809,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               {main.originalPrice != null && (
                 <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
               )}
-              <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}</span>
+              <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}{main.from && "〜"}</span>
             </span>
           )}
         </label>
@@ -1026,7 +1031,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             {totalGroupDiscount > 0 && (
               <p className="text-sm text-red-600 font-bold">まとめ割引：-¥{totalGroupDiscount.toLocaleString()}</p>
             )}
-            <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
+            <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}{totalHasFrom && "〜"}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
             <p className="text-[10px] text-slate-400 mt-2 leading-relaxed text-left sm:text-right">
               ※作業時間はワンオペのおおよその時間です。作業内容・状況により人員が追加になる場合があり、その場合は時間が短縮されることがあります。お申込み後、担当者よりおおよその目安をお伝えしますので、時間には余裕をもってお申込みください。
             </p>
@@ -1388,7 +1393,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               {!inquiryOnly && (
                 <div className="flex justify-between border-t pt-2">
                   <span className="font-bold">概算合計金額（税込）</span>
-                  <span className="font-black text-blue-700">¥{totalPrice.toLocaleString()}</span>
+                  <span className="font-black text-blue-700">¥{totalPrice.toLocaleString()}{totalHasFrom && "〜"}</span>
                 </div>
               )}
               <div>

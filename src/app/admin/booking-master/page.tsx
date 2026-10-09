@@ -74,10 +74,10 @@ function QtyDiscountEditor({ value, onChange }: { value: QtyDiscountRules; onCha
   );
 }
 
-type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; subMenuId: string | null; menuId: string | null };
-type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; menuId: string; options: BookingOption[] };
-type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; imageUrl: string | null; topFeaturedOrder: number | null; order: number; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
-type BookingCategory = { id: string; title: string; order: number; setDiscountRules: SetDiscountRules; menus: BookingMenu[] };
+type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; calendarOrder: number | null; subMenuId: string | null; menuId: string | null };
+type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; calendarOrder: number | null; menuId: string; options: BookingOption[] };
+type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; maxQty: number | null; qtyDiscountRules: QtyDiscountRules; imageUrl: string | null; topFeaturedOrder: number | null; showOnServiceList: boolean; detailPageSlug: string | null; listPriceOverride: string | null; priceFrom: boolean; order: number; calendarOrder: number | null; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
+type BookingCategory = { id: string; title: string; order: number; calendarOrder: number | null; setDiscountRules: SetDiscountRules; menus: BookingMenu[] };
 
 function newSetDiscountRules(): NonNullable<SetDiscountRules> {
   return { enabled: false, type: "percent", rules: [], rounding: "NONE" };
@@ -422,6 +422,7 @@ export default function AdminBookingMasterPage() {
                   <div className="flex items-center gap-2 w-full">
                     <button onClick={() => handleMove(catIdx, "up", categories, "category")} className="px-2 bg-white/10 rounded hover:bg-white/20">↑</button>
                     <button onClick={() => handleMove(catIdx, "down", categories, "category")} className="px-2 bg-white/10 rounded hover:bg-white/20">↓</button>
+                    <input key={`cord-cat-${cat.id}-${cat.calendarOrder ?? "n"}`} type="number" defaultValue={cat.calendarOrder ?? ""} placeholder="順" title="カレンダー表示順（小さいほど上・カレンダー専用／一覧には影響しません）" onClick={(e) => e.stopPropagation()} onBlur={(e) => { const raw = e.currentTarget.value.trim(); const v = raw === "" ? null : parseInt(raw); if (v !== (cat.calendarOrder ?? null) && (v === null || !isNaN(v))) handleAction("PUT", { ...cat, type: "category", calendarOrder: v }); }} className="w-12 px-1 py-0.5 rounded text-black text-xs text-center" />
                     <button onClick={() => toggleCatCollapse(cat.id)} className="px-2 bg-white/10 rounded hover:bg-white/20" title={collapsedCats.has(cat.id) ? "展開" : "折りたたむ"}>
                       {collapsedCats.has(cat.id) ? "▶" : "▼"}
                     </button>
@@ -594,6 +595,7 @@ export default function AdminBookingMasterPage() {
                           <div className="flex flex-col gap-0.5 mt-1">
                             <button onClick={() => handleMove(menuIdx, "up", cat.menus, "menu")} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded">↑</button>
                             <button onClick={() => handleMove(menuIdx, "down", cat.menus, "menu")} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded">↓</button>
+                            <input key={`cord-menu-${menu.id}-${menu.calendarOrder ?? "n"}`} type="number" defaultValue={menu.calendarOrder ?? ""} placeholder="順" title="カレンダー表示順（小さいほど上・カレンダー専用／一覧には影響しません）" onBlur={(e) => { const raw = e.currentTarget.value.trim(); const v = raw === "" ? null : parseInt(raw); if (v !== (menu.calendarOrder ?? null) && (v === null || !isNaN(v))) handleAction("PUT", { ...menu, type: "menu", calendarOrder: v }); }} className="w-10 px-0.5 py-0.5 border rounded text-black text-[10px] text-center" />
                             <button onClick={() => toggleMenuCollapse(menu.id)} className="text-[10px] bg-gray-100 hover:bg-gray-200 px-1 rounded" title={collapsedMenus.has(menu.id) ? "展開" : "折りたたむ"}>
                               {collapsedMenus.has(menu.id) ? "▶" : "▼"}
                             </button>
@@ -632,6 +634,10 @@ export default function AdminBookingMasterPage() {
                                 <option value="">（未設定＝問い合わせへ）</option>
                                 {servicePages.map((p) => <option key={p.slug} value={p.slug}>{p.title}</option>)}
                               </select>
+                              <label className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 cursor-pointer ml-1" title="価格を「〜」付き（最低価格・見積で変動）で表示します">
+                                <input type="checkbox" checked={!!menu.priceFrom} onChange={(e) => handleAction("PUT", { ...menu, type: "menu", priceFrom: e.target.checked })} />
+                                「〜」表示
+                              </label>
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -697,6 +703,10 @@ export default function AdminBookingMasterPage() {
                                     <span className="text-[10px] font-bold text-blue-700">個数上限(空欄/1で数量選択なし):</span>
                                     <input type="number" min={1} className="w-16 p-1 border rounded text-black text-xs" placeholder="例:3" value={editData.maxQty ?? ""} onChange={(e) => setEditData((prev:any) => ({...prev, maxQty: e.target.value === "" ? null : parseInt(e.target.value) || null}))} />
                                   </div>
+                                  <label className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-1.5 cursor-pointer">
+                                    <input type="checkbox" checked={!!editData.priceFrom} onChange={(e) => setEditData((prev: any) => ({ ...prev, priceFrom: e.target.checked }))} />
+                                    価格を「〜」付き（最低価格・見積で変動）で表示する
+                                  </label>
                                   <QtyDiscountEditor value={editData.qtyDiscountRules ?? null} onChange={(v) => setEditData((prev: any) => ({ ...prev, qtyDiscountRules: v }))} />
                                   <div className="ml-auto flex gap-1">
                                     <button onClick={saveEdit} className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">保存</button>
@@ -708,6 +718,7 @@ export default function AdminBookingMasterPage() {
                                   <div className="flex flex-col gap-0.5">
                                     <button onClick={() => handleMove(subMenuIdx, "up", menu.subMenus, "submenu")} className="text-[10px] bg-white border hover:bg-gray-100 px-1 rounded">↑</button>
                                     <button onClick={() => handleMove(subMenuIdx, "down", menu.subMenus, "submenu")} className="text-[10px] bg-white border hover:bg-gray-100 px-1 rounded">↓</button>
+                                    <input key={`cord-sub-${subMenu.id}-${subMenu.calendarOrder ?? "n"}`} type="number" defaultValue={subMenu.calendarOrder ?? ""} placeholder="順" title="カレンダー表示順（小さいほど上・カレンダー専用／一覧には影響しません）" onBlur={(e) => { const raw = e.currentTarget.value.trim(); const v = raw === "" ? null : parseInt(raw); if (v !== (subMenu.calendarOrder ?? null) && (v === null || !isNaN(v))) handleAction("PUT", { ...subMenu, type: "submenu", calendarOrder: v }); }} className="w-10 px-0.5 py-0.5 border rounded text-black text-[10px] text-center" />
                                   </div>
                                   <div className="flex-1 flex items-center gap-3 flex-wrap">
                                     <h4 className="font-bold text-orange-900 text-sm">➖ {subMenu.title}</h4>
@@ -770,6 +781,7 @@ export default function AdminBookingMasterPage() {
                                       <div className="flex flex-col gap-1 w-full">
                                         <div className="flex gap-1 items-center flex-wrap">
                                           <input className="flex-1 p-1 border rounded text-black text-[10px]" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} placeholder="追加オプション名" />
+                                          <label className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 whitespace-nowrap" title="価格を「〜」付き(最低価格・見積で変動)で表示"><input type="checkbox" checked={!!editData.priceFrom} onChange={(e) => setEditData((prev:any) => ({...prev, priceFrom: e.target.checked}))} />「〜」</label>
                                           <input type="number" className="w-14 p-1 border rounded text-black text-[10px]" value={editData.price || 0} onChange={(e) => setEditData((prev:any) => ({...prev, price: parseInt(e.target.value) || 0}))} placeholder="円" />
                                           <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMin || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMin: parseInt(e.target.value) || 0}))} placeholder="最短分" />
                                           <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMax || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMax: parseInt(e.target.value) || 0}))} placeholder="最長分" />
@@ -790,6 +802,7 @@ export default function AdminBookingMasterPage() {
                                         <div className="flex items-center gap-1">
                                           <button onClick={() => handleMove(optIdx, "up", subMenu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▲</button>
                                           <button onClick={() => handleMove(optIdx, "down", subMenu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▼</button>
+                                          <input key={`cord-opt-${opt.id}-${opt.calendarOrder ?? "n"}`} type="number" defaultValue={opt.calendarOrder ?? ""} placeholder="順" title="カレンダー表示順（小さいほど上・カレンダー専用／一覧には影響しません）" onBlur={(e) => { const raw = e.currentTarget.value.trim(); const v = raw === "" ? null : parseInt(raw); if (v !== (opt.calendarOrder ?? null) && (v === null || !isNaN(v))) handleAction("PUT", { ...opt, type: "option", calendarOrder: v }); }} className="w-9 px-0.5 border rounded text-black text-[9px] text-center" />
                                           <span className="font-bold text-orange-900 ml-1">{opt.title}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -891,6 +904,7 @@ export default function AdminBookingMasterPage() {
                                   <div className="flex flex-col gap-1 w-full">
                                     <div className="flex gap-1 items-center flex-wrap">
                                       <input className="flex-1 p-1 border rounded text-black text-[10px]" value={editData.title} onChange={(e) => setEditData((prev:any) => ({...prev, title: e.target.value}))} placeholder="オプション名" />
+                                      <label className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 whitespace-nowrap" title="価格を「〜」付き(最低価格・見積で変動)で表示"><input type="checkbox" checked={!!editData.priceFrom} onChange={(e) => setEditData((prev:any) => ({...prev, priceFrom: e.target.checked}))} />「〜」</label>
                                       <input type="number" className="w-14 p-1 border rounded text-black text-[10px]" value={editData.price || 0} onChange={(e) => setEditData((prev:any) => ({...prev, price: parseInt(e.target.value) || 0}))} placeholder="円" />
                                       <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMin || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMin: parseInt(e.target.value) || 0}))} placeholder="最短分" />
                                       <input type="number" className="w-12 p-1 border rounded text-black text-[10px]" value={editData.durationMax || 0} onChange={(e) => setEditData((prev:any) => ({...prev, durationMax: parseInt(e.target.value) || 0}))} placeholder="最長分" />
@@ -911,6 +925,7 @@ export default function AdminBookingMasterPage() {
                                     <div className="flex items-center gap-1">
                                       <button onClick={() => handleMove(optIdx, "up", menu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▲</button>
                                       <button onClick={() => handleMove(optIdx, "down", menu.options, "option")} className="text-[8px] text-gray-400 hover:text-gray-700">▼</button>
+                                      <input key={`cord-opt-${opt.id}-${opt.calendarOrder ?? "n"}`} type="number" defaultValue={opt.calendarOrder ?? ""} placeholder="順" title="カレンダー表示順（小さいほど上・カレンダー専用／一覧には影響しません）" onBlur={(e) => { const raw = e.currentTarget.value.trim(); const v = raw === "" ? null : parseInt(raw); if (v !== (opt.calendarOrder ?? null) && (v === null || !isNaN(v))) handleAction("PUT", { ...opt, type: "option", calendarOrder: v }); }} className="w-9 px-0.5 border rounded text-black text-[9px] text-center" />
                                       <span className="font-bold text-teal-900 ml-1">{opt.title}</span>
                                     </div>
                                     <div className="flex items-center gap-2">

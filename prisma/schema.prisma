@@ -436,6 +436,7 @@ model BookingCategory {
   id               String        @id @default(uuid())
   title            String
   order            Int           @default(0)
+  calendarOrder    Int?          // カレンダー(予約フォーム)専用の表示順。一覧・管理画面の並び(order)には影響しない
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   setDiscountRules Json?
@@ -452,6 +453,7 @@ model BookingMenu {
   durationMin      Int              @default(0)
   durationMax      Int?
   order            Int              @default(0)
+  calendarOrder    Int?             // カレンダー(予約フォーム)専用の表示順。一覧・管理画面の並び(order)には影響しない
   categoryId       String
   workContent      String?
   cautionNote      String?
@@ -469,6 +471,7 @@ model BookingMenu {
   showOnServiceList Boolean         @default(false) // サービス一覧(/service)に表示するか
   detailPageSlug   String?          // サービス一覧カードのリンク先サービス詳細ページのslug（未設定は/contact）
   listPriceOverride String?         // サービス一覧カードの価格表記の上書き（任意・空欄なら中分類優先→小分類最安を自動表示）
+  priceFrom        Boolean          @default(false) // 価格を「〜」付き(最低価格・見積で変動)で表示する
   category         BookingCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subMenus         BookingSubMenu[]
   options          BookingOption[]
@@ -484,6 +487,7 @@ model BookingSubMenu {
   durationMin      Int             @default(0)
   durationMax      Int?
   order            Int             @default(0)
+  calendarOrder    Int?            // カレンダー(予約フォーム)専用の表示順。一覧の並び(order)には影響しない
   menuId           String
   workContent      String?
   cautionNote      String?
@@ -494,6 +498,7 @@ model BookingSubMenu {
   webSpecialPrice  Int?
   maxQty           Int?            // 個数上限（未設定/1なら数量選択を表示しない）
   qtyDiscountRules Json?           // 数量値引き（{enabled, rules:[{count,value}], rounding}）
+  priceFrom        Boolean         @default(false) // 価格を「〜」付き(最低価格・見積で変動)で表示する
   options          BookingOption[]
   menu             BookingMenu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   landingPages     LandingPage[]
@@ -506,6 +511,7 @@ model BookingOption {
   durationMin      Int             @default(0)
   durationMax      Int?
   order            Int             @default(0)
+  calendarOrder    Int?            // カレンダー(予約フォーム)専用の表示順。一覧の並び(order)には影響しない
   workContent      String?
   cautionNote      String?
   recommendPoint   String?
@@ -514,6 +520,7 @@ model BookingOption {
   discountPercent  Float?
   discountRounding String          @default("NONE")
   qtyDiscountRules Json?
+  priceFrom        Boolean         @default(false) // 価格を「〜」付き(最低価格・見積で変動)で表示する
   subMenuId        String?
   subMenu          BookingSubMenu? @relation(fields: [subMenuId], references: [id], onDelete: Cascade)
   menuId           String?

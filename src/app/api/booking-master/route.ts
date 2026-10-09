@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         data: {
           title: body.title,
           order: body.order,
+          calendarOrder: body.calendarOrder ?? null,
           setDiscountRules: body.setDiscountRules ?? undefined,
           listPriceNote: body.listPriceNote || null,
         },
@@ -87,7 +88,9 @@ export async function POST(request: NextRequest) {
           showOnServiceList: !!body.showOnServiceList,
           detailPageSlug: body.detailPageSlug || null,
           listPriceOverride: body.listPriceOverride || null,
+          priceFrom: !!body.priceFrom,
           order: body.order,
+          calendarOrder: body.calendarOrder ?? null,
           categoryId: body.categoryId,
         },
       }));
@@ -109,7 +112,9 @@ export async function POST(request: NextRequest) {
           webSpecialPrice: body.webSpecialPrice != null && body.webSpecialPrice !== "" ? Number(body.webSpecialPrice) : null,
           maxQty: body.maxQty != null && body.maxQty !== "" ? Number(body.maxQty) : null,
           qtyDiscountRules: body.qtyDiscountRules ?? undefined,
+          priceFrom: !!body.priceFrom,
           order: body.order,
+          calendarOrder: body.calendarOrder ?? null,
           menuId: body.menuId,
         },
       }));
@@ -130,7 +135,9 @@ export async function POST(request: NextRequest) {
           discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
           discountRounding: body.discountRounding || "NONE",
           qtyDiscountRules: body.qtyDiscountRules ?? undefined,
+          priceFrom: !!body.priceFrom,
           order: body.order,
+          calendarOrder: body.calendarOrder ?? null,
           subMenuId: body.subMenuId || null,
           menuId: body.menuId || null,
         },
@@ -157,6 +164,7 @@ export async function PUT(request: NextRequest) {
         data: {
           title: data.title,
           order: data.order,
+          calendarOrder: data.calendarOrder !== undefined ? data.calendarOrder : undefined,
           setDiscountRules: data.setDiscountRules ?? undefined,
           listPriceNote: data.listPriceNote || null,
         },
@@ -187,7 +195,9 @@ export async function PUT(request: NextRequest) {
           showOnServiceList: data.showOnServiceList != null ? !!data.showOnServiceList : undefined,
           detailPageSlug: data.detailPageSlug !== undefined ? (data.detailPageSlug || null) : undefined,
           listPriceOverride: data.listPriceOverride !== undefined ? (data.listPriceOverride || null) : undefined,
+          priceFrom: data.priceFrom != null ? !!data.priceFrom : undefined,
           order: data.order,
+          calendarOrder: data.calendarOrder !== undefined ? data.calendarOrder : undefined,
         },
       }));
     }
@@ -209,7 +219,9 @@ export async function PUT(request: NextRequest) {
           webSpecialPrice: data.webSpecialPrice != null && data.webSpecialPrice !== "" ? Number(data.webSpecialPrice) : null,
           maxQty: data.maxQty != null && data.maxQty !== "" ? Number(data.maxQty) : null,
           qtyDiscountRules: data.qtyDiscountRules ?? undefined,
+          priceFrom: data.priceFrom != null ? !!data.priceFrom : undefined,
           order: data.order,
+          calendarOrder: data.calendarOrder !== undefined ? data.calendarOrder : undefined,
         },
       }));
     }
@@ -230,7 +242,9 @@ export async function PUT(request: NextRequest) {
           discountPercent: data.discountPercent != null && data.discountPercent !== "" ? Number(data.discountPercent) : null,
           discountRounding: data.discountRounding || "NONE",
           qtyDiscountRules: data.qtyDiscountRules ?? undefined,
+          priceFrom: data.priceFrom != null ? !!data.priceFrom : undefined,
           order: data.order,
+          calendarOrder: data.calendarOrder !== undefined ? data.calendarOrder : undefined,
         },
       }));
     }

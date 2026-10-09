@@ -28,7 +28,7 @@ export default async function ServicePage() {
         where: { showOnServiceList: true },
         orderBy: { order: "asc" },
         include: {
-          subMenus: { select: { price: true, webSpecialPrice: true, discountPercent: true, discountRounding: true } },
+          subMenus: { select: { price: true, webSpecialPrice: true, discountPercent: true, discountRounding: true, priceFrom: true } },
         },
       },
     },
@@ -50,15 +50,20 @@ export default async function ServicePage() {
     detailPages.map((p) => [p.slug, (p.catchphrase || p.metaDescription || "").trim()])
   );
 
-  // カード価格：上書き欄があればそれ／無ければ中分類の価格／それも0なら小分類の最安を「〜」表示
-  function cardPrice(menu: { listPriceOverride?: string | null; basePrice: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; subMenus: { price: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string }[] }): { override?: string; price?: number; originalPrice?: number } {
+  // カード価格：上書き欄があればそれ／無ければ中分類の価格／それも0なら小分類の最安を表示。
+  // from=true のとき「〜」を付ける（中分類自身の priceFrom、または小分類最安から算出した場合）。
+  function cardPrice(menu: { listPriceOverride?: string | null; basePrice: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; priceFrom?: boolean; subMenus: { price: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; priceFrom?: boolean }[] }): { override?: string; price?: number; originalPrice?: number; from?: boolean } {
     if (menu.listPriceOverride && menu.listPriceOverride.trim()) return { override: menu.listPriceOverride.trim() };
     const own = resolvePrice(menu.basePrice, menu.webSpecialPrice, menu.discountPercent, menu.discountRounding);
-    if (own.price > 0) return { price: own.price, originalPrice: own.originalPrice ?? undefined };
-    const subPrices = (menu.subMenus || [])
-      .map((s) => resolvePrice(s.price, s.webSpecialPrice, s.discountPercent, s.discountRounding).price)
-      .filter((p) => p > 0);
-    if (subPrices.length) return { price: Math.min(...subPrices) };
+    if (own.price > 0) return { price: own.price, originalPrice: own.originalPrice ?? undefined, from: !!menu.priceFrom };
+    const subs = (menu.subMenus || [])
+      .map((s) => ({ price: resolvePrice(s.price, s.webSpecialPrice, s.discountPercent, s.discountRounding).price, priceFrom: s.priceFrom }))
+      .filter((s) => s.price > 0);
+    if (subs.length) {
+      const cheapest = subs.reduce((a, b) => (b.price < a.price ? b : a));
+      // 小分類の最安＝「ここから」なので〜を付ける（その小分類が見積変動なら当然〜）
+      return { price: cheapest.price, from: true };
+    }
     return {};
   }
 
@@ -185,7 +190,7 @@ export default async function ServicePage() {
                                     <span className="text-[10px] text-white/70 line-through">通常¥{cp.originalPrice.toLocaleString()}</span>
                                   )}
                                   <span className="text-base md:text-lg font-black text-[#ffd54a]">¥{cp.price.toLocaleString()}</span>
-                                  <span className="text-[9px] text-white/80">〜</span>
+                                  {cp.from && <span className="text-[9px] text-white/80">〜</span>}
                                 </div>
                               ) : null}
                             </div>
