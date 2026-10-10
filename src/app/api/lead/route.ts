@@ -74,11 +74,22 @@ export async function POST(request: NextRequest) {
       landingUrl: str("landingUrl"),
     };
 
-    // 管理者通知は失敗させたくないので待つ。自動返信は失敗してもユーザー成功扱い。
-    await sendLeadNotification(lead);
-    sendLeadConfirmationToUser(lead).catch((err) =>
-      console.error("Lead confirmation mail error:", err)
-    );
+    // お客様への自動返信を先に“待って”送り、結果を管理者通知に載せる。
+    // （以前は待たずに送っていたため、失敗してもサーバーログにしか残らなかった）
+    // 自動返信が失敗してもお客様の送信自体は成功扱いにする。
+    let confirmStatus = "メール未入力のため送信なし";
+    if (lead.email) {
+      try {
+        await sendLeadConfirmationToUser(lead);
+        confirmStatus = `送信済み（${lead.email}）`;
+      } catch (err: any) {
+        console.error("Lead confirmation mail error:", err);
+        confirmStatus = `送信失敗（${lead.email}）: ${String(err?.message || err).slice(0, 200)}`;
+      }
+    }
+
+    // 管理者通知は失敗させたくないので待つ。
+    await sendLeadNotification(lead, confirmStatus);
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {

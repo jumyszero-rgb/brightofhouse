@@ -63,7 +63,7 @@ function sourceBlock(lead: LeadData): string {
 }
 
 /** 管理者へのリード通知 */
-export async function sendLeadNotification(lead: LeadData) {
+export async function sendLeadNotification(lead: LeadData, confirmStatus?: string) {
   const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER;
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
   const transporter = createTransporter();
@@ -100,6 +100,7 @@ export async function sendLeadNotification(lead: LeadData) {
 ■住所: ${lead.address || "未入力"}
 ■メール: ${lead.email || "未入力"}
 ■希望連絡方法: ${lead.contactMethod || "未指定"}
+■お客様への自動返信: ${confirmStatus || "不明"}
 
 【ご要望・備考】
 ------------------------------------------

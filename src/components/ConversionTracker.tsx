@@ -13,10 +13,10 @@ import { fireGenerateLead } from "@/lib/leadTracking";
  *   form_location    : どのページのフォームから送ったか（例: /lp/mizumawari/bathroom, /service/...）
  *                      props → URLの ?from= → 直前ページ（document.referrer）の順で決定
  *   service_category : form_location の lp/ または service/ の次の階層（例: mizumawari）
- * - 再読み込みで二重計上しないよう、同じタブで同じ送信元から10分以内の再発火はしない。
+ * - サンキューページの再読み込み・戻る/進むでは再発火しない（フォームを送り直した場合は毎回計上）。
  */
 const DEDUPE_KEY = "bh_cv_fired";
-const DEDUPE_MS = 10 * 60 * 1000;
+const DEDUPE_MS = 60 * 60 * 1000;
 
 function sanitizePath(v: string | null | undefined): string {
   if (!v) return "";
@@ -62,12 +62,15 @@ export default function ConversionTracker({
     if (location && !location.startsWith("/")) location = `/${location}`;
     const category = sanitizePath(serviceCategory) || categoryFrom(location);
 
-    // 再読み込みによる二重計上を防ぐ
+    // 再読み込み・戻る/進むでサンキューページを再表示した時だけ二重計上を防ぐ。
+    // （フォームを送り直して遷移してきた場合は navigation type が "navigate" なので毎回計上する）
     const dedupeId = `${formType}|${location}`;
     try {
+      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      const isRevisit = !!nav && (nav.type === "reload" || nav.type === "back_forward");
       const raw = sessionStorage.getItem(DEDUPE_KEY);
       const prev = raw ? (JSON.parse(raw) as { id: string; at: number }) : null;
-      if (prev && prev.id === dedupeId && Date.now() - prev.at < DEDUPE_MS) return;
+      if (isRevisit && prev && prev.id === dedupeId && Date.now() - prev.at < DEDUPE_MS) return;
       sessionStorage.setItem(DEDUPE_KEY, JSON.stringify({ id: dedupeId, at: Date.now() }));
     } catch {
       /* sessionStorage不可の環境では重複防止なしで発火 */
