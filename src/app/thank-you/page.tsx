@@ -1,6 +1,7 @@
 // @/src/app/thank-you/page.tsx
 import type { Metadata } from "next";
 import ConversionTracker from "@/components/ConversionTracker";
+import PhoneLink from "@/components/PhoneLink";
 
 export const metadata: Metadata = {
   title: "お申し込みありがとうございます | 北海道ブライトオブハウス",
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
 export default function ThankYouPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex items-center justify-center px-4 text-black">
-      {/* ★追加：既存の予約・問い合わせフォーム送信を generate_lead として計測 */}
+      {/* 予約カレンダー送信を generate_lead として計測。
+          送信元のサービスページは直前ページ（referrer）から ConversionTracker が読み取る */}
       <ConversionTracker formType="booking" />
 
       <div className="w-full max-w-lg text-center">
@@ -30,9 +32,7 @@ export default function ThankYouPage() {
           </div>
           <div className="bg-sky-50 rounded-xl p-4 mb-6 border border-sky-200">
             <p className="text-xs text-slate-500 font-bold mb-1">お急ぎの場合は お電話ください</p>
-            <a href="tel:0120792684" className="text-2xl font-black text-sky-700 tracking-widest font-mono">
-              0120-792-684
-            </a>
+            <PhoneLink className="text-2xl font-black text-sky-700 tracking-widest font-mono" />
             <p className="text-[10px] text-slate-400 mt-1">受付時間 9:00〜18:00</p>
           </div>
           <a

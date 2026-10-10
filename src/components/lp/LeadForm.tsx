@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { BRAND } from "@/lib/lpContent";
+import { trafficSourceFields } from "@/lib/leadTracking";
 
 const TIMING_OPTIONS = [
   "なるべく早く",
@@ -89,6 +90,8 @@ export default function LeadForm({
       fd.set("contactMethod", contactMethods.join("・"));
       fd.set("service", service);
       fd.set("source", source);
+      // 流入元（gclid / utm_* / 着地URL）をメール通知に載せるため同送
+      Object.entries(trafficSourceFields()).forEach(([k, v]) => fd.set(k, v));
       photos.forEach((file) => fd.append("photos", file));
 
       const res = await fetch("/api/lead", {
@@ -96,7 +99,8 @@ export default function LeadForm({
         body: fd,
       });
       if (!res.ok) throw new Error();
-      window.location.href = "/lp/thank-you";
+      // 成功 → /lp/thank-you へ。遷移先で generate_lead が発火する（from=どのLPから送ったか）。
+      window.location.href = `/lp/thank-you?from=${encodeURIComponent(source)}`;
     } catch {
       setError("送信に失敗しました。お手数ですがお電話ください（0120-792-684）。");
       setLoading(false);

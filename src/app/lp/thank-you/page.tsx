@@ -1,6 +1,7 @@
 // @/src/app/lp/thank-you/page.tsx
 import type { Metadata } from "next";
 import ConversionTracker from "@/components/ConversionTracker";
+import PhoneLink from "@/components/PhoneLink";
 
 export const metadata: Metadata = {
   title: "お問い合わせありがとうございます",
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
 export default function LpThankYouPage() {
   return (
     <main className="min-h-[70vh] bg-gradient-to-b from-sky-50 to-white flex items-center justify-center px-4 text-slate-800">
-      {/* GA4 generate_lead を発火（→GA4でキーイベント化→広告にインポートでCV計測） */}
+      {/* GA4 generate_lead を発火（→GA4でキーイベント化→広告にインポートでCV計測）
+          送信元LPは URL の ?from=（LeadForm が付与）から ConversionTracker が読み取る */}
       <ConversionTracker formType="lp" />
 
       <div className="w-full max-w-lg text-center">
@@ -28,12 +30,7 @@ export default function LpThankYouPage() {
             <p className="text-xs text-slate-500 font-bold mb-1">
               お急ぎの場合はお電話ください
             </p>
-            <a
-              href="tel:0120-792-684"
-              className="text-2xl font-black text-sky-700 tracking-widest font-mono"
-            >
-              0120-792-684
-            </a>
+            <PhoneLink className="text-2xl font-black text-sky-700 tracking-widest font-mono" />
             <p className="text-[10px] text-slate-400 mt-1">受付時間 9:00〜18:00</p>
           </div>
           <a

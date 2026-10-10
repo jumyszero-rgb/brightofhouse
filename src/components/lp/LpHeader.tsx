@@ -1,10 +1,11 @@
 // @/src/components/lp/LpHeader.tsx
 import Link from "next/link";
+import PhoneLink from "@/components/PhoneLink";
 
 /**
  * LP専用の最小ヘッダ。グローバルナビは置かない（離脱導線を消す）。
- * ロゴ＋電話CTAのみ。電話番号は 0120-792-684 を表示することで
- * Google広告の通話コンバージョン（phone_conversion_number）も拾える。
+ * ロゴ＋電話CTAのみ。電話は PhoneLink 経由で、広告流入時は
+ * Google広告の通話コンバージョン用番号（0800）に自動で置き換わる。
  */
 export default function LpHeader() {
   return (
@@ -15,13 +16,11 @@ export default function LpHeader() {
           <span className="text-xs sm:text-sm md:text-base whitespace-nowrap truncate">北海道ブライトオブハウス</span>
         </Link>
 
-        <a
-          href="tel:0120-792-684"
+        <PhoneLink
           className="flex items-center gap-1 bg-blue-600 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-full hover:bg-blue-700 transition-colors whitespace-nowrap shrink-0"
-        >
-          <span aria-hidden>📞</span>
-          <span className="tracking-wide">0120-792-684</span>
-        </a>
+          prefix={<span aria-hidden>📞</span>}
+          numberClassName="tracking-wide"
+        />
       </div>
     </header>
   );

@@ -2,7 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import TrafficSourceCapture from "@/components/TrafficSourceCapture";
 import prisma from "@/lib/prisma";
 import { getFontClassName, DEFAULT_FONT_KEY } from "@/lib/fonts";
 
@@ -44,7 +44,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const gaId = "G-LMELPVPT3Z";
+  // 計測ID（GA4 / Google広告）。gtag.js は1本だけ読み込み、<head> で全部 config してからイベントを送る。
+  const GA4_ID = "G-LMELPVPT3Z";
+  const ADS_ID = "AW-17996016781";
+  const ADS_CALL_LABEL = "AW-17996016781/DTKqCPuhmawcEI3ZlYVD";
 
   // サイトフォント（admin で選択・SiteSettings.fontKey）。未設定/取得失敗時は既定フォント。
   let fontKey = DEFAULT_FONT_KEY;
@@ -59,6 +62,25 @@ export default async function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/*
+          計測タグ（全ページ・LP含む）。
+          ・以前は GA4 を @next/third-parties（画面の準備完了後に注入）、広告タグを body 末尾で読んでいたため、
+            サンキューページの generate_lead が「GA4 の config より先」に送られ GA4 に届いていなかった。
+          ・HTML直書きで <head> の最初に GA4 と広告の両方を config → その後のイベントは必ず両方に届く。
+        */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA4_ID}');
+gtag('config', '${ADS_ID}');
+gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' });
+`,
+          }}
+        />
         <link
           rel="alternate"
           type="application/rss+xml"
@@ -67,28 +89,12 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${fontClass} text-slate-800 pb-16 md:pb-0`}>
+        {/* 広告流入（gclid / utm_*）をランディング時に保存。フォーム送信時にメールへ載せる。 */}
+        <TrafficSourceCapture />
+
         {/* chrome（Header/footer等）は SiteShell が pathname で出し分ける */}
         <SiteShell>{children}</SiteShell>
 
-        {/* 計測タグは SiteShell の外＝全ページ（LP含む）で必ず読み込む */}
-        {gaId && <GoogleAnalytics gaId={gaId} />}
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=AW-17996016781"
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-17996016781');
-              gtag('config', 'AW-17996016781/DTKqCPuhmawcEI3ZlYVD', {
-                'phone_conversion_number': '0120-792-684'
-              });
-            `,
-          }}
-        />
       </body>
     </html>
   );

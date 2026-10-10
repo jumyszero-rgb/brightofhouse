@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import LpHeader from "@/components/lp/LpHeader";
 import LpFooter from "@/components/lp/LpFooter";
+import PhoneLink from "@/components/PhoneLink";
 
 /**
  * /lp 配下は「広告用の最小レイアウト」（ナビ無しヘッダ＋会社情報のみのフッタ）に切り替える。
@@ -66,9 +67,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               <p className="text-xs text-slate-400 mb-1">
                 フリーダイヤル（9:00-18:00）
               </p>
-              <p className="text-2xl font-black text-white tracking-widest">
-                0120-792-684
-              </p>
+              {/* タップで発信＋広告流入時は通話計測用番号に置き換え */}
+              <PhoneLink className="block text-2xl font-black text-white tracking-widest" />
             </div>
           </div>
 

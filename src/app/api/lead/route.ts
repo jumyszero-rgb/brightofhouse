@@ -35,10 +35,11 @@ const uploadPhoto = async (file: File) => {
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
+    const str = (k: string) => ((formData.get(k) as string) || "").trim();
 
-    const name = ((formData.get("name") as string) || "").trim();
-    const phone = ((formData.get("phone") as string) || "").trim();
-    const service = ((formData.get("service") as string) || "お問い合わせ").trim();
+    const name = str("name");
+    const phone = str("phone");
+    const service = str("service") || "お問い合わせ";
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -54,15 +55,23 @@ export async function POST(request: NextRequest) {
       name,
       phone,
       service,
-      email: ((formData.get("email") as string) || "").trim(),
-      zip: ((formData.get("zip") as string) || "").trim(),
-      address: ((formData.get("address") as string) || "").trim(),
-      timing: ((formData.get("timing") as string) || "").trim(),
-      area: ((formData.get("area") as string) || "").trim(),
-      contactMethod: ((formData.get("contactMethod") as string) || "").trim(),
-      notes: ((formData.get("notes") as string) || "").trim(),
-      source: ((formData.get("source") as string) || "").trim(),
+      email: str("email"),
+      zip: str("zip"),
+      address: str("address"),
+      timing: str("timing"),
+      area: str("area"),
+      contactMethod: str("contactMethod"),
+      notes: str("notes"),
+      source: str("source"),
       photoUrls,
+      // 流入元（フォームから同送。無ければ空）
+      gclid: str("gclid"),
+      utm_source: str("utm_source"),
+      utm_medium: str("utm_medium"),
+      utm_campaign: str("utm_campaign"),
+      utm_term: str("utm_term"),
+      utm_content: str("utm_content"),
+      landingUrl: str("landingUrl"),
     };
 
     // 管理者通知は失敗させたくないので待つ。自動返信は失敗してもユーザー成功扱い。

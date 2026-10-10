@@ -34,7 +34,33 @@ export type LeadData = {
   notes?: string;
   source?: string; // どのLPから来たか（例: lp/mizumawari/bathroom）
   photoUrls?: string[]; // お客様が添付した写真（現地の汚れ具合など）
+  // 流入元（広告計測の補助。メールだけで検索広告／P-MAX／自然検索を見分けるため）
+  gclid?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  landingUrl?: string;
 };
+
+/** 流入元の表示ブロックを作る */
+function sourceBlock(lead: LeadData): string {
+  const inflow = lead.gclid
+    ? "Google広告クリック（gclidあり）"
+    : (lead.utm_source || lead.utm_medium || lead.utm_campaign ? "参照元あり" : "自然流入/不明");
+  const lines = [
+    `判定: ${inflow}`,
+    `gclid: ${lead.gclid || "なし"}`,
+    `utm_source: ${lead.utm_source || "-"} / utm_medium: ${lead.utm_medium || "-"} / utm_campaign: ${lead.utm_campaign || "-"}`,
+  ];
+  if (lead.utm_term || lead.utm_content) {
+    lines.push(`utm_term: ${lead.utm_term || "-"} / utm_content: ${lead.utm_content || "-"}`);
+  }
+  lines.push(`着地ページ: ${lead.landingUrl || "-"}`);
+  lines.push(`流入元LP: ${lead.source || "不明"}`);
+  return lines.join("\n");
+}
 
 /** 管理者へのリード通知 */
 export async function sendLeadNotification(lead: LeadData) {
@@ -83,9 +109,11 @@ ${lead.photoUrls && lead.photoUrls.length > 0 ? `
 ------------------------------------------
 ${lead.photoUrls.map((url, i) => `写真${i + 1}: ${url}`).join("\n")}
 ` : ""}
+【流入元】
+------------------------------------------
+${sourceBlock(lead)}
 ------------------------------------------
 受付日時: ${receivedAt}
-流入元LP: ${lead.source || "不明"}
 `,
   });
 }

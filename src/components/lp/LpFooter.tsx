@@ -1,5 +1,6 @@
 // @/src/components/lp/LpFooter.tsx
 import Link from "next/link";
+import PhoneLink from "@/components/PhoneLink";
 
 /**
  * LP専用の最小フッタ。会社情報・電話・プライバシーポリシー・コピーライトのみ。
@@ -20,9 +21,7 @@ export default function LpFooter() {
           ビッグバーンズマンション東札幌2-105号
           <br />
           フリーダイヤル：
-          <a href="tel:0120-792-684" className="text-white font-bold tracking-wide">
-            0120-792-684
-          </a>
+          <PhoneLink className="text-white font-bold tracking-wide" />
           （9:00-18:00）
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
