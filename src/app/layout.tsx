@@ -70,7 +70,8 @@ export default async function RootLayout({
           ・今は「ゲートウェイのタグがあればそれだけを使う」。ここでは config（GA4・広告・電話番号置き換え）だけを積む。
           ・ゲートウェイが無効になっている時だけ、googletagmanager.com の gtag.js を代わりに読み込む（計測が途切れない保険）。
           ・さらに保険：ゲートウェイのタグが「読み込み失敗」した時、またはページの読み込み完了（load）時点で
-            GA4 のタグが動いていない時だけ gtag.js を読み込む。
+            Googleタグが1つも動いていない時だけ gtag.js を読み込む。
+          ・2026-10-17：GA4のGoogleタグに広告のGoogleタグを結合（Google側の設定）→ /wd9j/ の1本で GA4・広告の両方に送る。
             （以前は「5秒」で判定していたため、回線の遅いスマホ・PageSpeed の計測では5秒以内に間に合わず
               gtag.js も追加で読まれ、Googleタグが3本になっていた）
         */}
@@ -93,8 +94,10 @@ function gtag(){dataLayer.push(arguments);}
   gw.addEventListener('error', loadDirect);
   function checkAfterLoad(){
     setTimeout(function(){
-      var t = window.google_tag_manager;
-      if (!t || !t['${GA4_ID}']) loadDirect();
+      // Googleタグが1つも動いていない時だけ（＝ゲートウェイ自体が失敗した時だけ）読み込む。
+      // ※ GA4タグと広告タグを1本に結合したため、google_tag_manager には広告側のID（AW-）だけが
+      //   登録される。GA4のIDで判定すると「無い」と誤判定して gtag.js を二重に読んでしまう。
+      if (!window.google_tag_manager) loadDirect();
     }, 3000);
   }
   if (document.readyState === 'complete') checkAfterLoad();

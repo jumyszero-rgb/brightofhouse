@@ -1,7 +1,7 @@
 // @/src/components/lp/LpTemplate.tsx
 import Image from "next/image";
-import LeadForm from "@/components/lp/LeadForm";
-import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
+import PhoneLink from "@/components/PhoneLink";
 import { BRAND, type LpContent } from "@/lib/lpContent";
 
 function Stars({ n = 5 }: { n?: number }) {
@@ -21,12 +21,10 @@ function CtaButtons({ compact = false }: { compact?: boolean }) {
       >
         無料で相談・見積り
       </a>
-      <a
-        href="tel:0120-792-684"
+      <PhoneLink
         className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full border-2 border-white/0 shadow hover:bg-blue-50 transition-colors text-center"
-      >
-        📞 0120-792-684
-      </a>
+        prefix="📞 "
+      />
       {BRAND.lineUrl && (
         <a
           href={BRAND.lineUrl}
@@ -507,16 +505,16 @@ export default function LpTemplate({ content, bookingData }: Props) {
         {/* ===== リードフォーム（予約マスター連動時はカレンダー予約フォームに差し替え） ===== */}
         <section id="lead" className="pb-24 md:pb-16 pt-4 scroll-mt-20">
           {bookingData ? (
-            <ServicePageBooking pageTitle={serviceLabel} bookingData={bookingData} />
+            <LazyServicePageBooking pageTitle={serviceLabel} bookingData={bookingData} />
           ) : (
             <>
               <p className="text-center text-lg md:text-2xl font-black mb-2">
                 まずは無料でご相談ください
               </p>
               <p className="text-center text-sm text-slate-600 mb-6">
-                お見積り無料・追加料金なし。30秒で送信できます。
+                お見積り無料・料金は作業前に確定。30秒で送信できます。
               </p>
-              <LeadForm service={serviceLabel} source={slug} />
+              <LazyLeadForm service={serviceLabel} source={slug} />
             </>
           )}
         </section>
@@ -524,12 +522,11 @@ export default function LpTemplate({ content, bookingData }: Props) {
 
       {/* ===== モバイル固定CTAバー ===== */}
       <div className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur border-t border-slate-200 px-3 py-2 flex gap-2">
-        <a
-          href="tel:0120-792-684"
+        {/* 広告経由の人には通話計測用の0800番号で発信（表示は「電話する」のまま） */}
+        <PhoneLink
           className="flex-1 text-center bg-white border border-blue-600 text-blue-700 font-bold py-3 rounded-full text-sm"
-        >
-          📞 電話する
-        </a>
+          display="📞 電話する"
+        />
         <a
           href="#lead"
           className="flex-1 text-center bg-amber-400 text-slate-900 font-black py-3 rounded-full text-sm"

@@ -2,9 +2,8 @@
 // ブロック形式LPの公開側レンダラ（フェーズ1+）
 // blocks(Json配列)を上から順に描画する。価格・名称は予約マスターから解決したresolvedを参照する。
 import Image from "next/image";
-import LeadForm from "@/components/lp/LeadForm";
 import PhoneLink from "@/components/PhoneLink";
-import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import { BRAND } from "@/lib/lpContent";
 
 type MasterItem = { title: string; price: number; workContent?: string | null };
@@ -268,7 +267,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                 <div className="max-w-2xl mx-auto px-4">
                   {d.heading && <h2 className="text-2xl font-black text-center text-slate-800 mb-2">{d.heading}</h2>}
                   {d.note && <p className="text-center text-sm text-slate-500 mb-6">{d.note}</p>}
-                  <LeadForm service={lpTitle} source={slug} />
+                  <LazyLeadForm service={lpTitle} source={slug} />
                 </div>
               </section>
             );
@@ -280,7 +279,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                 <div className="max-w-5xl mx-auto px-4">
                   {d.heading && <h2 className="text-2xl font-black text-center text-slate-800 mb-6">{d.heading}</h2>}
                   {bd ? (
-                    <ServicePageBooking pageTitle={lpTitle} bookingData={bd} />
+                    <LazyServicePageBooking pageTitle={lpTitle} bookingData={bd} />
                   ) : (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 text-center">※予約カテゴリ未設定です。ブロック編集で大分類を選択してください。</div>
                   )}

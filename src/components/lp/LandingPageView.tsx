@@ -6,7 +6,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import prisma from "@/lib/prisma";
-import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import { LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
@@ -189,7 +189,7 @@ export default async function LandingPageView({
 
           {effectiveBookingData && (
             <div id="booking" className="mb-16 scroll-mt-20">
-              <ServicePageBooking pageTitle={lp.title} bookingData={effectiveBookingData} />
+              <LazyServicePageBooking pageTitle={lp.title} bookingData={effectiveBookingData} />
             </div>
           )}
 
