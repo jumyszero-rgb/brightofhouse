@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
+import PhoneLink from "@/components/PhoneLink";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
 import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
 import { extractToc } from "@/lib/extractToc";
@@ -525,12 +526,8 @@ export default async function ServiceDetailPage({
                     <p className="text-xs text-white/80 mb-1">
                       お電話でのご相談はこちら
                     </p>
-                    <a
-                      href={`tel:${phoneNumber.replace(/-/g, "")}`}
-                      className="text-2xl font-black text-white hover:text-white/90 transition-colors tracking-widest font-mono"
-                    >
-                      {phoneNumber}
-                    </a>
+                    {/* 広告経由では通話計測用の0800番号に置き換わる */}
+                    <PhoneLink className="text-2xl font-black text-white hover:text-white/90 transition-colors tracking-widest font-mono" />
                   </div>
                 </div>
               </div>

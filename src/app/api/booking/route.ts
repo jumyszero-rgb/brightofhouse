@@ -7,7 +7,7 @@ import { sendBookingNotification, sendBookingConfirmationToUser } from "@/lib/ma
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
-  
+
   try {
     const bookings = await prisma.booking.findMany({
       where: { category: category || undefined },
@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
   }
 }
+
+// 文字列だけを短く取り出す（流入元フィールド用）
+const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // 仮予約の作成
 export async function POST(request: NextRequest) {
@@ -48,6 +51,18 @@ export async function POST(request: NextRequest) {
       totalMinutesDisplay: body.totalMinutes || "未定",
       dateUndecided: !!body.dateUndecided,
       inquiryOnly: !!body.inquiryOnly,
+      // 流入元（DBには保存せず、管理者通知メールにだけ載せる）
+      source: {
+        gclid: str(body.gclid),
+        utm_source: str(body.utm_source),
+        utm_medium: str(body.utm_medium),
+        utm_campaign: str(body.utm_campaign),
+        utm_term: str(body.utm_term),
+        utm_content: str(body.utm_content),
+        landingUrl: str(body.landingUrl),
+        pagePath: str(body.pagePath),
+        referrer: str(body.referrer),
+      },
     };
 
     sendBookingNotification(mailData).catch(err => console.error("Admin Email notification error:", err));

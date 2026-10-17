@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
           calendarOrder: body.calendarOrder ?? null,
           setDiscountRules: body.setDiscountRules ?? undefined,
           listPriceNote: body.listPriceNote || null,
+          minItemsRule: body.minItemsRule ?? undefined,
         },
       }));
     }
@@ -166,7 +167,9 @@ export async function PUT(request: NextRequest) {
           order: data.order,
           calendarOrder: data.calendarOrder !== undefined ? data.calendarOrder : undefined,
           setDiscountRules: data.setDiscountRules ?? undefined,
-          listPriceNote: data.listPriceNote || null,
+          // 送られてきた時だけ更新（セット割引や表示順だけの保存で一覧の「〇〇円〜」が消えないように）
+          listPriceNote: data.listPriceNote !== undefined ? (data.listPriceNote || null) : undefined,
+          minItemsRule: data.minItemsRule !== undefined && data.minItemsRule !== null ? data.minItemsRule : undefined,
         },
       }));
     }

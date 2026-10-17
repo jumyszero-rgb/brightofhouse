@@ -2,6 +2,7 @@
 // ブロック形式LPの公開側レンダラ（フェーズ1+）
 // blocks(Json配列)を上から順に描画する。価格・名称は予約マスターから解決したresolvedを参照する。
 import LeadForm from "@/components/lp/LeadForm";
+import PhoneLink from "@/components/PhoneLink";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
 import { BRAND } from "@/lib/lpContent";
 
@@ -23,7 +24,7 @@ type Block = {
 type Props = {
   blocks: Block[];
   resolved: ResolvedMaster;
-  bookingForms?: Record<string, any>; // categoryId -> bookingData({mains,...})
+  bookingForms?: Record<string, any>; // blockId（複数大分類対応）または categoryId（旧形式） -> bookingData({mains,...})
   lpTitle: string;
   slug: string;
 };
@@ -106,7 +107,12 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                     )}
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <a href="#lead" className="bg-amber-400 text-slate-900 font-black px-6 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center">無料で相談・見積り</a>
-                      <a href={`tel:${phone}`} className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center">📞 {phone}</a>
+                      {/* 0120 のときは PhoneLink（広告経由で0800に置き換え）。独自番号のときはそのまま */}
+                      {phone.replace(/[^0-9]/g, "") === "0120792684" ? (
+                        <PhoneLink className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center" prefix="📞 " />
+                      ) : (
+                        <a href={`tel:${phone}`} className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center">📞 {phone}</a>
+                      )}
                       {lineUrl && (
                         <a href={lineUrl} className="bg-green-500 text-white font-bold px-6 py-3.5 rounded-full shadow hover:bg-green-600 transition-colors text-center">LINEで相談</a>
                       )}
@@ -222,7 +228,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
             );
 
           case "bookingForm": {
-            const bd = bookingForms?.[block.refs?.refId];
+            const bd = bookingForms?.[block.id] ?? bookingForms?.[block.refs?.refId];
             return (
               <section key={block.id} id="lead" className="py-12 bg-slate-50 scroll-mt-16">
                 <div className="max-w-5xl mx-auto px-4">

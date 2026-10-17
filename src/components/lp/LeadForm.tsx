@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { BRAND } from "@/lib/lpContent";
-import { trafficSourceFields } from "@/lib/leadTracking";
+import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
 
 const TIMING_OPTIONS = [
   "なるべく早く",
@@ -17,7 +17,7 @@ const CONTACT_OPTIONS = ["電話", "SMS", "メール", "LINE"];
 
 /**
  * LP用の軽量リードフォーム。カレンダー・料金計算なし。
- * service は各LPからプリセット。送信後 /lp/thank-you に遷移し generate_lead 発火。
+ * service は各LPからプリセット。送信成功時に generate_lead を送ってから /lp/thank-you に遷移。
  */
 export default function LeadForm({
   service,
@@ -99,7 +99,9 @@ export default function LeadForm({
         body: fd,
       });
       if (!res.ok) throw new Error();
-      // 成功 → /lp/thank-you へ。遷移先で generate_lead が発火する（from=どのLPから送ったか）。
+      // 送信成功のレスポンスを受けた時点で generate_lead を1回だけ送る（サンキューページの表示には頼らない）。
+      // 送信が終わる（最大1.2秒）のを待ってからサンキューページへ移動する。
+      await sendGenerateLead({ lead_type: "form", lead_source: source });
       window.location.href = `/lp/thank-you?from=${encodeURIComponent(source)}`;
     } catch {
       setError("送信に失敗しました。お手数ですがお電話ください（0120-792-684）。");

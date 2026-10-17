@@ -37,7 +37,7 @@ function newBlock(type: string): Block {
     case "masterMenu": return { id, type, visible: true, data: { showDesc: true }, refs: { refType: "menu", refId: "" } };
     case "cta": return { id, type, visible: true, data: { label: "お問い合わせはこちら", targetType: "form", targetValue: "" } };
     case "leadForm": return { id, type, visible: true, data: { heading: "無料相談・お見積り", note: "30秒で送信できます" } };
-    case "bookingForm": return { id, type, visible: true, data: { heading: "ご希望日時から仮予約・お見積り" }, refs: { refType: "category", refId: "" } };
+    case "bookingForm": return { id, type, visible: true, data: { heading: "ご希望日時から仮予約・お見積り" }, refs: { refType: "category", refId: "", refIds: [] } };
     case "html": return { id, type, visible: true, data: { html: "", fullWidth: false } };
     default: return { id, type, visible: true, data: {} };
   }
@@ -415,14 +415,27 @@ function BlocksBuilder() {
       );
     }
     if (b.type === "bookingForm") {
+      // 大分類は複数選べる（refIds）。旧データ（refIdのみ）も読めるようにする。
+      const selectedIds: string[] = Array.isArray(b.refs?.refIds) && b.refs.refIds.length
+        ? b.refs.refIds
+        : (b.refs?.refId ? [b.refs.refId] : []);
+      const toggleCat = (id: string) => {
+        const next = selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id];
+        updateRefs(idx, { refType: "category", refIds: next, refId: next[0] || "" });
+      };
       return (
         <>
           <input className={inputCls} placeholder="見出し" value={d.heading || ""} onChange={(e) => updateData(idx, { heading: e.target.value })} />
-          <select className={inputCls} value={b.refs?.refId || ""} onChange={(e) => updateRefs(idx, { refType: "category", refId: e.target.value })}>
-            <option value="">— 予約カテゴリ(大分類)を選択 —</option>
-            {flat.categories.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-          </select>
-          <p className="text-[11px] text-gray-400">※選んだ大分類のメニューで、カレンダー付きの予約・見積フォームを表示します（価格は予約マスター連動）。</p>
+          <p className="text-xs font-bold text-gray-600 mt-1">予約カテゴリ（大分類）を選択 ※複数選択できます</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {flat.categories.map((c) => (
+              <label key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-sm cursor-pointer ${selectedIds.includes(c.id) ? "bg-blue-50 border-blue-300 font-bold" : "bg-white border-gray-200"}`}>
+                <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleCat(c.id)} />
+                {c.title}
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400">※選んだ大分類のメニューで、カレンダー付きの予約・見積フォームを表示します（価格は予約マスター連動）。複数選ぶと、お客様は大分類ごとにチェックして中のメニューを開く形になります。表示順は予約マスターのカレンダー表示順です。</p>
         </>
       );
     }

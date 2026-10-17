@@ -2,14 +2,15 @@
 "use client";
 
 import Link from "next/link";
+import PhoneLink from "@/components/PhoneLink";
 
 /**
  * スマホ用 画面下固定ナビ（新トップのデザインに統一）
  * 電話する / LINE相談 / 無料見積り の3ボタン。PC(md以上)では非表示。
+ * 電話は PhoneLink：広告経由の人には通話計測用の0800番号で発信される。
+ * （タップ計測 phone_tap / line_click は TrafficSourceCapture が全ページ共通で送る）
  */
 export default function BottomNav() {
-  // 電話番号
-  const phoneNumber = "0120792684";
   // LINE公式アカウントのURL
   const lineUrl = "https://line.me/ti/p/RBwKccvQ1O";
 
@@ -19,15 +20,15 @@ export default function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,30,46,0.08)] pb-[env(safe-area-inset-bottom)]"
     >
       {/* 電話する */}
-      <a
-        href={`tel:${phoneNumber}`}
+      <PhoneLink
         className="flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-bold leading-tight text-[#0a568f] hover:bg-slate-50"
-      >
-        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
-        </svg>
-        電話する
-      </a>
+        prefix={
+          <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+          </svg>
+        }
+        display="電話する"
+      />
 
       {/* LINE相談 */}
       <a

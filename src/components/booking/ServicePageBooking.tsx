@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
+import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
 
 type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
 
@@ -36,6 +37,25 @@ type MainService = {
   groupId?: string;
   groupTitle?: string;
   groupSetDiscount?: SetDiscount;
+  // 所属する大分類ID（最低申込点数ルールの判定用）
+  categoryId?: string;
+};
+
+// 大分類ごとの最低申込点数（/api/booking-min-rules）。from/to は "MM-DD"（空なら通年）。
+type MinRule = { categoryId: string; title: string; min: number; from: string; to: string };
+
+// 日付(JST)が "MM-DD"〜"MM-DD" の期間内か。年をまたぐ期間（例 12-20〜01-05）にも対応。
+function inMonthDayRange(date: Date, from: string, to: string): boolean {
+  if (!from && !to) return true;
+  const md = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit" }).format(date); // "MM-DD"
+  const f = from || "01-01";
+  const t = to || "12-31";
+  return f <= t ? md >= f && md <= t : md >= f || md <= t;
+}
+
+const mdLabel = (md: string) => {
+  const [m, d] = md.split("-").map(Number);
+  return m && d ? `${m}/${d}` : "";
 };
 
 type LegacyOptionService = {
@@ -86,6 +106,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   // 見積を希望するか（カレンダーの前に置き、チェック時は日程選択を隠す）
   const [wantEstimate, setWantEstimate] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [minRules, setMinRules] = useState<MinRule[]>([]);
+  // generate_lead の二重送信防止（同じ画面で2回送らない）
+  const leadSentRef = useRef(false);
 
   const [customer, setCustomer] = useState({
     name: "", email: "", phone: "", zip: "", address: "", building: "", notes: "", contactMethods: ["お電話"] as string[],
@@ -272,6 +295,25 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     ? `${totalMinutesMin}分`
     : `${totalMinutesMin}〜${totalMinutesMax}分`;
 
+  // 最低申込点数のチェック。
+  // 判定日：カレンダーで選んだ作業日。日程未定・見積希望で日付が無い場合は申込日（今日）。
+  // 点数：その大分類で選択中の中分類の「台数」を合計（例：浴室×2＋トイレ＝3点）。小分類・オプションは数えない。
+  // 「お問い合わせのみ」はメニューを選ばないので対象外。
+  const minRuleDate = selectedDate || new Date();
+  const minRuleViolations = inquiryOnly ? [] : minRules
+    .filter(r => inMonthDayRange(minRuleDate, r.from, r.to))
+    .map(r => {
+      const count = mains.reduce((sum, m, idx) =>
+        m.categoryId === r.categoryId && hasBaseSelection(m) && selectedMains.includes(idx)
+          ? sum + getUnitQty(m.id || "", m.maxQty)
+          : sum, 0);
+      return { ...r, count };
+    })
+    // その大分類のメニューを1つも選んでいない場合は対象外（他の大分類だけの申込は制限しない）
+    .filter(r => r.count > 0 && r.count < r.min);
+  const minRuleMessage = (v: MinRule & { count: number }) =>
+    `${v.from || v.to ? `${mdLabel(v.from) || ""}〜${mdLabel(v.to) || ""}の` : ""}「${v.title}」は${v.min}点以上からのお申し込みとなります（台数の合計／現在${v.count}点）。`;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -280,6 +322,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           fetch("/api/admin/calendar"),
           fetch("/api/settings"),
         ]);
+        // 最低申込点数ルール（取得できなくても予約フォームは通常どおり使える）
+        fetch("/api/booking-min-rules").then(r => (r.ok ? r.json() : [])).then((rules) => {
+          if (Array.isArray(rules)) setMinRules(rules);
+        }).catch(() => {});
         if (resB.ok) setBookedSlots(await resB.json());
         if (resO.ok) setOverrides(await resO.json());
         if (resS.ok) {
@@ -353,6 +399,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       alert("作業メニューを1つ以上選択してください。");
       return;
     }
+    if (minRuleViolations.length > 0) {
+      alert(minRuleViolations.map(minRuleMessage).join("\n"));
+      return;
+    }
     if (customer.contactMethods.length === 0) {
       alert("ご連絡方法を選択してください。");
       return;
@@ -362,6 +412,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   const submitBooking = async () => {
     setShowConfirm(false);
+    if (minRuleViolations.length > 0) return;
     const itemsText = buildOrderLines().map(formatOrderLine).join("\n") || "（作業内容未定・お問い合わせのみ）";
 
     const discountNotes = mains.map((m, idx) => {
@@ -414,10 +465,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           items: itemsText,
           totalPrice: inquiryOnly ? 0 : totalPrice,
           totalMinutes: inquiryOnly ? "未定" : `${totalMinutesMin}〜${totalMinutesMax}`,
+          // 流入元（gclid / utm_* / 着地ページ）と送信ページ。予約の通知メールの【流入元】に載せる。
+          ...trafficSourceFields(),
+          pagePath: typeof window !== "undefined" ? window.location.pathname : "",
         }),
       });
 
       if (res.ok) {
+        // 送信成功のレスポンスを受けた時点で generate_lead（lead_type=booking）を1回だけ送る。
+        // （サンキューページの表示には頼らない。送信完了を最大1.2秒待ってから移動）
+        if (!leadSentRef.current) {
+          leadSentRef.current = true;
+          await sendGenerateLead({ lead_type: "booking", lead_source: pageTitle, inquiry_only: inquiryOnly });
+        }
         window.location.href = "/thank-you";
         return;
       } else {
@@ -1032,6 +1092,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <p className="text-sm text-red-600 font-bold">まとめ割引：-¥{totalGroupDiscount.toLocaleString()}</p>
             )}
             <p className="text-2xl font-black text-blue-600">合計：¥{totalPrice.toLocaleString()}{totalHasFrom && "〜"}<span className="text-sm ml-1 text-slate-500">(税込)</span></p>
+            {minRuleViolations.length > 0 && (
+              <div className="mt-3 text-left bg-red-50 border border-red-200 rounded-xl p-3 space-y-1">
+                {minRuleViolations.map(v => (
+                  <p key={v.categoryId} className="text-sm font-bold text-red-600">⚠ {minRuleMessage(v)}</p>
+                ))}
+                <p className="text-xs text-red-500">もう1点追加するか、別の日程をお選びください。</p>
+              </div>
+            )}
             <p className="text-[10px] text-slate-400 mt-2 leading-relaxed text-left sm:text-right">
               ※作業時間はワンオペのおおよその時間です。作業内容・状況により人員が追加になる場合があり、その場合は時間が短縮されることがあります。お申込み後、担当者よりおおよその目安をお伝えしますので、時間には余裕をもってお申込みください。
             </p>
@@ -1361,7 +1429,12 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || (!inquiryOnly && !selectedDate && !dateUndecided && !wantEstimate)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
+            {minRuleViolations.length > 0 && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm font-bold text-red-600 space-y-1">
+                {minRuleViolations.map(v => <p key={v.categoryId}>⚠ {minRuleMessage(v)}</p>)}
+              </div>
+            )}
+            <button type="submit" disabled={loading || minRuleViolations.length > 0 || (!inquiryOnly && !selectedDate && !dateUndecided && !wantEstimate)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
               {loading ? "送信中..." : "入力内容を確認する"}
             </button>
             <p className="text-center text-[10px] text-slate-400">※送信後、担当者より確認のご連絡をいたします。この時点では予約は確定しません。</p>

@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       utm_term: str("utm_term"),
       utm_content: str("utm_content"),
       landingUrl: str("landingUrl"),
+      referrer: str("referrer"),
     };
 
     // お客様への自動返信を先に“待って”送り、結果を管理者通知に載せる。

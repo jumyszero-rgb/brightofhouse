@@ -152,6 +152,8 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
   return {
     id: menu.id,
     title: menu.title,
+    // 所属する大分類ID（最低申込点数の判定用）。Prisma の include で categoryId も返ってくる。
+    categoryId: (menu as { categoryId?: string }).categoryId ?? group?.id,
     ...mainPricing,
     from: !!menu.priceFrom,
     durationMin: menu.durationMin,

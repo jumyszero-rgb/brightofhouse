@@ -1,6 +1,5 @@
 // @/src/app/lp/thank-you/page.tsx
 import type { Metadata } from "next";
-import ConversionTracker from "@/components/ConversionTracker";
 import PhoneLink from "@/components/PhoneLink";
 
 export const metadata: Metadata = {
@@ -11,9 +10,7 @@ export const metadata: Metadata = {
 export default function LpThankYouPage() {
   return (
     <main className="min-h-[70vh] bg-gradient-to-b from-sky-50 to-white flex items-center justify-center px-4 text-slate-800">
-      {/* GA4 generate_lead を発火（→GA4でキーイベント化→広告にインポートでCV計測）
-          送信元LPは URL の ?from=（LeadForm が付与）から ConversionTracker が読み取る */}
-      <ConversionTracker formType="lp" />
+      {/* generate_lead はフォーム・予約の送信成功時に送信済み（このページでは送らない＝二重計上しない） */}
 
       <div className="w-full max-w-lg text-center">
         <div className="bg-white rounded-3xl shadow-xl p-10 border border-slate-200">

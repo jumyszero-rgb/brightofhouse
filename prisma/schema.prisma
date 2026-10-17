@@ -441,6 +441,7 @@ model BookingCategory {
   updatedAt        DateTime      @updatedAt
   setDiscountRules Json?
   listPriceNote    String?       // サービス一覧の見出し横に出す「〇〇円〜」等（任意・表示専用）
+  minItemsRule     Json?         // 最低申込点数 {enabled,min,from:"MM-DD",to:"MM-DD"}。作業希望日が期間内ならこの大分類は min 点(台数合計)以上でないと申し込めない
   menus            BookingMenu[]
   servicePages     ServicePage[]
   landingPages     LandingPage[]

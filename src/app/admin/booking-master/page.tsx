@@ -77,7 +77,59 @@ function QtyDiscountEditor({ value, onChange }: { value: QtyDiscountRules; onCha
 type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; calendarOrder: number | null; subMenuId: string | null; menuId: string | null };
 type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; calendarOrder: number | null; menuId: string; options: BookingOption[] };
 type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; maxQty: number | null; qtyDiscountRules: QtyDiscountRules; imageUrl: string | null; topFeaturedOrder: number | null; showOnServiceList: boolean; detailPageSlug: string | null; listPriceOverride: string | null; priceFrom: boolean; order: number; calendarOrder: number | null; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
-type BookingCategory = { id: string; title: string; order: number; calendarOrder: number | null; setDiscountRules: SetDiscountRules; menus: BookingMenu[] };
+type MinItemsRule = { enabled: boolean; min: number; from: string; to: string } | null;
+type BookingCategory = { id: string; title: string; order: number; calendarOrder: number | null; setDiscountRules: SetDiscountRules; minItemsRule?: MinItemsRule; listPriceNote?: string | null; menus: BookingMenu[] };
+
+// 最低申込点数の編集（大分類）。例：12/1〜12/31 の水回りは2点以上（台数合計）でないと予約フォームから送信できない。
+function MinItemsEditor({ value, onSave }: { value: MinItemsRule | undefined; onSave: (v: NonNullable<MinItemsRule>) => void }) {
+  const init = value || { enabled: false, min: 2, from: "", to: "" };
+  const split = (md: string) => { const [m, d] = (md || "").split("-"); return { m: m ? String(Number(m)) : "", d: d ? String(Number(d)) : "" }; };
+  const [enabled, setEnabled] = useState<boolean>(!!init.enabled);
+  const [min, setMin] = useState<string>(String(init.min || 2));
+  const [fromM, setFromM] = useState(split(init.from).m);
+  const [fromD, setFromD] = useState(split(init.from).d);
+  const [toM, setToM] = useState(split(init.to).m);
+  const [toD, setToD] = useState(split(init.to).d);
+  const [saved, setSaved] = useState(false);
+  const md = (m: string, d: string) => {
+    const mm = parseInt(m), dd = parseInt(d);
+    if (!mm || !dd || mm < 1 || mm > 12 || dd < 1 || dd > 31) return "";
+    return `${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  };
+  const save = () => {
+    const n = Math.max(2, parseInt(min) || 2);
+    onSave({ enabled, min: n, from: md(fromM, fromD), to: md(toM, toD) });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  const num = "w-14 p-1 border rounded text-black text-sm text-center";
+  return (
+    <div className="bg-rose-50 p-3 rounded-lg border border-rose-200 space-y-2">
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={enabled} onChange={() => setEnabled(!enabled)} className="w-4 h-4 accent-rose-600" />
+        <span className="text-sm font-bold text-rose-800">最低申込点数を設定する（この大分類は○点以上からしか申し込めない）</span>
+      </label>
+      {enabled && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+          <input type="number" min={2} className={num} value={min} onChange={(e) => setMin(e.target.value)} />
+          <span>点以上（台数の合計）／期間</span>
+          <input type="number" min={1} max={12} className={num} value={fromM} onChange={(e) => setFromM(e.target.value)} placeholder="月" />月
+          <input type="number" min={1} max={31} className={num} value={fromD} onChange={(e) => setFromD(e.target.value)} placeholder="日" />日 〜
+          <input type="number" min={1} max={12} className={num} value={toM} onChange={(e) => setToM(e.target.value)} placeholder="月" />月
+          <input type="number" min={1} max={31} className={num} value={toD} onChange={(e) => setToD(e.target.value)} placeholder="日" />日
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={save} className="bg-rose-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-rose-700">保存</button>
+        {saved && <span className="text-xs text-green-700 font-bold">保存しました</span>}
+      </div>
+      <p className="text-[11px] text-slate-500 leading-relaxed">
+        ※作業希望日（日程未定・見積希望の場合は申込日）が期間内のとき有効。期間を空欄にすると通年。毎年くり返し適用されます（年をまたぐ 12/20〜1/5 のような指定も可）。<br />
+        ※点数は選んだ中分類の台数の合計（例：浴室×2＋トイレ＝3点）。小分類・オプションは数えません。お問い合わせのみは対象外。
+      </p>
+    </div>
+  );
+}
 
 function newSetDiscountRules(): NonNullable<SetDiscountRules> {
   return { enabled: false, type: "percent", rules: [], rounding: "NONE" };
@@ -443,6 +495,13 @@ export default function AdminBookingMasterPage() {
                 <SetDiscountEditor
                   value={cat.setDiscountRules}
                   onChange={(v) => handleAction("PUT", { id: cat.id, type: "category", title: cat.title, order: cat.order, setDiscountRules: v })}
+                />
+
+                {/* --- 大分類の最低申込点数（期間指定） --- */}
+                <MinItemsEditor
+                  key={`min-${cat.id}-${JSON.stringify(cat.minItemsRule || null)}`}
+                  value={cat.minItemsRule}
+                  onSave={(v) => handleAction("PUT", { id: cat.id, type: "category", title: cat.title, order: cat.order, minItemsRule: v })}
                 />
 
                 {/* --- 中分類追加フォーム --- */}

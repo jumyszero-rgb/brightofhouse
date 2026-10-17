@@ -46,6 +46,7 @@ export type LeadData = {
   utm_term?: string;
   utm_content?: string;
   landingUrl?: string;
+  referrer?: string; // 初回ランディング時の外部参照元
 };
 
 /** 流入元の表示ブロックを作る */
@@ -62,6 +63,7 @@ function sourceBlock(lead: LeadData): string {
     lines.push(`utm_term: ${lead.utm_term || "-"} / utm_content: ${lead.utm_content || "-"}`);
   }
   lines.push(`着地ページ: ${lead.landingUrl || "-"}`);
+  lines.push(`参照元: ${lead.referrer || "-"}`);
   lines.push(`流入元LP: ${lead.source || "不明"}`);
   return lines.join("\n");
 }

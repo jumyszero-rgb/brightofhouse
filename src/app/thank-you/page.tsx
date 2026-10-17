@@ -1,6 +1,5 @@
 // @/src/app/thank-you/page.tsx
 import type { Metadata } from "next";
-import ConversionTracker from "@/components/ConversionTracker";
 import PhoneLink from "@/components/PhoneLink";
 
 export const metadata: Metadata = {
@@ -11,9 +10,7 @@ export const metadata: Metadata = {
 export default function ThankYouPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex items-center justify-center px-4 text-black">
-      {/* 予約カレンダー送信を generate_lead として計測。
-          送信元のサービスページは直前ページ（referrer）から ConversionTracker が読み取る */}
-      <ConversionTracker formType="booking" />
+      {/* generate_lead はフォーム・予約の送信成功時に送信済み（このページでは送らない＝二重計上しない） */}
 
       <div className="w-full max-w-lg text-center">
         <div className="bg-white rounded-3xl shadow-xl p-10 border border-slate-200">

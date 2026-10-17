@@ -31,6 +31,38 @@ export async function sendAuthCode(to: string, code: string) {
   });
 }
 
+type BookingSource = {
+  gclid?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  landingUrl?: string;
+  pagePath?: string;
+  referrer?: string;
+};
+
+/** 予約通知用の【流入元】ブロック（LPお問い合わせの通知と同じ書式） */
+function bookingSourceBlock(src: BookingSource | undefined): string {
+  const s = src || {};
+  const inflow = s.gclid
+    ? "Google広告クリック（gclidあり）"
+    : (s.utm_source || s.utm_medium || s.utm_campaign ? "参照元あり" : "自然流入/不明");
+  const lines = [
+    `判定: ${inflow}`,
+    `gclid: ${s.gclid || "なし"}`,
+    `utm_source: ${s.utm_source || "-"} / utm_medium: ${s.utm_medium || "-"} / utm_campaign: ${s.utm_campaign || "-"}`,
+  ];
+  if (s.utm_term || s.utm_content) {
+    lines.push(`utm_term: ${s.utm_term || "-"} / utm_content: ${s.utm_content || "-"}`);
+  }
+  lines.push(`着地ページ: ${s.landingUrl || "-"}`);
+  lines.push(`参照元: ${s.referrer || "-"}`);
+  lines.push(`予約したページ: ${s.pagePath || "-"}`);
+  return lines.join("\n");
+}
+
 /**
  * 管理者へ新しい予約が入ったことを知らせるメール
  */
@@ -41,7 +73,7 @@ export async function sendBookingNotification(bookingData: any) {
 
   const {
     customerName, phone, email, address, startTime, endTime,
-    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes, dateUndecided, inquiryOnly
+    items, totalPrice, category, zip, contactMethod, totalMinutesDisplay, notes, dateUndecided, inquiryOnly, source
   } = bookingData;
 
 const startFormatted = new Date(startTime).toLocaleString("ja-JP", {
@@ -85,6 +117,10 @@ const label = inquiryOnly ? "お問い合わせ" : "予約";
 【備考・要望】
 ------------------------------------------
 ${notes || "なし"}
+
+【流入元】
+------------------------------------------
+${bookingSourceBlock(source)}
 
 ------------------------------------------
 管理画面で確認：https://brightofhouse.jp/admin/bookings
