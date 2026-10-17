@@ -90,7 +90,7 @@ export default async function TopPriceSection() {
         {items.length > 0 && (
           <div className={menus.length > 0 ? "mt-16 pt-12 border-t border-slate-100" : ""}>
             <div className="text-center mb-8">
-              <p className="text-slate-500 text-sm font-bold mb-1">札幌最安水準の価格設定</p>
+              <p className="text-slate-500 text-sm font-bold mb-1">札幌市内・近郊は出張費無料</p>
               <h3 className="text-2xl font-black text-slate-800">単品料金のご案内</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

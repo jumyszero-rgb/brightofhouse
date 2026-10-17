@@ -31,7 +31,7 @@ export default function HomeClient({ settings, children }: Props) {
               ⭐ 口コミ★4.9（200件超）
             </span>
             <span className="bg-white/15 border border-white/25 text-white text-[11px] md:text-xs font-bold px-3 py-1 rounded-full">
-              💰 札幌最安水準
+              🚗 札幌市内・近郊 出張費無料
             </span>
           </div>
 

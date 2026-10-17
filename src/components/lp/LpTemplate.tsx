@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import PhoneLink from "@/components/PhoneLink";
+import AfterHoursNote from "@/components/lp/AfterHoursNote";
 import { BRAND, type LpContent } from "@/lib/lpContent";
 
 function Stars({ n = 5 }: { n?: number }) {
@@ -12,27 +13,60 @@ function Stars({ n = 5 }: { n?: number }) {
   );
 }
 
-function CtaButtons({ compact = false }: { compact?: boolean }) {
+const LINE_ICON = (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M12 3C6.48 3 2 6.58 2 11c0 3.94 3.55 7.24 8.35 7.88.33.07.77.22.88.5.1.25.07.65.03.9l-.14.85c-.04.25-.2.98.86.53 1.06-.45 5.73-3.37 7.81-5.77C21.27 14.3 22 12.73 22 11c0-4.42-4.48-8-10-8z" />
+  </svg>
+);
+
+/**
+ * LINE（写真見積もり）ボタン。LPでいちばん目立たせる導線。
+ * 実績：10/3〜13の問い合わせ13件のうちLINEが4件 → 主役に（lead-increase-plan 1-2）。
+ * タップ計測（line_click）は TrafficSourceCapture が全ページ共通で送る。
+ */
+function LineCta({
+  tone = "dark",
+  label = "写真を送るだけで料金がわかる（LINE）",
+}: {
+  tone?: "dark" | "light";
+  label?: string;
+}) {
+  if (!BRAND.lineUrl) return null;
   return (
-    <div className={`flex flex-col sm:flex-row gap-3 justify-center ${compact ? "" : ""}`}>
+    <div>
       <a
-        href="#lead"
-        className="bg-amber-400 text-slate-900 font-black px-6 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center"
+        href={BRAND.lineUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 bg-[#06c755] text-white font-black text-[15px] md:text-lg px-4 py-4 rounded-full shadow-lg hover:brightness-105 transition"
       >
-        無料で相談・見積り
+        {LINE_ICON}
+        <span className="leading-snug">{label}</span>
       </a>
-      <PhoneLink
-        className="bg-white text-blue-700 font-bold px-6 py-3.5 rounded-full border-2 border-white/0 shadow hover:bg-blue-50 transition-colors text-center"
-        prefix="📞 "
-      />
-      {BRAND.lineUrl && (
+      <p className={`text-[11px] mt-1.5 text-center ${tone === "dark" ? "text-white/90" : "text-slate-500"}`}>
+        お名前・住所の入力は不要です
+      </p>
+    </div>
+  );
+}
+
+/** ファーストビューのCTA：①LINE（最大・緑）②無料相談・予約 ③電話 */
+function CtaButtons() {
+  return (
+    <div className="flex flex-col gap-3 max-w-md mx-auto">
+      <LineCta tone="dark" />
+      <div className="grid grid-cols-2 gap-3">
         <a
-          href={BRAND.lineUrl}
-          className="bg-green-500 text-white font-bold px-6 py-3.5 rounded-full shadow hover:bg-green-600 transition-colors text-center"
+          href="#lead"
+          className="flex items-center justify-center bg-amber-400 text-slate-900 font-black px-3 py-3.5 rounded-full shadow-lg hover:bg-amber-300 transition-colors text-center text-sm md:text-base"
         >
-          LINEで相談
+          無料相談・予約
         </a>
-      )}
+        <PhoneLink
+          className="flex items-center justify-center bg-white text-blue-700 font-bold px-3 py-3.5 rounded-full shadow hover:bg-blue-50 transition-colors text-center text-sm md:text-base whitespace-nowrap"
+          prefix="📞 "
+        />
+      </div>
     </div>
   );
 }
@@ -131,7 +165,7 @@ export default function LpTemplate({ content, bookingData }: Props) {
           )}
 
           <CtaButtons />
-          <p className="text-[11px] text-blue-100 mt-3">受付 9:00〜18:00 / お見積り無料</p>
+          <p className="text-[11px] text-blue-100 mt-3">お電話 9:00〜18:00／LINE・予約は24時間受付／お見積り無料</p>
         </div>
       </section>
 
@@ -201,9 +235,21 @@ export default function LpTemplate({ content, bookingData }: Props) {
               </li>
             ))}
           </ul>
-          <p className="text-center text-sm text-slate-600 mt-6 font-bold">
-            その汚れ、札幌のプロにお任せください。
-          </p>
+          {/* お悩みの直後にCTA（lead-increase-plan 1-3） */}
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-2xl p-5 md:p-6 max-w-md mx-auto">
+            <p className="text-center font-black text-base md:text-lg mb-4 leading-snug">
+              その汚れ、写真を送るだけで
+              <br />
+              料金がわかります
+            </p>
+            <LineCta tone="light" label="LINEで写真を送る" />
+            <a
+              href="#lead"
+              className="mt-3 flex items-center justify-center bg-amber-400 text-slate-900 font-black px-5 py-3.5 rounded-full shadow hover:bg-amber-300 transition-colors"
+            >
+              無料相談・予約はこちら →
+            </a>
+          </div>
         </section>
 
         {/* ===== メニュー・料金（キャンペーン） ===== */}
@@ -521,18 +567,40 @@ export default function LpTemplate({ content, bookingData }: Props) {
         </section>
       </div>
 
-      {/* ===== モバイル固定CTAバー ===== */}
-      <div className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur border-t border-slate-200 px-3 py-2 flex gap-2">
-        {/* 広告経由の人には通話計測用の0800番号で発信（表示は「電話する」のまま） */}
-        <PhoneLink
-          className="flex-1 text-center bg-white border border-blue-600 text-blue-700 font-bold py-3 rounded-full text-sm"
-          display="📞 電話する"
-        />
+      {/* ===== モバイル固定CTAバー（電話／LINEで写真見積もり／無料相談） ===== */}
+      <div className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur border-t border-slate-200 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-3 gap-2 items-start">
+        <div>
+          {/* 広告経由の人には通話計測用の0800番号で発信（表示は「電話する」のまま） */}
+          <PhoneLink
+            className="flex items-center justify-center h-12 bg-white border border-blue-600 text-blue-700 font-bold rounded-full text-xs"
+            display="📞 電話する"
+          />
+          {/* 18:00〜翌9:00だけ表示 */}
+          <AfterHoursNote className="mt-1 text-[10px] leading-tight text-slate-500 text-center">
+            時間外はLINE・予約で
+            <br />
+            24時間受付
+          </AfterHoursNote>
+        </div>
+        {BRAND.lineUrl ? (
+          <a
+            href={BRAND.lineUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center h-12 bg-[#06c755] text-white font-black rounded-full text-[11px] leading-tight text-center"
+          >
+            LINEで
+            <br />
+            写真見積もり
+          </a>
+        ) : (
+          <span aria-hidden />
+        )}
         <a
           href="#lead"
-          className="flex-1 text-center bg-amber-400 text-slate-900 font-black py-3 rounded-full text-sm"
+          className="flex items-center justify-center h-12 bg-amber-400 text-slate-900 font-black rounded-full text-xs"
         >
-          無料で相談
+          無料相談
         </a>
       </div>
     </div>

@@ -12,7 +12,7 @@ const DEFAULT_BUTTONS: Btn[] = [
   { text: "サービス・料金を見る", link: "/service" },
   { text: "📞 0120-792-684", link: "tel:0120792684" },
 ];
-const DEFAULT_BADGES: string[] = ["見積り無料・追加料金なし", "⭐ 口コミ★4.9（200件超）", "💰 札幌最安水準"];
+const DEFAULT_BADGES: string[] = ["見積り無料・料金は作業前に確定", "⭐ 口コミ★4.9（200件超）", "🚗 札幌市内・近郊 出張費無料"];
 const DEFAULT_STATS: Stat[] = [
   { big: "年間300件+", sub: "施工実績" },
   { big: "★4.9", sub: "口コミ評価" },

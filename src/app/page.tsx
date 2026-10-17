@@ -40,7 +40,7 @@ const topFaqs = [
   {
     question: "札幌市以外のエリアにも対応していますか？",
     answer:
-      "はい。札幌市全10区に加え、江別市・北広島市・恵庭市・千歳市・石狩市・小樽市・当別町・苫小牧市など、事務所から約25km圏内に対応しています。ゴミ屋敷清掃・遺品整理は北海道全域対応です。",
+      "はい。札幌市全10区に加え、江別市・北広島市・恵庭市など札幌近郊に対応しています（札幌市内・近郊は出張費無料）。千歳市・苫小牧市は、1LDK以上のハウスクリーニング、または30,000円以上のご依頼で対応いたします。その他の地域（石狩市・小樽市・当別町など）も、ご依頼内容により対応いたしますのでご相談ください。なお、ゴミ屋敷清掃・遺品整理は札幌市内限定です。",
   },
   {
     question: "作業中は家にいる必要がありますか？",
@@ -105,8 +105,8 @@ const PAINS = [
 // 選ばれる理由（6項目・インラインSVGアイコン）
 const REASONS: { title: string; desc: string; path: string }[] = [
   {
-    title: "明朗会計・追加料金なし",
-    desc: "見積り無料。作業前に必ず金額を明示します。",
+    title: "明朗会計・料金は作業前に確定",
+    desc: "見積り無料。作業前に必ず金額を明示し、ご了承なく料金が増えることはありません。",
     path: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z M7 7h.01",
   },
   {
@@ -115,8 +115,8 @@ const REASONS: { title: string; desc: string; path: string }[] = [
     path: "M14.7 6.3a4 4 0 0 0-5.66 5.66l-6.34 6.34a2 2 0 1 0 2.83 2.83l6.34-6.34a4 4 0 0 0 5.66-5.66l-3 3-2.83-2.83 3-3z",
   },
   {
-    title: "札幌最安水準の価格",
-    desc: "大手より圧倒的に安い価格設定。「安かろう悪かろう」ではありません。低価格でもプロの仕上がりをお約束します。",
+    title: "出張費無料・WEB限定価格",
+    desc: "札幌市内・近郊は出張費無料。WEB限定価格でご案内します。「安かろう悪かろう」ではなく、プロの仕上がりをお約束します。",
     path: "M23 18 13.5 8.5 8.5 13.5 1 6 M17 18h6v-6",
   },
   {
@@ -253,7 +253,7 @@ export default async function Home() {
   const heroBadges: string[] =
     Array.isArray((settings as any)?.badges) && (settings as any).badges.length > 0
       ? (settings as any).badges
-      : ["見積り無料・追加料金なし", "⭐ 口コミ★4.9（200件超）", "💰 札幌最安水準"];
+      : ["見積り無料・料金は作業前に確定", "⭐ 口コミ★4.9（200件超）", "🚗 札幌市内・近郊 出張費無料"];
   const heroStats: { big: string; sub: string }[] =
     Array.isArray((settings as any)?.stats) && (settings as any).stats.length > 0
       ? (settings as any).stats

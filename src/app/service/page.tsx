@@ -115,7 +115,7 @@ export default async function ServicePage() {
             <p className="mt-5 text-sm md:text-base text-white/90 leading-relaxed max-w-2xl mx-auto">
               お客様のご要望に合わせた多彩な清掃プランをご用意。
               <br className="hidden md:block" />
-              明朗価格・追加料金なしで、プロの技術をお届けします。
+              料金は作業前に確定。明朗価格で、プロの技術をお届けします。
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/inquiry" className="bg-[#f5a524] text-[#3a2a02] font-black py-3 px-8 rounded-full shadow-lg hover:brightness-105 transition-all">無料で相談・見積り</Link>
