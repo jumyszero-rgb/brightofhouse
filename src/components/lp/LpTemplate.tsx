@@ -77,7 +77,11 @@ export default function LpTemplate({ content, bookingData }: Props) {
               src={hero.image}
               alt=""
               fill
-              priority
+              // ファーストビュー（LCP要素）：先読み＋最優先で取得、遅延読み込みしない
+              // （Next 16 では priority は非推奨 → preload / loading="eager" / fetchPriority="high"）
+              preload
+              loading="eager"
+              fetchPriority="high"
               sizes="100vw"
               className="object-cover"
             />

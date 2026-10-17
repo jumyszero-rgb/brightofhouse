@@ -1,6 +1,7 @@
 // @/src/components/lp/LpBlocksRenderer.tsx
 // ブロック形式LPの公開側レンダラ（フェーズ1+）
 // blocks(Json配列)を上から順に描画する。価格・名称は予約マスターから解決したresolvedを参照する。
+import Image from "next/image";
 import LeadForm from "@/components/lp/LeadForm";
 import PhoneLink from "@/components/PhoneLink";
 import ServicePageBooking from "@/components/booking/ServicePageBooking";
@@ -54,13 +55,48 @@ function HeroStars() {
   return <span className="text-amber-400" aria-hidden>★★★★★</span>;
 }
 
+/**
+ * next/image で最適化できる画像か（next.config の images 設定で許可している配信元だけ）。
+ *  - サイト内の画像（/images/... など・クエリなし）
+ *  - R2 の公開URL（https://pub-xxxx.r2.dev/...）
+ * それ以外の外部URLを next/image に渡すとエラーになるため、通常の <img> で表示する。
+ */
+function isOptimizableSrc(src: string): boolean {
+  if (src.includes("?")) return false; // クエリ付きURLは next/image の許可設定が別途必要なので対象外
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  return /^https:\/\/pub-[^/.]+\.r2\.dev\//.test(src);
+}
+
+/**
+ * ヒーロー背景画像。
+ * firstView=true（ページ最上部のブロック＝LCP要素）のときは先読み＋最優先で取得し、遅延読み込みしない。
+ * それ以外の位置に置かれたヒーローは遅延読み込み。
+ */
+function HeroBgImage({ src, firstView }: { src: string; firstView: boolean }) {
+  const cls = "absolute inset-0 w-full h-full object-cover";
+  if (isOptimizableSrc(src)) {
+    return firstView ? (
+      <Image src={src} alt="" fill sizes="100vw" preload loading="eager" fetchPriority="high" className="object-cover" />
+    ) : (
+      <Image src={src} alt="" fill sizes="100vw" loading="lazy" className="object-cover" />
+    );
+  }
+  if (firstView) {
+    // 最適化できない外部URLでも、遅延読み込みせず最優先で取りに行かせる
+    return <img src={src} alt="" className={cls} loading="eager" fetchPriority="high" decoding="async" />;
+  }
+  return <img src={src} alt="" className={cls} loading="lazy" decoding="async" />;
+}
+
 export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTitle, slug }: Props) {
   const list = Array.isArray(blocks) ? blocks.filter((b) => b && b.visible !== false) : [];
 
   return (
     <main className="min-h-screen bg-white text-slate-800">
-      {list.map((block) => {
+      {list.map((block, index) => {
         const d = block.data || {};
+        // ページ最上部のブロック（ファーストビュー）か
+        const firstView = index === 0;
         switch (block.type) {
           case "hero": {
             const common = d.useCommon !== false;
@@ -79,7 +115,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
                 <section className="relative overflow-hidden">
                   {d.imageUrl ? (
                     <>
-                      <img src={d.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      <HeroBgImage src={d.imageUrl} firstView={firstView} />
                       <div className="absolute inset-0 bg-[#022047]/60" aria-hidden />
                     </>
                   ) : (
@@ -176,7 +212,17 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, lpTit
             return (
               <section key={block.id} className="py-8">
                 <div className="max-w-3xl mx-auto px-4 text-center">
-                  {d.imageUrl && <img src={d.imageUrl} alt={d.caption || ""} className="w-full rounded-2xl shadow" />}
+                  {d.imageUrl && (
+                    <img
+                      src={d.imageUrl}
+                      alt={d.caption || ""}
+                      className="w-full rounded-2xl shadow"
+                      // 最上部に置かれた時だけ最優先、それ以外は画面に近づいてから読み込む
+                      loading={firstView ? "eager" : "lazy"}
+                      fetchPriority={firstView ? "high" : "auto"}
+                      decoding="async"
+                    />
+                  )}
                   {d.caption && <p className="text-xs text-slate-500 mt-2">{d.caption}</p>}
                 </div>
               </section>

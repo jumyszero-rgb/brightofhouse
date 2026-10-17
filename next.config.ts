@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // CSS を <head> に直接埋め込む（別ファイルの CSS を待たずに描画できる＝レンダリングブロック解消）。
+  // 広告LPは初回訪問がほとんどなので、キャッシュより「1往復減らす」効果が大きい。
+  // ※ Tailwind のような共通CSS向けの機能。選択中フォントの @font-face（約23KB）は別ファイルのまま。
+  experimental: {
+    inlineCss: true,
+  },
+
   images: {
     remotePatterns:[
       {

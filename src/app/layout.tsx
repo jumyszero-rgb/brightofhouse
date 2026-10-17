@@ -69,7 +69,10 @@ export default async function RootLayout({
             以前はそれに加えて googletagmanager.com の gtag.js もここで読んでいたため、Googleタグが2系統・3本読まれていた。
           ・今は「ゲートウェイのタグがあればそれだけを使う」。ここでは config（GA4・広告・電話番号置き換え）だけを積む。
           ・ゲートウェイが無効になっている時だけ、googletagmanager.com の gtag.js を代わりに読み込む（計測が途切れない保険）。
-          ・さらに保険：5秒たっても GA4 のタグが動いていなければ gtag.js を読み込む。
+          ・さらに保険：ゲートウェイのタグが「読み込み失敗」した時、またはページの読み込み完了（load）時点で
+            GA4 のタグが動いていない時だけ gtag.js を読み込む。
+            （以前は「5秒」で判定していたため、回線の遅いスマホ・PageSpeed の計測では5秒以内に間に合わず
+              gtag.js も追加で読まれ、Googleタグが3本になっていた）
         */}
         <script
           dangerouslySetInnerHTML={{
@@ -85,14 +88,17 @@ function gtag(){dataLayer.push(arguments);}
     s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
     document.head.appendChild(s);
   }
-  var viaGateway = !!document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
-  if (!viaGateway) { gtag('js', new Date()); loadDirect(); }
-  else {
+  var gw = document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
+  if (!gw) { gtag('js', new Date()); loadDirect(); return; }
+  gw.addEventListener('error', loadDirect);
+  function checkAfterLoad(){
     setTimeout(function(){
       var t = window.google_tag_manager;
       if (!t || !t['${GA4_ID}']) loadDirect();
-    }, 5000);
+    }, 3000);
   }
+  if (document.readyState === 'complete') checkAfterLoad();
+  else window.addEventListener('load', checkAfterLoad);
 })();
 gtag('config', '${GA4_ID}');
 gtag('config', '${ADS_ID}');

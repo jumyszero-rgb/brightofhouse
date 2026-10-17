@@ -150,7 +150,17 @@ export default async function LandingPageView({
       {/* ヒーロー */}
       <div className="relative w-full py-16 md:py-24 flex flex-col items-center justify-center overflow-hidden bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 border-b-[12px] border-yellow-400">
         {lp.heroImage && (
-          <Image src={lp.heroImage} alt={lp.title} fill className="object-cover opacity-40 mix-blend-overlay" priority />
+          <Image
+            src={lp.heroImage}
+            alt={lp.title}
+            fill
+            // ファーストビュー（LCP要素）：先読み＋最優先・遅延読み込みしない
+            preload
+            loading="eager"
+            fetchPriority="high"
+            sizes="100vw"
+            className="object-cover opacity-40 mix-blend-overlay"
+          />
         )}
         <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto w-full">
           <h1 className="text-3xl md:text-6xl font-black leading-tight drop-shadow-lg mb-6">
