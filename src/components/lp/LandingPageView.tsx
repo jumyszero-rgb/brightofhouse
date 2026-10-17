@@ -24,6 +24,13 @@ const subMenusInclude = {
   options: { orderBy: { order: "asc" as const } },
 } as const;
 
+// カレンダー予約フォームブロックの大分類ID一覧（複数対応の refIds を優先、旧データの refId にもフォールバック）
+function bookingFormCategoryIds(b: any): string[] {
+  const ids: string[] = Array.isArray(b?.refs?.refIds) ? b.refs.refIds.filter(Boolean) : [];
+  if (ids.length) return ids;
+  return b?.refs?.refId ? [b.refs.refId] : [];
+}
+
 function PreviewBanner() {
   return (
     <div className="bg-yellow-400 text-black text-center py-2 text-sm font-bold sticky top-0 z-50">
@@ -80,7 +87,7 @@ export default async function LandingPageView({
         else if (b.refs.refType === "subMenu") subMenuIds.push(b.refs.refId);
         else if (b.refs.refType === "option") optionIds.push(b.refs.refId);
       }
-      if (b?.type === "bookingForm" && b?.refs?.refId) formCategoryIds.push(b.refs.refId);
+      if (b?.type === "bookingForm") formCategoryIds.push(...bookingFormCategoryIds(b));
     }
     const [menus, subMenus, options] = await Promise.all([
       menuIds.length ? prisma.bookingMenu.findMany({ where: { id: { in: menuIds } }, select: { id: true, title: true, basePrice: true, workContent: true } }) : Promise.resolve([] as any[]),
@@ -92,12 +99,17 @@ export default async function LandingPageView({
       subMenus: Object.fromEntries(subMenus.map((s: any) => [s.id, { title: s.title, price: s.price, workContent: s.workContent }])),
       options: Object.fromEntries(options.map((o: any) => [o.id, { title: o.title, price: o.price, workContent: o.workContent }])),
     };
-    const formCats = formCategoryIds.length
-      ? await prisma.bookingCategory.findMany({ where: { id: { in: formCategoryIds } }, include: { menus: { include: subMenusInclude } } })
+    const uniqueFormCategoryIds = Array.from(new Set(formCategoryIds));
+    const formCats: any[] = uniqueFormCategoryIds.length
+      ? await prisma.bookingCategory.findMany({ where: { id: { in: uniqueFormCategoryIds } }, include: { menus: { include: subMenusInclude } } })
       : [];
+    const catById = new Map<string, any>(formCats.map((c: any) => [c.id, c]));
+    // ブロックごとに、選ばれた大分類（複数可）をまとめて1つの予約フォーム用データにする
     const bookingForms: Record<string, any> = {};
-    for (const cat of formCats) {
-      bookingForms[cat.id] = bookingSelectionToBookingData([cat as any], []);
+    for (const b of rawBlocks) {
+      if (b?.type !== "bookingForm") continue;
+      const cats = bookingFormCategoryIds(b).map((id) => catById.get(id)).filter(Boolean);
+      if (cats.length && b.id) bookingForms[b.id] = bookingSelectionToBookingData(cats as any[], []);
     }
     // 本文中の [[key]] ショートコードを展開（richText本文 / blocknote HTML）
     const scMap = await getShortcodeMap();
@@ -129,7 +141,7 @@ export default async function LandingPageView({
           <Link href="/" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
             <span>←</span> 公式サイト
           </Link>
-          <Link href="/contact" className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-red-700 transition-colors">
+          <Link href="/inquiry" className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-red-700 transition-colors">
             無料相談
           </Link>
         </div>
@@ -199,7 +211,7 @@ export default async function LandingPageView({
                 </a>
 
                 <Link
-                  href={lp.ctaLink || "/contact"}
+                  href={lp.ctaLink || "/inquiry"}
                   className="flex items-center justify-center gap-3 w-full md:flex-1 bg-yellow-400 text-red-700 font-black py-4 px-6 rounded-full shadow-lg hover:bg-yellow-500 transition-all text-lg"
                 >
                   {lp.ctaText || "お見積り依頼はこちら"}

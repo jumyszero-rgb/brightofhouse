@@ -516,7 +516,7 @@ export default async function ServiceDetailPage({
                 </p>
                 <div className="relative z-10 flex flex-col items-center gap-6">
                   <Link
-                    href="/contact"
+                    href="/inquiry"
                     className="inline-block bg-[#f5a524] text-[#3a2a02] text-xl font-black py-5 px-12 rounded-full shadow-lg hover:brightness-105 transition-all w-full md:w-auto"
                   >
                     お問い合わせはこちら ➝

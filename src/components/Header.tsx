@@ -12,16 +12,16 @@ export default function Header() {
 
   const handleLinkClick = () => setIsOpen(false);
 
-  const getNavLinkClass = (path: string) => 
+  const getNavLinkClass = (path: string) =>
     `hover:text-blue-600 transition-colors ${pathname === path ? "text-blue-600 font-bold" : "text-slate-600"}`;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm text-black">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        
+
         {/* スマホ用 (左: ハンバーガー + ロゴ) */}
         <div className="flex items-center gap-3 md:hidden">
-          <button 
+          <button
             onClick={() => setIsOpen(!isOpen)}
             className="p-2 -ml-2 text-slate-600 hover:text-blue-600 focus:outline-none"
             aria-label="メニューを開く"
@@ -34,7 +34,7 @@ export default function Header() {
               )}
             </svg>
           </button>
-          
+
           <Link href="/" onClick={handleLinkClick} className="flex items-center">
             <Image
               src="/images/logo.png"
@@ -68,7 +68,8 @@ export default function Header() {
           <Link href="/area" className={getNavLinkClass("/area")}>対応エリア</Link>
           <Link href="/blog" className={getNavLinkClass("/blog")}>ブログ</Link>
           <Link href="/company" className={getNavLinkClass("/company")}>会社概要</Link>
-          <Link href="/contact" className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors shadow-sm">
+          {/* お客様のお問い合わせはLPと同じフォーム（/inquiry）へ。/contact は業者・法人向け */}
+          <Link href="/inquiry" className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors shadow-sm">
             お問い合わせ
           </Link>
         </nav>
@@ -84,7 +85,7 @@ export default function Header() {
             <Link href="/area" onClick={handleLinkClick} className={`text-lg font-bold py-3 border-b border-slate-50 ${pathname === "/area" ? "text-blue-600" : "text-slate-700"}`}>対応エリア</Link>
             <Link href="/blog" onClick={handleLinkClick} className={`text-lg font-bold py-3 border-b border-slate-50 ${pathname === "/blog" ? "text-blue-600" : "text-slate-700"}`}>お掃除ブログ</Link>
             <Link href="/company" onClick={handleLinkClick} className={`text-lg font-bold py-3 border-b border-slate-50 ${pathname === "/company" ? "text-blue-600" : "text-slate-700"}`}>会社概要</Link>
-            <Link href="/contact" onClick={handleLinkClick} className="bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-lg inline-block mx-auto mt-6 w-full max-w-xs text-lg">
+            <Link href="/inquiry" onClick={handleLinkClick} className="bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-lg inline-block mx-auto mt-6 w-full max-w-xs text-lg">
               お問い合わせ・無料相談
             </Link>
           </nav>

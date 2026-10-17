@@ -118,7 +118,7 @@ export default async function ServicePage() {
               明朗価格・追加料金なしで、プロの技術をお届けします。
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/contact" className="bg-[#f5a524] text-[#3a2a02] font-black py-3 px-8 rounded-full shadow-lg hover:brightness-105 transition-all">無料で相談・見積り</Link>
+              <Link href="/inquiry" className="bg-[#f5a524] text-[#3a2a02] font-black py-3 px-8 rounded-full shadow-lg hover:brightness-105 transition-all">無料で相談・見積り</Link>
               <a href="tel:0120792684" className="bg-white/15 backdrop-blur-sm border border-white/40 text-white font-bold py-3 px-8 rounded-full hover:bg-white/25 transition-all">📞 0120-792-684</a>
             </div>
           </div>
@@ -167,7 +167,7 @@ export default async function ServicePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                     {category.menus.map((menu) => {
                       const cp = cardPrice(menu);
-                      const href = menu.detailPageSlug ? `/service/${menu.detailPageSlug}` : "/contact";
+                      const href = menu.detailPageSlug ? `/service/${menu.detailPageSlug}` : "/inquiry";
                       const summary = menu.detailPageSlug ? (summaryBySlug[menu.detailPageSlug] || "") : "";
                       return (
                         <Link key={menu.id} href={href} className="group block rounded-xl overflow-hidden shadow-sm border border-[#e7ecf1] bg-white">
@@ -238,7 +238,7 @@ export default async function ServicePage() {
             </p>
             <a href="tel:0120792684" className="block mt-6 text-3xl md:text-4xl font-black tracking-wider">📞 0120-792-684</a>
             <p className="text-xs text-white/80 mt-1">受付 9:00〜18:00（年中無休）</p>
-            <Link href="/contact" className="inline-block mt-6 bg-[#f5a524] text-[#3a2a02] font-black py-4 px-12 rounded-full shadow-lg hover:brightness-105 transition-all text-lg">フォームで無料見積り</Link>
+            <Link href="/inquiry" className="inline-block mt-6 bg-[#f5a524] text-[#3a2a02] font-black py-4 px-12 rounded-full shadow-lg hover:brightness-105 transition-all text-lg">フォームで無料見積り</Link>
           </div>
         </section>
       </main>

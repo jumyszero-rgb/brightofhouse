@@ -80,7 +80,11 @@ export async function POST(request: NextRequest) {
     let confirmStatus = "メール未入力のため送信なし";
     if (lead.email) {
       try {
-        await sendLeadConfirmationToUser(lead);
+        // 最大12秒で打ち切る（お客様を待たせすぎない）
+        await Promise.race([
+          sendLeadConfirmationToUser(lead),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout 12s")), 12_000)),
+        ]);
         confirmStatus = `送信済み（${lead.email}）`;
       } catch (err: any) {
         console.error("Lead confirmation mail error:", err);

@@ -18,6 +18,10 @@ function createTransporter() {
     port: SMTP_PORT,
     secure: isSecure,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    // SMTPが応答しない時にフォーム送信が長時間「送信中…」で止まらないよう上限を設ける
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
 }
 
@@ -78,12 +82,14 @@ export async function sendLeadNotification(lead: LeadData, confirmStatus?: strin
     minute: "2-digit",
   });
 
+  // ホームページの問い合わせページ（/inquiry・source が "hp/" 始まり）とLPを件名で区別する
+  const fromHp = (lead.source || "").startsWith("hp/");
   await transporter.sendMail({
     from: `"Bright House LP" <${SMTP_FROM}>`,
     to: ADMIN_EMAIL,
-    subject: `【LP問い合わせ】${lead.name}様（${lead.service}）`,
+    subject: `${fromHp ? "【HP問い合わせ】" : "【LP問い合わせ】"}${lead.name}様（${lead.service}）`,
     text: `
-広告LPから新しいお問い合わせ（リード）が入りました。
+${fromHp ? "ホームページの問い合わせフォーム" : "広告LP"}から新しいお問い合わせ（リード）が入りました。
 お客様へ折り返しのご連絡をお願いします。
 
 【お問い合わせ内容】

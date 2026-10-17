@@ -121,8 +121,13 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-white transition-colors">
+                <Link href="/inquiry" className="hover:text-white transition-colors">
                   無料見積・相談
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-white transition-colors">
+                  法人・業者様のお問い合わせ
                 </Link>
               </li>
               <li>
