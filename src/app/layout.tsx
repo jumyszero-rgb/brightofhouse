@@ -4,7 +4,8 @@ import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import TrafficSourceCapture from "@/components/TrafficSourceCapture";
 import prisma from "@/lib/prisma";
-import { DEFAULT_FONT_KEY, getFontOption, getFontCssHref } from "@/lib/fonts";
+import { DEFAULT_FONT_KEY } from "@/lib/fonts";
+import SiteFont from "@/components/site-font/SiteFont";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -44,10 +45,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // 計測ID（GA4 / Google広告）。gtag.js は1本だけ読み込み、<head> で全部 config してからイベントを送る。
+  // 計測ID（GA4 / Google広告）。Googleタグは1系統だけ読み込み、<head> で全部 config してからイベントを送る。
   const GA4_ID = "G-LMELPVPT3Z";
   const ADS_ID = "AW-17996016781";
   const ADS_CALL_LABEL = "AW-17996016781/DTKqCPuhmawcEI3ZlYVD";
+  // Cloudflare の Google tag gateway の計測パス（Cloudflare の設定と同じ値。変更したらここも合わせる）
+  const TAG_GATEWAY_PATH = "wd9j";
 
   // サイトフォント（admin で選択・SiteSettings.fontKey）。未設定/取得失敗時は既定フォント。
   let fontKey = DEFAULT_FONT_KEY;
@@ -57,36 +60,48 @@ export default async function RootLayout({
   } catch {
     // DB未接続時などは既定フォントで継続
   }
-  // 選ばれている1フォントだけを読み込む（未選択フォントは読み込まない・先読みしない）
-  const font = getFontOption(fontKey);
-  const fontHref = getFontCssHref(fontKey);
-
   return (
     <html lang="ja">
       <head>
         {/*
-          計測タグ（全ページ・LP含む）。
-          ・以前は GA4 を @next/third-parties（画面の準備完了後に注入）、広告タグを body 末尾で読んでいたため、
-            サンキューページの generate_lead が「GA4 の config より先」に送られ GA4 に届いていなかった。
-          ・HTML直書きで <head> の最初に GA4 と広告の両方を config → その後のイベントは必ず両方に届く。
+          計測タグ（全ページ・LP含む）— Googleタグは「1系統」だけ。
+          ・Cloudflare の Google tag gateway が <head> の先頭に Googleタグ（自社ドメイン /wd9j/ 配信）を自動で挿入している。
+            以前はそれに加えて googletagmanager.com の gtag.js もここで読んでいたため、Googleタグが2系統・3本読まれていた。
+          ・今は「ゲートウェイのタグがあればそれだけを使う」。ここでは config（GA4・広告・電話番号置き換え）だけを積む。
+          ・ゲートウェイが無効になっている時だけ、googletagmanager.com の gtag.js を代わりに読み込む（計測が途切れない保険）。
+          ・さらに保険：5秒たっても GA4 のタグが動いていなければ gtag.js を読み込む。
         */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
+(function(){
+  var loaded = false;
+  function loadDirect(){
+    if (loaded) return; loaded = true;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
+    document.head.appendChild(s);
+  }
+  var viaGateway = !!document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
+  if (!viaGateway) { gtag('js', new Date()); loadDirect(); }
+  else {
+    setTimeout(function(){
+      var t = window.google_tag_manager;
+      if (!t || !t['${GA4_ID}']) loadDirect();
+    }, 5000);
+  }
+})();
 gtag('config', '${GA4_ID}');
 gtag('config', '${ADS_ID}');
 gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' });
 `,
           }}
         />
-        {/* サイトフォント：選択中の1フォント・2ウェイトだけ（display=swap で読み込み中も文字はすぐ表示） */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href={fontHref} />
+        {/* サイトフォント：選択中の1フォント・2ウェイトだけを自社ドメインから配信（next/font・外部接続なし） */}
+        <SiteFont fontKey={fontKey} />
         <link
           rel="alternate"
           type="application/rss+xml"
@@ -94,7 +109,7 @@ gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' 
           href="/rss.xml"
         />
       </head>
-      <body className="text-slate-800 pb-16 md:pb-0" style={{ fontFamily: font.family }}>
+      <body className="text-slate-800 pb-16 md:pb-0">
         {/* 広告流入（gclid / utm_*）をランディング時に保存。フォーム送信時にメールへ載せる。 */}
         <TrafficSourceCapture />
 
