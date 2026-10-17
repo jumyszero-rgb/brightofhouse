@@ -12,6 +12,7 @@
  * → フォントは「画面が出た後」に読み込む（ssr: false）。
  *   - 最初の一瞬は下の FALLBACK（端末の近い書体）で文字を出し、フォントが届いたら選択中のフォントに切り替わる
  *   - 日本語は全角文字の幅が同じで、行の高さも固定なので、切り替わってもレイアウトはほぼ動かない
+ * 「system〜」（端末の標準フォント：ゴシック／丸ゴシック／明朝）を選ぶと、フォントの読み込み自体をしない（最速）。
  */
 import dynamic from "next/dynamic";
 import { normalizeFontKey } from "@/lib/fonts";
@@ -25,12 +26,19 @@ const FONTS = {
   "shippori-mincho": dynamic(() => import("./font-shippori-mincho"), { ssr: false }),
 } as const;
 
-const MARU = '"Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif';
-const GOTHIC = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif';
-const MINCHO = '"Hiragino Mincho ProN", "Yu Mincho", serif';
+// 端末に入っている書体（iPhone/Mac＝ヒラギノ、Windows＝游ゴシック/メイリオ・游明朝、Android＝Noto）。
+// ※ 丸ゴシックは iPhone/Mac だけ（Windows・Android には標準の丸ゴシックが無いため、普通のゴシックで表示される）
+const MARU = '"Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", YuGothic, Meiryo, sans-serif';
+const GOTHIC = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", "Yu Gothic", YuGothic, Meiryo, sans-serif';
+const MINCHO = '"Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif';
 
-/** フォントが届くまでの表示用（端末に入っている近い書体） */
-const FALLBACK: Record<keyof typeof FONTS, string> = {
+type FontKey = keyof typeof FONTS | "system" | "system-maru" | "system-mincho";
+
+/** フォントが届くまでの表示用（端末に入っている近い書体）。"system" はこれだけで表示する（読み込みなし） */
+const FALLBACK: Record<FontKey, string> = {
+  system: GOTHIC,
+  "system-maru": MARU,
+  "system-mincho": MINCHO,
   "zen-maru": MARU,
   "zen-kaku": GOTHIC,
   "noto-sans": GOTHIC,
@@ -40,13 +48,14 @@ const FALLBACK: Record<keyof typeof FONTS, string> = {
 };
 
 export default function SiteFont({ fontKey }: { fontKey?: string | null }) {
-  const key = normalizeFontKey(fontKey) as keyof typeof FONTS;
-  const Font = FONTS[key];
+  const key = normalizeFontKey(fontKey) as FontKey;
+  // 端末の標準フォント（system〜）はフォントを読み込まない
+  const Font = key.startsWith("system") ? null : FONTS[key as keyof typeof FONTS];
   return (
     <>
       {/* サーバー描画のHTMLに入る：最初から文字が出る（選択フォントの <style> が後に来て上書きする） */}
       <style>{`html body{font-family:${FALLBACK[key]};}`}</style>
-      <Font />
+      {Font && <Font />}
     </>
   );
 }

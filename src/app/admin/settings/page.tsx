@@ -3,13 +3,17 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const FONT_CHOICES: { key: string; label: string; css: string }[] = [
-  { key: "zen-maru", label: "Zen丸ゴシック（やわらか・現行）", css: "'Zen Maru Gothic', sans-serif" },
-  { key: "zen-kaku", label: "Zen角ゴシック（モダン・きりっと）", css: "'Zen Kaku Gothic New', sans-serif" },
-  { key: "noto-sans", label: "Noto Sans JP（標準・読みやすい）", css: "'Noto Sans JP', sans-serif" },
-  { key: "mplus-rounded", label: "M PLUS Rounded（まるみ）", css: "'M PLUS Rounded 1c', sans-serif" },
-  { key: "kosugi-maru", label: "小杉丸ゴシック（カジュアル）", css: "'Kosugi Maru', sans-serif" },
-  { key: "shippori-mincho", label: "しっぽり明朝（上品・明朝体）", css: "'Shippori Mincho', serif" },
+// weight：ページ表示時に読み込むフォントの重さの目安（日本語フォントは文字範囲ごとに約120分割×ウェイト数）
+const FONT_CHOICES: { key: string; label: string; css: string; weight: string }[] = [
+  { key: "system", label: "端末の標準：ゴシック", css: '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", "Yu Gothic", YuGothic, Meiryo, sans-serif', weight: "最軽量（読み込み 0KB）・iPhone/Mac＝ヒラギノ角ゴ、Windows＝游ゴシック" },
+  { key: "system-maru", label: "端末の標準：丸ゴシック", css: '"Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", YuGothic, Meiryo, sans-serif', weight: "最軽量（読み込み 0KB）・iPhone/Mac＝ヒラギノ丸ゴ。Windows/Androidは丸ゴが無く普通のゴシック" },
+  { key: "system-mincho", label: "端末の標準：明朝", css: '"Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif', weight: "最軽量（読み込み 0KB）・iPhone/Mac＝ヒラギノ明朝、Windows＝游明朝" },
+  { key: "zen-maru", label: "Zen丸ゴシック（やわらか・現行）", css: "'Zen Maru Gothic', sans-serif", weight: "重い（太字あり）" },
+  { key: "zen-kaku", label: "Zen角ゴシック（モダン・きりっと）", css: "'Zen Kaku Gothic New', sans-serif", weight: "重い（太字あり）" },
+  { key: "noto-sans", label: "Noto Sans JP（標準・読みやすい）", css: "'Noto Sans JP', sans-serif", weight: "重い（太字あり）" },
+  { key: "mplus-rounded", label: "M PLUS Rounded（まるみ）", css: "'M PLUS Rounded 1c', sans-serif", weight: "重い（太字あり）" },
+  { key: "kosugi-maru", label: "小杉丸ゴシック（カジュアル）", css: "'Kosugi Maru', sans-serif", weight: "やや軽い（太字なし）" },
+  { key: "shippori-mincho", label: "しっぽり明朝（上品・明朝体）", css: "'Shippori Mincho', serif", weight: "重い（太字あり）" },
 ];
 
 export default function AdminSettingsPage() {
@@ -67,20 +71,10 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="space-y-8">
-          {/* robots.txt */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">robots.txt の内容</label>
-            <textarea
-              className="w-full h-64 p-4 font-mono text-sm border rounded bg-slate-50"
-              value={robotsTxt}
-              onChange={(e) => setRobotsTxt(e.target.value)}
-            />
-          </div>
-
           {/* サイトフォント */}
           <div className="bg-fuchsia-50 border border-fuchsia-200 rounded-xl p-5">
             <h2 className="font-bold text-fuchsia-800 mb-1">🔤 サイトフォント</h2>
-            <p className="text-xs text-slate-500 mb-4">サイト全体の文字フォントを変更します。保存後、ページを再読み込みすると反映されます。</p>
+            <p className="text-xs text-slate-500 mb-4">サイト全体の文字フォントを変更します。保存後、ページを再読み込みすると反映されます。<br />※ 日本語のWebフォントは読み込みが重く、表示速度（広告LPの成果）に影響します。速さ優先なら「端末の標準」（ゴシック／丸ゴシック／明朝）。プレビューは今見ている端末での見え方です。</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {FONT_CHOICES.map((f) => (
                 <button
@@ -93,6 +87,7 @@ export default function AdminSettingsPage() {
                     <span className={`w-4 h-4 rounded-full border-2 shrink-0 ${fontKey === f.key ? "border-fuchsia-500 bg-fuchsia-500" : "border-slate-300"}`} />
                     <span className="text-xs font-bold text-slate-600">{f.label}</span>
                   </div>
+                  <div className={`text-[11px] font-bold mb-1 ${f.key.startsWith("system") ? "text-emerald-600" : "text-slate-400"}`}>{f.weight}</div>
                   <div className="text-lg text-slate-900 leading-snug" style={{ fontFamily: f.css }}>
                     あいうアイウ 北海道ブライトオブハウス
                   </div>
@@ -102,6 +97,16 @@ export default function AdminSettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* robots.txt */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">robots.txt の内容</label>
+            <textarea
+              className="w-full h-64 p-4 font-mono text-sm border rounded bg-slate-50"
+              value={robotsTxt}
+              onChange={(e) => setRobotsTxt(e.target.value)}
+            />
           </div>
 
           {/* カレンダー表示時間帯 */}

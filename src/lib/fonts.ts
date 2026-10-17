@@ -24,6 +24,11 @@ export const FONT_OPTIONS: FontOption[] = [
   { key: "mplus-rounded", label: "M PLUS Rounded（まるみ）" },
   { key: "kosugi-maru", label: "小杉丸ゴシック（カジュアル）" },
   { key: "shippori-mincho", label: "しっぽり明朝（上品・明朝体）" },
+  // 端末に最初から入っているフォント（iPhone/Mac＝ヒラギノ、Windows＝游ゴシック／メイリオ、Android＝Noto Sans）。
+  // フォントの読み込みが一切ないので最速。
+  { key: "system", label: "端末の標準フォント：ゴシック（最軽量）" },
+  { key: "system-maru", label: "端末の標準フォント：丸ゴシック（最軽量）" },
+  { key: "system-mincho", label: "端末の標準フォント：明朝（最軽量）" },
 ];
 
 export const DEFAULT_FONT_KEY = "zen-maru";

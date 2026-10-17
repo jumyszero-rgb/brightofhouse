@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 
           <Link href="/admin/settings" className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-gray-500">
             <h2 className="text-xl font-bold text-gray-800 mb-2">SEO・サイト設定</h2>
-            <p className="text-gray-600 text-sm">robots.txt などの全体設定を編集します。</p>
+            <p className="text-gray-600 text-sm">サイトフォント・robots.txt・カレンダー表示時間などの全体設定を編集します。</p>
           </Link>
 
         </div>
