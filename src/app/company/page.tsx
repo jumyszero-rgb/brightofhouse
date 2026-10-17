@@ -2,6 +2,7 @@
 // import { PrismaClient } from "@prisma/client"; // ← 削除
 import prisma from "@/lib/prisma"; // ← 追加
 import type { Metadata } from "next";
+import SmartImage from "@/components/SmartImage";
 
 export const metadata: Metadata = {
   title: "会社概要",
@@ -9,6 +10,11 @@ export const metadata: Metadata = {
     "北海道ブライトオブハウスの会社概要・所在地・営業時間などの基本情報です。札幌市を中心に水回りクリーニング・ハウスクリーニングを提供しています。",
   alternates: { canonical: "/company" },
 };
+
+/** 埋め込み地図の <iframe> に loading="lazy" と title を付ける（付いていなければ） */
+function lazyIframe(html: string): string {
+  return html.replace(/<iframe(?![^>]*\bloading=)/gi, '<iframe loading="lazy"').replace(/<iframe(?![^>]*\btitle=)/gi, '<iframe title="アクセスマップ"');
+}
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +63,7 @@ export default async function CompanyPage() {
 
       {heroImage ? (
         <section className="relative overflow-hidden text-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroImage} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+          <SmartImage src={heroImage} priority className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#0a568f]/65 to-[#12b5a6]/45" aria-hidden />
           <div className="relative max-w-4xl mx-auto px-4 sm:px-8 py-20 text-center">
             <h1 className="text-3xl sm:text-5xl font-black drop-shadow-sm">
@@ -133,7 +138,8 @@ export default async function CompanyPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden p-2">
             <div 
               className="relative w-full h-64 sm:h-96 bg-slate-200 rounded-xl overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:absolute [&>iframe]:inset-0"
-              dangerouslySetInnerHTML={{ __html: data.mapCode }}
+              // 地図は画面に近づいてから読み込む（Googleマップ本体のJSが約300KBあるため）
+              dangerouslySetInnerHTML={{ __html: lazyIframe(data.mapCode) }}
             />
           </div>
         )}

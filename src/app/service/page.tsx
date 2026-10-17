@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { resolvePrice } from "@/lib/bookingMenuToBookingData";
+import SmartImage from "@/components/SmartImage";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -103,8 +104,7 @@ export default async function ServicePage() {
         <header className="relative overflow-hidden bg-gradient-to-br from-[#0a568f] via-[#0e7ad1] to-[#12b5a6] text-white">
           {heroImage && (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+              <SmartImage src={heroImage} priority className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#0a568f]/70 to-[#12b5a6]/50" aria-hidden />
             </>
           )}
@@ -173,8 +173,7 @@ export default async function ServicePage() {
                         <Link key={menu.id} href={href} className="group block rounded-xl overflow-hidden shadow-sm border border-[#e7ecf1] bg-white">
                           <div className="relative aspect-[4/3]">
                             {menu.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={menu.imageUrl} alt={menu.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <SmartImage src={menu.imageUrl} alt={menu.title} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center text-4xl" style={{ background: `linear-gradient(135deg, ${accent}22, ${accent}44)` }}>🧹</div>
                             )}

@@ -4,7 +4,8 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import ServicePageBooking from "@/components/booking/ServicePageBooking";
+// カレンダー予約は下の方にあるので「画面に近づいたら読み込む」版を使う（最初の表示でJSの実行が約2.6秒かかっていた）
+import { LazyServicePageBooking as ServicePageBooking } from "@/components/lp/LazyLpForms";
 import PhoneLink from "@/components/PhoneLink";
 import { serviceItemToBookingData } from "@/lib/serviceItemToBookingData";
 import { bookingSelectionToBookingData, cheapestBookingMenu, roundAmount, HIDE_ALL_DISPLAY_MENUS } from "@/lib/bookingMenuToBookingData";
@@ -248,8 +249,12 @@ export default async function ServiceDetailPage({
               src={page.heroImage}
               alt={page.title}
               fill
+              sizes="100vw"
+              // ファーストビュー（LCP）：先読み＋最優先・遅延読み込みしない
+              preload
+              loading="eager"
+              fetchPriority="high"
               className="object-cover opacity-45"
-              priority
             />
           )}
           {/* 画像がある場合の可読性確保オーバーレイ */}

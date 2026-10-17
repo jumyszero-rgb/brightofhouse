@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { cheapestBookingMenu } from "@/lib/bookingMenuToBookingData";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 
 /**
  * トップの「人気の作業・おすすめプラン」。
@@ -59,8 +60,7 @@ export default async function PopularPlans() {
                 {/* 画像（未設定はプレースホルダー） */}
                 <div className="relative aspect-[16/9] bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center">
                   {m.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.imageUrl} alt={m.title} className="absolute inset-0 w-full h-full object-cover" />
+                    <SmartImage src={m.imageUrl} alt={m.title} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
                   ) : (
                     <span className="text-[#7fa3bd] text-sm font-bold">施工写真</span>
                   )}

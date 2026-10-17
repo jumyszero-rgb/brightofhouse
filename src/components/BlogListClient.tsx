@@ -1,26 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import SmartImage from "@/components/SmartImage";
 
-type BlogCategory = { id: string; name: string; slug: string; _count?: { posts: number } };
+export type BlogCategory = { id: string; name: string; slug: string; _count?: { posts: number } };
+export type BlogListPost = {
+  id: string;
+  slug: string;
+  title: string;
+  cover: string;
+  date: string;
+  text: string;
+  category: { name: string; slug: string } | null;
+};
 
-export default function BlogListClient() {
-  const [posts, setPosts] = useState<any[]>([]);
+/**
+ * ブログ一覧（記事データはサーバーで作って渡す。絞り込み・ページ送りはブラウザ側で即時）
+ */
+export default function BlogListClient({
+  initialPosts,
+  initialCategories,
+}: {
+  initialPosts: BlogListPost[];
+  initialCategories: BlogCategory[];
+}) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const categories = initialCategories;
   const [activeCategory, setActiveCategory] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 6;
-
-  // カテゴリ取得
-  useEffect(() => {
-    fetch("/api/blog/categories")
-      .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(() => {});
-  }, []);
 
   // URLのcategoryパラメータを読み取り
   useEffect(() => {
@@ -29,29 +38,16 @@ export default function BlogListClient() {
     if (cat) setActiveCategory(cat);
   }, []);
 
-  const fetchPosts = async (query = "", category = "") => {
-    setLoading(true);
-    try {
-      let url = `/api/blog?query=${encodeURIComponent(query)}`;
-      if (category) url += `&category=${encodeURIComponent(category)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data.filter((post: any) => post.status === "PUBLISHED"));
-      }
-    } catch (error) {
-      console.error("Failed to fetch blog posts:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchPosts(searchTerm, activeCategory);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [searchTerm, activeCategory]);
+  // カテゴリ・キーワードで絞り込み（キーワードはタイトルと本文の先頭で検索）
+  const posts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return initialPosts.filter((p) => {
+      if (activeCategory && p.category?.slug !== activeCategory) return false;
+      if (q && !(p.title.toLowerCase().includes(q) || p.text.toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [initialPosts, searchTerm, activeCategory]);
+  const loading = false;
 
   // 検索・カテゴリを変えたら1ページ目に戻す
   useEffect(() => { setPage(1); }, [searchTerm, activeCategory]);
@@ -144,12 +140,18 @@ export default function BlogListClient() {
         ) : (
           <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visiblePosts.map((post) => {
-              const coverImg = post.thumbnail || (post.content?.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1]) || "";
+            {visiblePosts.map((post, i) => {
+              const coverImg = post.cover;
               return (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group relative block aspect-square rounded-2xl overflow-hidden shadow-sm border border-slate-200">
                 {coverImg ? (
-                  <img src={coverImg} alt={post.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <SmartImage
+                    src={coverImg}
+                    alt={post.title}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    priority={page === 1 && i === 0}
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-indigo-200 flex items-center justify-center text-6xl">🧹</div>
                 )}
@@ -164,7 +166,7 @@ export default function BlogListClient() {
                 {/* タイトル・日付（下） */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <span className="text-[11px] font-medium opacity-90">
-                    {new Date(post.createdAt).toLocaleDateString()}
+                    {post.date}
                   </span>
                   <h2 className="text-base md:text-lg font-bold leading-snug line-clamp-3 drop-shadow mt-1 group-hover:underline">
                     {post.title}

@@ -115,7 +115,7 @@ export default async function AreaPage({ params }: Props) {
 
       <div className="relative w-full py-16 md:py-24 flex flex-col items-center justify-center overflow-hidden bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-500 border-b-[12px] border-blue-100">
         {lp.heroImage && (
-          <Image src={lp.heroImage} alt={lp.title} fill className="object-cover opacity-30 mix-blend-overlay" priority />
+          <Image src={lp.heroImage} alt={lp.title} fill sizes="100vw" preload loading="eager" fetchPriority="high" className="object-cover opacity-30 mix-blend-overlay" />
         )}
         <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto w-full">
           <h1 className="text-3xl md:text-6xl font-black leading-tight drop-shadow-lg">

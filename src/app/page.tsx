@@ -8,6 +8,7 @@ import TopPriceSection from "@/components/TopPriceSection";
 import PopularPlans from "@/components/top/PopularPlans";
 import ServiceArea from "@/components/ServiceArea";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -280,12 +281,7 @@ export default async function Home() {
           {/* 背景：admin画像があれば使用、無ければグラデーション */}
           {heroImage ? (
             <>
-              <img
-                src={heroImage}
-                alt=""
-                aria-hidden
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <SmartImage src={heroImage} priority className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#081e32]/85 via-[#081e32]/60 to-[#081e32]/30" aria-hidden />
             </>
           ) : (
@@ -378,8 +374,7 @@ export default async function Home() {
                 >
                   {c.imageUrl ? (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={c.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+                      <SmartImage src={c.imageUrl} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
                     </>
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#cfe4f5] to-[#e8f3ee] flex items-center justify-center text-5xl" aria-hidden>

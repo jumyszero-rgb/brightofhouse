@@ -4,6 +4,12 @@ import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { expandShortcodes } from "@/lib/shortcodes";
+import SmartImage from "@/components/SmartImage";
+
+/** 本文中の画像は画面に近づいてから読み込む（loading 指定が無いものだけ） */
+function lazyImages(html: string): string {
+  return html.replace(/<img(?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async"');
+}
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -116,9 +122,10 @@ export default async function BlogPostPage({ params }: Props) {
       />
       {/* ナビゲーション＋タイトル（アイキャッチ or 本文最初の画像があれば背景に・無ければ通常背景） */}
       <div
-        className={`relative border-b border-slate-200 pt-10 pb-16 px-4 ${headerBg ? "text-white" : "bg-slate-50"}`}
-        style={headerBg ? { backgroundImage: `url(${headerBg})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        className={`relative overflow-hidden border-b border-slate-200 pt-10 pb-16 px-4 ${headerBg ? "text-white" : "bg-slate-50"}`}
       >
+        {/* タイトル背景（ファーストビュー＝LCP）：CSS背景だと発見が遅く最適化もされないので画像タグで先読み */}
+        {headerBg && <SmartImage src={headerBg} priority className="object-cover" />}
         {headerBg && <div className="absolute inset-0 bg-black/50" aria-hidden />}
         <div className="relative max-w-3xl mx-auto">
           <Link href="/blog" className={`text-sm mb-6 inline-block font-bold transition-colors ${headerBg ? "text-white/90 hover:text-white" : "text-blue-600 hover:underline"}`}>
@@ -147,7 +154,7 @@ export default async function BlogPostPage({ params }: Props) {
       <article className="max-w-3xl mx-auto px-4 py-12">
         <div
           className="bn-content ql-content prose prose-slate prose-base md:prose-lg max-w-none text-slate-700 leading-loose"
-          dangerouslySetInnerHTML={{ __html: contentHtml }}
+          dangerouslySetInnerHTML={{ __html: lazyImages(contentHtml) }}
         />
 
 

@@ -1,5 +1,6 @@
 // @/src/app/api/blog/categories/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -29,6 +30,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const body = await request.json();
     const category = await prisma.blogCategory.create({
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const body = await request.json();
     const category = await prisma.blogCategory.update({
@@ -64,6 +67,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const { id } = await request.json();
     await prisma.blogCategory.delete({ where: { id } });

@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
 
 
   images: {
+    // 最適化した画像のキャッシュ期間（既定4時間 → 30日）。画像URLが同じ限り作り直さない
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns:[
       {
         protocol: "https",
