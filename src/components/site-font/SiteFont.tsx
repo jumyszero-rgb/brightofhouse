@@ -5,24 +5,48 @@
  * サイトフォントの切り替え（layout.tsx の <head> に1つ置く）。
  *
  * next/font は「モジュールを import した時点で、そのフォントのCSSがページに入る」仕組みのため、
- * 6フォントを普通に import すると全フォントのCSSが毎ページ出力されてしまう。
- * そこで各フォントを別ファイル（font-*.tsx）にし、next/dynamic で「選ばれているフォントのファイルだけ」を描画する。
- * → サーバー描画時も、実際に描画された1フォント分のCSSだけが <head> に出力される（ビルド検証済み）。
+ * 各フォントを別ファイル（font-*.tsx）にし、next/dynamic で「選ばれているフォントのファイルだけ」を読み込む。
+ *
+ * 【2026-10-18 表示速度対策】
+ * 日本語フォントのCSS（@font-face が文字範囲ごとに約240個・約63KB）を読み終わるまで画面が出なかった。
+ * → フォントは「画面が出た後」に読み込む（ssr: false）。
+ *   - 最初の一瞬は下の FALLBACK（端末の近い書体）で文字を出し、フォントが届いたら選択中のフォントに切り替わる
+ *   - 日本語は全角文字の幅が同じで、行の高さも固定なので、切り替わってもレイアウトはほぼ動かない
  */
 import dynamic from "next/dynamic";
 import { normalizeFontKey } from "@/lib/fonts";
 
 const FONTS = {
-  "zen-maru": dynamic(() => import("./font-zen-maru")),
-  "zen-kaku": dynamic(() => import("./font-zen-kaku")),
-  "noto-sans": dynamic(() => import("./font-noto-sans")),
-  "mplus-rounded": dynamic(() => import("./font-mplus-rounded")),
-  "kosugi-maru": dynamic(() => import("./font-kosugi-maru")),
-  "shippori-mincho": dynamic(() => import("./font-shippori-mincho")),
+  "zen-maru": dynamic(() => import("./font-zen-maru"), { ssr: false }),
+  "zen-kaku": dynamic(() => import("./font-zen-kaku"), { ssr: false }),
+  "noto-sans": dynamic(() => import("./font-noto-sans"), { ssr: false }),
+  "mplus-rounded": dynamic(() => import("./font-mplus-rounded"), { ssr: false }),
+  "kosugi-maru": dynamic(() => import("./font-kosugi-maru"), { ssr: false }),
+  "shippori-mincho": dynamic(() => import("./font-shippori-mincho"), { ssr: false }),
 } as const;
+
+const MARU = '"Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif';
+const GOTHIC = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif';
+const MINCHO = '"Hiragino Mincho ProN", "Yu Mincho", serif';
+
+/** フォントが届くまでの表示用（端末に入っている近い書体） */
+const FALLBACK: Record<keyof typeof FONTS, string> = {
+  "zen-maru": MARU,
+  "zen-kaku": GOTHIC,
+  "noto-sans": GOTHIC,
+  "mplus-rounded": MARU,
+  "kosugi-maru": MARU,
+  "shippori-mincho": MINCHO,
+};
 
 export default function SiteFont({ fontKey }: { fontKey?: string | null }) {
   const key = normalizeFontKey(fontKey) as keyof typeof FONTS;
   const Font = FONTS[key];
-  return <Font />;
+  return (
+    <>
+      {/* サーバー描画のHTMLに入る：最初から文字が出る（選択フォントの <style> が後に来て上書きする） */}
+      <style>{`html body{font-family:${FALLBACK[key]};}`}</style>
+      <Font />
+    </>
+  );
 }
