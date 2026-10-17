@@ -4,7 +4,7 @@ import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import TrafficSourceCapture from "@/components/TrafficSourceCapture";
 import prisma from "@/lib/prisma";
-import { getFontClassName, DEFAULT_FONT_KEY } from "@/lib/fonts";
+import { DEFAULT_FONT_KEY, getFontOption, getFontCssHref } from "@/lib/fonts";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -57,7 +57,9 @@ export default async function RootLayout({
   } catch {
     // DB未接続時などは既定フォントで継続
   }
-  const fontClass = getFontClassName(fontKey);
+  // 選ばれている1フォントだけを読み込む（未選択フォントは読み込まない・先読みしない）
+  const font = getFontOption(fontKey);
+  const fontHref = getFontCssHref(fontKey);
 
   return (
     <html lang="ja">
@@ -81,6 +83,10 @@ gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' 
 `,
           }}
         />
+        {/* サイトフォント：選択中の1フォント・2ウェイトだけ（display=swap で読み込み中も文字はすぐ表示） */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={fontHref} />
         <link
           rel="alternate"
           type="application/rss+xml"
@@ -88,7 +94,7 @@ gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' 
           href="/rss.xml"
         />
       </head>
-      <body className={`${fontClass} text-slate-800 pb-16 md:pb-0`}>
+      <body className="text-slate-800 pb-16 md:pb-0" style={{ fontFamily: font.family }}>
         {/* 広告流入（gclid / utm_*）をランディング時に保存。フォーム送信時にメールへ載せる。 */}
         <TrafficSourceCapture />
 
