@@ -122,7 +122,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               </li>
               <li>
                 <Link href="/inquiry" className="hover:text-white transition-colors">
-                  無料見積・相談
+                  サービスのお問い合わせ（無料見積・相談）
                 </Link>
               </li>
               <li>

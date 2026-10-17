@@ -44,7 +44,7 @@ const empty = (): CtaBlock => ({
   desc1Text: "お見積り無料で迅速に駆けつけます。", desc1Color: "#475569", desc1Size: 14, desc1Weight: "400",
   linkText: null, linkUrl: null, linkColor: "#2563eb", linkSize: 14, linkWeight: "700",
   desc2Text: null, desc2Color: "#475569", desc2Size: 14, desc2Weight: "400",
-  btn1Text: "無料相談・お問い合わせ", btn1Url: "/contact", btn1BgColor: "#2563eb", btn1TextColor: "#ffffff",
+  btn1Text: "無料相談・お問い合わせ", btn1Url: "/inquiry", btn1BgColor: "#2563eb", btn1TextColor: "#ffffff",
   btn1Size: 16, btn1Weight: "700", btn1Radius: 9999, btn1PaddingY: 14, btn1PaddingX: 40,
   desc3Text: null, desc3Color: "#475569", desc3Size: 14, desc3Weight: "400",
   btn2Text: null, btn2Url: null, btn2BgColor: "#e2e8f0", btn2TextColor: "#334155", btn2Size: 14, btn2Weight: "700",

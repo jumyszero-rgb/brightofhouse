@@ -30,7 +30,7 @@ export async function GET() {
       mobileHeight: "h-[50vh]", // デフォルト
       pcHeight: "md:h-[65vh]",  // デフォルト
       btn1Text: "無料お見積り",
-      btn1Link: "/contact",
+      btn1Link: "/inquiry",
       btn2Text: "料金を見る",
       btn2Link: "/service",
     });

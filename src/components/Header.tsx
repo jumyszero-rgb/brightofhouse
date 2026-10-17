@@ -36,13 +36,14 @@ export default function Header() {
           </button>
 
           <Link href="/" onClick={handleLinkClick} className="flex items-center">
+            {/* ロゴは小さく・先読みしない（先読みするとファーストビュー画像の読み込みと帯域を取り合う） */}
             <Image
               src="/images/logo.png"
               alt="北海道ブライトオブハウス"
-              width={200}
-              height={50}
+              width={104}
+              height={40}
+              loading="eager"
               className="h-10 w-auto object-contain"
-              priority
             />
           </Link>
         </div>
@@ -53,10 +54,10 @@ export default function Header() {
             <Image
               src="/images/logo.png"
               alt="北海道ブライトオブハウス"
-              width={300}
-              height={60}
+              width={146}
+              height={56}
+              loading="eager"
               className="h-14 w-auto object-contain"
-              priority
             />
           </Link>
         </div>
@@ -69,8 +70,8 @@ export default function Header() {
           <Link href="/blog" className={getNavLinkClass("/blog")}>ブログ</Link>
           <Link href="/company" className={getNavLinkClass("/company")}>会社概要</Link>
           {/* お客様のお問い合わせはLPと同じフォーム（/inquiry）へ。/contact は業者・法人向け */}
-          <Link href="/inquiry" className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors shadow-sm">
-            お問い合わせ
+          <Link href="/inquiry" className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap">
+            サービスのお問い合わせ
           </Link>
         </nav>
       </div>
@@ -86,7 +87,7 @@ export default function Header() {
             <Link href="/blog" onClick={handleLinkClick} className={`text-lg font-bold py-3 border-b border-slate-50 ${pathname === "/blog" ? "text-blue-600" : "text-slate-700"}`}>お掃除ブログ</Link>
             <Link href="/company" onClick={handleLinkClick} className={`text-lg font-bold py-3 border-b border-slate-50 ${pathname === "/company" ? "text-blue-600" : "text-slate-700"}`}>会社概要</Link>
             <Link href="/inquiry" onClick={handleLinkClick} className="bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-lg inline-block mx-auto mt-6 w-full max-w-xs text-lg">
-              お問い合わせ・無料相談
+              サービスのお問い合わせ・無料相談
             </Link>
           </nav>
         </div>

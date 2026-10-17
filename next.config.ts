@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   images: {
     // 最適化した画像のキャッシュ期間（既定4時間 → 30日）。画像URLが同じ限り作り直さない
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // 使う画質の一覧（next/image の quality はここにある値だけ使える）。背景・カード写真は 60 で軽く
+    qualities: [60, 75],
     remotePatterns:[
       {
         protocol: "https",

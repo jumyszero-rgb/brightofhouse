@@ -7,6 +7,7 @@
  *  - next/image で最適化できる画像（サイト内・R2）は、表示サイズに合わせて縮小・WebP化して配信（Cloudflareでキャッシュ）
  *  - priority … ファーストビュー（LCP）の画像に付ける。先読み＋最優先で取得し、遅延読み込みしない
  *  - それ以外は画面に近づいてから読み込む（loading="lazy"）
+ *  - 画質は 60（上に文字や暗いグラデーションを重ねる写真なので見た目はほぼ変わらず、容量は約3割減）
  * ※ サーバー／クライアントどちらのコンポーネントからも使える。
  */
 import Image from "next/image";
@@ -29,9 +30,9 @@ export default function SmartImage({
 }) {
   if (isOptimizableSrc(src)) {
     return priority ? (
-      <Image src={src} alt={alt} fill sizes={sizes} preload loading="eager" fetchPriority="high" className={className} />
+      <Image src={src} alt={alt} fill sizes={sizes} quality={60} preload loading="eager" fetchPriority="high" className={className} />
     ) : (
-      <Image src={src} alt={alt} fill sizes={sizes} loading="lazy" className={className} />
+      <Image src={src} alt={alt} fill sizes={sizes} quality={60} loading="lazy" className={className} />
     );
   }
   return (

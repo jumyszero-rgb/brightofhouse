@@ -281,7 +281,7 @@ export default async function ServiceDetailPage({
                 href="#booking"
                 className="bg-white/20 backdrop-blur-sm text-white border border-white/50 font-bold py-3 px-8 rounded-full hover:bg-white/30 transition-all w-64"
               >
-                通常のお問い合わせはこちら
+                サービスのお問い合わせはこちら
               </Link>
             </div>
           </div>
@@ -525,7 +525,7 @@ export default async function ServiceDetailPage({
                     href="/inquiry"
                     className="inline-block bg-[#f5a524] text-[#3a2a02] text-xl font-black py-5 px-12 rounded-full shadow-lg hover:brightness-105 transition-all w-full md:w-auto"
                   >
-                    お問い合わせはこちら ➝
+                    サービスのお問い合わせはこちら ➝
                   </Link>
                   <div className="pt-6 border-t border-white/30 w-full max-w-md">
                     <p className="text-xs text-white/80 mb-1">

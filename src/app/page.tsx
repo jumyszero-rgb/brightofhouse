@@ -246,7 +246,7 @@ export default async function Home() {
     Array.isArray((settings as any)?.buttons) && (settings as any).buttons.length > 0
       ? (settings as any).buttons
       : [
-          { text: settings?.btn1Text || "無料で相談・見積り", link: settings?.btn1Link || "/contact" },
+          { text: settings?.btn1Text || "無料で相談・見積り", link: settings?.btn1Link || "/inquiry" },
           { text: "サービス・料金を見る", link: "/service" },
           { text: `📞 ${PHONE}`, link: `tel:${PHONE.replace(/-/g, "")}` },
         ];

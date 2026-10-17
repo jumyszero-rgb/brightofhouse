@@ -6,9 +6,10 @@
 import type { Metadata } from "next";
 import LeadForm from "@/components/lp/LeadForm";
 import PhoneLink from "@/components/PhoneLink";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "無料相談・お見積り",
+  title: "サービスのお問い合わせ・無料お見積り",
   description:
     "北海道ブライトオブハウスへの無料相談・お見積りのお申し込みはこちら。写真を送っていただくとお見積りがスムーズです。",
   robots: { index: false, follow: true },
@@ -19,7 +20,7 @@ export default function InquiryPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white px-4 py-10 md:py-14 text-slate-800">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-black text-center mb-3">無料相談・お見積り</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-center mb-3">サービスのお問い合わせ・無料お見積り</h1>
         <p className="text-center text-sm text-slate-600 leading-relaxed mb-6">
           ご相談・お見積りは無料です。担当者より折り返しご連絡いたします。
           <br className="hidden sm:block" />
@@ -34,6 +35,17 @@ export default function InquiryPage() {
         </div>
 
         <LeadForm service="お問い合わせ・お見積り（ホームページ）" source="hp/inquiry" />
+
+        {/* 業者・営業の方を業者用窓口へ誘導（このフォームはお客様専用） */}
+        <p className="mt-8 text-xs text-slate-500 leading-relaxed text-center">
+          ※ こちらはお客様向けの、清掃サービスに関するお問い合わせ窓口です。
+          <br className="hidden sm:block" />
+          法人・業者様からのご連絡（お取引のご相談・ご提案など）は、
+          <Link href="/contact" className="text-sky-700 underline underline-offset-2 hover:text-sky-900">
+            法人・業者様のお問い合わせ
+          </Link>
+          よりお願いいたします。
+        </p>
       </div>
     </main>
   );

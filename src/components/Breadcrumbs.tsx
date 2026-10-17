@@ -13,7 +13,8 @@ const routeMap: { [key: string]: { label: string; api?: string; } } = {
   "service": { label: "サービス・料金", api: "/api/service-pages" },
   "before-after": { label: "清掃実績" },
   "company": { label: "会社概要" },
-  "contact": { label: "お問い合わせ" },
+  "contact": { label: "法人・業者様のお問い合わせ" },
+  "inquiry": { label: "サービスのお問い合わせ" },
 };
 
 export default function Breadcrumbs() {

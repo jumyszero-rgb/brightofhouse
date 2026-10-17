@@ -150,7 +150,7 @@ export default async function AreaPage({ params }: Props) {
             </div>
 
             <Link
-              href={lp.ctaLink || "/contact"}
+              href={lp.ctaLink || "/inquiry"}
               className="inline-block w-full md:w-auto bg-yellow-400 text-blue-900 text-lg md:text-2xl font-black py-4 px-12 rounded-full shadow-lg hover:bg-yellow-500 transition-all"
             >
               無料お見積りはこちら

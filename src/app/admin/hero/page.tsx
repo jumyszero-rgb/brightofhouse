@@ -8,7 +8,7 @@ type Btn = { text: string; link: string };
 type Stat = { big: string; sub: string };
 
 const DEFAULT_BUTTONS: Btn[] = [
-  { text: "無料で相談・見積り", link: "/contact" },
+  { text: "無料で相談・見積り", link: "/inquiry" },
   { text: "サービス・料金を見る", link: "/service" },
   { text: "📞 0120-792-684", link: "tel:0120792684" },
 ];
@@ -154,7 +154,7 @@ export default function AdminHeroPage() {
                 <div key={i} className="flex gap-2 items-center">
                   <span className="text-xs text-gray-400 w-5">{i + 1}</span>
                   <input type="text" placeholder="ボタン文言" value={b.text} onChange={(e) => setButtons((prev) => prev.map((x, j) => j === i ? { ...x, text: e.target.value } : x))} className="flex-1 p-2 border rounded text-black text-sm" />
-                  <input type="text" placeholder="/contact や tel:0120792684" value={b.link} onChange={(e) => setButtons((prev) => prev.map((x, j) => j === i ? { ...x, link: e.target.value } : x))} className="flex-1 p-2 border rounded text-black text-sm" />
+                  <input type="text" placeholder="/inquiry や tel:0120792684" value={b.link} onChange={(e) => setButtons((prev) => prev.map((x, j) => j === i ? { ...x, link: e.target.value } : x))} className="flex-1 p-2 border rounded text-black text-sm" />
                   <button type="button" onClick={() => setButtons((prev) => prev.filter((_, j) => j !== i))} className="text-red-500 text-xs font-bold">削除</button>
                 </div>
               ))}
