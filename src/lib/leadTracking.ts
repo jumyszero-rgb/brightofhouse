@@ -98,7 +98,10 @@ export function sendGenerateLead(params: { lead_type: "form" | "booking"; [k: st
     if (typeof window === "undefined") return resolve();
     let done = false;
     const finish = () => { if (!done) { done = true; resolve(); } };
-    const w = window as unknown as { gtag?: Gtag };
+    const w = window as unknown as { gtag?: Gtag; google_tag_manager?: unknown; __bhLoadGtag?: () => void };
+    // Googleタグは遅延読み込みなので、まだなら今すぐ読み込む（読み込み前のイベントは読み込み後に送られる）
+    const tagReady = !!w.google_tag_manager;
+    if (!tagReady) w.__bhLoadGtag?.();
     const payload = {
       page_path: window.location.pathname,
       ...params,
@@ -112,7 +115,8 @@ export function sendGenerateLead(params: { lead_type: "form" | "booking"; [k: st
     } catch {
       finish();
     }
-    setTimeout(finish, 1200);
+    // タグ読み込み済みなら最大1.2秒、読み込み中なら最大3.5秒待ってから次へ進む
+    setTimeout(finish, tagReady ? 1200 : 3500);
   });
 }
 

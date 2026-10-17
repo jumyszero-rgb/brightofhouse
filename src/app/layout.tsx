@@ -68,16 +68,17 @@ export default async function RootLayout({
     <html lang="ja">
       <head>
         {/*
-          計測タグ（全ページ・LP含む）— Googleタグは「1系統」だけ。
-          ・Cloudflare の Google tag gateway が <head> の先頭に Googleタグ（自社ドメイン /wd9j/ 配信）を自動で挿入している。
-            以前はそれに加えて googletagmanager.com の gtag.js もここで読んでいたため、Googleタグが2系統・3本読まれていた。
-          ・今は「ゲートウェイのタグがあればそれだけを使う」。ここでは config（GA4・広告・電話番号置き換え）だけを積む。
-          ・ゲートウェイが無効になっている時だけ、googletagmanager.com の gtag.js を代わりに読み込む（計測が途切れない保険）。
-          ・さらに保険：ゲートウェイのタグが「読み込み失敗」した時、またはページの読み込み完了（load）時点で
-            Googleタグが1つも動いていない時だけ gtag.js を読み込む。
-          ・2026-10-17：GA4のGoogleタグに広告のGoogleタグを結合（Google側の設定）→ /wd9j/ の1本で GA4・広告の両方に送る。
-            （以前は「5秒」で判定していたため、回線の遅いスマホ・PageSpeed の計測では5秒以内に間に合わず
-              gtag.js も追加で読まれ、Googleタグが3本になっていた）
+          計測タグ（全ページ・LP含む）— Googleタグは1本（GA4と広告を結合済みのGoogleタグ）。
+          【2026-10-18 遅延読み込み】
+          Googleタグ（約200KB）が画面を描くタイミングで動き、表示（LCP）と操作開始（TBT）を遅らせていた。
+          → 画面が表示された後に読み込む。きっかけは次のどれか早いもの：
+             ・お客さんの最初の操作（スクロール・タップ・クリック・キー入力）
+             ・ページの読み込み完了（load）から3秒後
+          ・読み込み前に送ったイベント（電話タップ・LINE・フォーム送信など）は dataLayer に積まれ、読み込み後にまとめて送られる
+          ・window.__bhLoadGtag() で即時読み込みもできる（フォーム送信時に使用）
+          ・Cloudflare の Google tag gateway がタグを自動挿入している場合（/wd9j/ のスクリプトがある場合）は、
+            それがすでに読み込み中なので遅延はできない → 従来どおりの保険だけ動かす
+            ※ 遅延を効かせるには Cloudflare 側の自動挿入をオフにする
         */}
         <script
           dangerouslySetInnerHTML={{
@@ -86,26 +87,36 @@ window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 (function(){
   var loaded = false;
-  function loadDirect(){
+  var direct = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
+  function loadTag(){
     if (loaded) return; loaded = true;
     var s = document.createElement('script');
     s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
+    s.src = direct;
     document.head.appendChild(s);
   }
-  var gw = document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
-  if (!gw) { gtag('js', new Date()); loadDirect(); return; }
-  gw.addEventListener('error', loadDirect);
-  function checkAfterLoad(){
-    setTimeout(function(){
-      // Googleタグが1つも動いていない時だけ（＝ゲートウェイ自体が失敗した時だけ）読み込む。
-      // ※ GA4タグと広告タグを1本に結合したため、google_tag_manager には広告側のID（AW-）だけが
-      //   登録される。GA4のIDで判定すると「無い」と誤判定して gtag.js を二重に読んでしまう。
-      if (!window.google_tag_manager) loadDirect();
-    }, 3000);
+  function onLoaded(fn){
+    if (document.readyState === 'complete') fn();
+    else window.addEventListener('load', fn);
   }
-  if (document.readyState === 'complete') checkAfterLoad();
-  else window.addEventListener('load', checkAfterLoad);
+  var gw = document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
+  if (gw) {
+    // Cloudflare が自動挿入したタグを使う（失敗した時だけ gtag.js を読む）
+    window.__bhLoadGtag = function(){};
+    gw.addEventListener('error', loadTag);
+    onLoaded(function(){ setTimeout(function(){ if (!window.google_tag_manager) loadTag(); }, 3000); });
+    return;
+  }
+  // 遅延読み込み
+  gtag('js', new Date());
+  var evs = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+  function go(){
+    loadTag();
+    evs.forEach(function(e){ window.removeEventListener(e, go); });
+  }
+  window.__bhLoadGtag = go;
+  evs.forEach(function(e){ window.addEventListener(e, go, { passive: true }); });
+  onLoaded(function(){ setTimeout(go, 3000); });
 })();
 gtag('config', '${GA4_ID}');
 gtag('config', '${ADS_ID}');
