@@ -18,7 +18,7 @@ type Props = { searchParams: Promise<{ preview?: string }> };
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { preview } = await searchParams;
   const isPreview = preview === "true";
-  const lp = await getDbLpBySlug(DB_SLUG);
+  const lp = await getDbLpBySlug(DB_SLUG, { fresh: isPreview });
   if (lp && (lp.status === "PUBLISHED" || isPreview)) {
     return {
       title: lp.title,
@@ -38,7 +38,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function Page({ searchParams }: Props) {
   const { preview } = await searchParams;
   const isPreview = preview === "true";
-  const lp = await getDbLpBySlug(DB_SLUG);
+  const lp = await getDbLpBySlug(DB_SLUG, { fresh: isPreview });
 
   if (lp && (lp.status === "PUBLISHED" || isPreview)) {
     return <LandingPageView lp={lp} isPreview={isPreview && lp.status !== "PUBLISHED"} />;

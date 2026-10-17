@@ -4,6 +4,7 @@ import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import TrafficSourceCapture from "@/components/TrafficSourceCapture";
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 import { DEFAULT_FONT_KEY } from "@/lib/fonts";
 import SiteFont from "@/components/site-font/SiteFont";
 
@@ -55,7 +56,10 @@ export default async function RootLayout({
   // サイトフォント（admin で選択・SiteSettings.fontKey）。未設定/取得失敗時は既定フォント。
   let fontKey = DEFAULT_FONT_KEY;
   try {
-    const s = await prisma.siteSettings.findUnique({ where: { id: "main" }, select: { fontKey: true } });
+    // 全ページで使うので作り置き（admin のサイト設定を保存すると消える）
+    const s = await memo("settings:fontKey", () =>
+      prisma.siteSettings.findUnique({ where: { id: "main" }, select: { fontKey: true } })
+    );
     if (s?.fontKey) fontKey = s.fontKey;
   } catch {
     // DB未接続時などは既定フォントで継続

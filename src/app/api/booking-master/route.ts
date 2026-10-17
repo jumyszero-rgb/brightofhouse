@@ -1,5 +1,6 @@
 // @/src/app/api/booking-master/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -49,6 +50,7 @@ export async function GET() {
 // POST: 各階層の作成
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
 
   try {
     const body = await request.json();
@@ -154,6 +156,7 @@ export async function POST(request: NextRequest) {
 // PUT: 更新
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
 
   try {
     const body = await request.json();
@@ -261,6 +264,7 @@ export async function PUT(request: NextRequest) {
 // DELETE: 削除
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
 
   try {
     const { id, type } = await request.json();

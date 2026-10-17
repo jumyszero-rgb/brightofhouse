@@ -2,13 +2,15 @@
 // ショートコード展開。本文HTML中の [[key]] を、DBに登録されたHTMLに置換する。
 // 記述例: 記事やLPの本文に [[service-banner]] と書くと、そのショートコードのHTMLに展開される。
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 
 const SHORTCODE_RE = /\[\[\s*([A-Za-z0-9_-]+)\s*\]\]/g;
 
 // キー→HTML のマップを取得（失敗しても空マップを返し、ページは壊さない）
 export async function getShortcodeMap(): Promise<Record<string, string>> {
   try {
-    const rows = await prisma.shortcode.findMany();
+    // 作り置き（admin でショートコードを保存すると消える）
+    const rows: { key: string; html: string }[] = await memo("shortcodes:all", () => prisma.shortcode.findMany());
     const map: Record<string, string> = {};
     for (const r of rows) map[r.key] = r.html;
     return map;

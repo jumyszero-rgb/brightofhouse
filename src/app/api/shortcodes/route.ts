@@ -1,6 +1,7 @@
 // @/src/app/api/shortcodes/route.ts
 // ショートコード管理API（管理者のみ）。GET=一覧 / POST=作成 / PUT=更新 / DELETE=削除
 import { NextRequest, NextResponse } from "next/server";
+import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -37,6 +38,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const { key, name, html } = await request.json();
     const nk = normalizeKey(key);
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const { id, key, name, html } = await request.json();
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -74,6 +77,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const { id } = await request.json();
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

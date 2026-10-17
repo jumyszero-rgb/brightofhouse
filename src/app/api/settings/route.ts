@@ -1,5 +1,6 @@
 // @/src/app/api/settings/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -34,6 +35,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const body = await request.json();
     const res = await prisma.siteSettings.upsert({

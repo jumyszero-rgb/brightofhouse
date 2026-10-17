@@ -6,6 +6,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 import { LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
 import LpTemplate from "@/components/lp/LpTemplate";
@@ -89,11 +90,13 @@ export default async function LandingPageView({
       }
       if (b?.type === "bookingForm") formCategoryIds.push(...bookingFormCategoryIds(b));
     }
-    const [menus, subMenus, options] = await Promise.all([
+    // 予約マスターの価格・大分類も作り置き（プレビュー時は常に最新。予約マスター保存で消える）
+    const memoKey = `lp:blocks:${lp.id}:${lp.updatedAt ? new Date(lp.updatedAt).getTime() : 0}`;
+    const [menus, subMenus, options] = await memo(`${memoKey}:prices`, () => Promise.all([
       menuIds.length ? prisma.bookingMenu.findMany({ where: { id: { in: menuIds } }, select: { id: true, title: true, basePrice: true, workContent: true } }) : Promise.resolve([] as any[]),
       subMenuIds.length ? prisma.bookingSubMenu.findMany({ where: { id: { in: subMenuIds } }, select: { id: true, title: true, price: true, workContent: true } }) : Promise.resolve([] as any[]),
       optionIds.length ? prisma.bookingOption.findMany({ where: { id: { in: optionIds } }, select: { id: true, title: true, price: true, workContent: true } }) : Promise.resolve([] as any[]),
-    ]);
+    ]), { fresh: isPreview });
     const resolved = {
       menus: Object.fromEntries(menus.map((m: any) => [m.id, { title: m.title, price: m.basePrice, workContent: m.workContent }])),
       subMenus: Object.fromEntries(subMenus.map((s: any) => [s.id, { title: s.title, price: s.price, workContent: s.workContent }])),
@@ -101,7 +104,7 @@ export default async function LandingPageView({
     };
     const uniqueFormCategoryIds = Array.from(new Set(formCategoryIds));
     const formCats: any[] = uniqueFormCategoryIds.length
-      ? await prisma.bookingCategory.findMany({ where: { id: { in: uniqueFormCategoryIds } }, include: { menus: { include: subMenusInclude } } })
+      ? await memo(`${memoKey}:forms`, () => prisma.bookingCategory.findMany({ where: { id: { in: uniqueFormCategoryIds } }, include: { menus: { include: subMenusInclude } } }), { fresh: isPreview })
       : [];
     const catById = new Map<string, any>(formCats.map((c: any) => [c.id, c]));
     // ブロックごとに、選ばれた大分類（複数可）をまとめて1つの予約フォーム用データにする

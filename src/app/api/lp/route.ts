@@ -1,5 +1,6 @@
 // @/src/app/api/lp/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client } from "@/lib/s3";
@@ -112,6 +113,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const formData = await request.formData();
     const slug = formData.get("slug") as string;
@@ -201,6 +203,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const formData = await request.formData();
     const id = formData.get("id") as string;
@@ -294,6 +297,7 @@ export async function PUT(request: NextRequest) {
 // ブロックエディタ専用: blocks / templateStyle / status のみを更新する（他フィールドは変更しない）
 export async function PATCH(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const body = await request.json();
     const { id, blocks, templateStyle, status } = body || {};
@@ -316,6 +320,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const { id } = await request.json();
     const lp = await prisma.landingPage.findUnique({ where: { id } });

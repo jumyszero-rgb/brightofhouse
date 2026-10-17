@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 import LpTemplate from "@/components/lp/LpTemplate";
 import LandingPageView from "@/components/lp/LandingPageView";
 import {
@@ -25,8 +26,8 @@ const subMenusInclude = {
   options: { orderBy: { order: "asc" as const } },
 } as const;
 
-async function getDbLp(item: string) {
-  return prisma.landingPage.findUnique({
+async function getDbLp(item: string, fresh = false) {
+  return memo(`lp:slug:mizumawari-${item}`, () => prisma.landingPage.findUnique({
     where: { slug: `mizumawari-${item}` },
     include: {
       bookingMenus: { include: subMenusInclude },
@@ -38,7 +39,7 @@ async function getDbLp(item: string) {
       testimonialServicePages: { include: { testimonials: { where: { isActive: true }, orderBy: { order: "asc" as const } } } },
       faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
     },
-  });
+  }), { fresh });
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -47,7 +48,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const isPreview = preview === "true";
   if (!(MIZUMAWARI_ITEM_KEYS as string[]).includes(item)) return {};
 
-  const lp = await getDbLp(item);
+  const lp = await getDbLp(item, isPreview);
   if (lp && (lp.status === "PUBLISHED" || isPreview)) {
     return {
       title: lp.title,
@@ -72,7 +73,7 @@ export default async function Page({ params, searchParams }: Props) {
   const isPreview = preview === "true";
   if (!(MIZUMAWARI_ITEM_KEYS as string[]).includes(item)) notFound();
 
-  const lp = await getDbLp(item);
+  const lp = await getDbLp(item, isPreview);
 
   // DB側が「公開済み」またはプレビュー時は、テンプレ設定（SIMPLE/RICH/BLOCKS/HTML）に従って描画。
   // それ以外（未作成・下書き）は従来どおりの静的コンテンツを表示する。

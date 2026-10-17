@@ -2,6 +2,7 @@
 // 固定URLのLPルート（house / akishitsu / kouatsu / mizumawari(set)）で共通して使う
 // DB(LandingPage)取得ヘルパー。RICH/BLOCKS描画に必要な関連を全部includeする。
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 
 const subMenusInclude = {
   subMenus: {
@@ -22,9 +23,15 @@ export const lpRouteInclude = {
   faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
 } as const;
 
-export async function getDbLpBySlug(slug: string) {
-  return prisma.landingPage.findUnique({
-    where: { slug },
-    include: lpRouteInclude,
-  });
+/** LPを取得（通常は作り置きから・プレビューは fresh: true で常に最新） */
+export async function getDbLpBySlug(slug: string, opts?: { fresh?: boolean }) {
+  return memo(
+    `lp:slug:${slug}`,
+    () =>
+      prisma.landingPage.findUnique({
+        where: { slug },
+        include: lpRouteInclude,
+      }),
+    { fresh: opts?.fresh }
+  );
 }

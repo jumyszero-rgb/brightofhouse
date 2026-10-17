@@ -1,6 +1,7 @@
 // @/src/app/lp/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { memo } from "@/lib/serverMemo";
 import type { Metadata } from "next";
 import LandingPageView from "@/components/lp/LandingPageView";
 
@@ -31,13 +32,24 @@ const lpInclude = {
   faqServicePages: { include: { faqs: { orderBy: { order: "asc" as const } } } },
 } as const;
 
+/** キャンペーンLPを取得（通常は作り置きから・プレビューは常に最新）。メタデータと本文で同じ結果を使う */
+function getCampaignLp(slug: string, isPreview: boolean) {
+  return memo(
+    `lp:campaign:${slug}`,
+    () =>
+      prisma.landingPage.findUnique({
+        where: { slug, category: "CAMPAIGN" },
+        include: lpInclude,
+      }),
+    { fresh: isPreview }
+  );
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { preview } = await searchParams;
   const isPreview = preview === "true";
-  const lp = await prisma.landingPage.findUnique({
-    where: { slug, category: "CAMPAIGN" }
-  });
+  const lp = await getCampaignLp(slug, isPreview);
 
   if (!lp || (lp.status === "DRAFT" && !isPreview)) return { title: "ページが見つかりません" };
 
@@ -60,10 +72,7 @@ export default async function LPPage({ params, searchParams }: Props) {
   const { preview } = await searchParams;
   const isPreview = preview === "true";
 
-  const lp = await prisma.landingPage.findUnique({
-    where: { slug, category: "CAMPAIGN" },
-    include: lpInclude,
-  });
+  const lp = await getCampaignLp(slug, isPreview);
 
   if (!lp || (lp.status === "DRAFT" && !isPreview)) notFound();
 
