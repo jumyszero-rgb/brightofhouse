@@ -4,6 +4,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { mergeLegacyDescription } from "@/lib/beforeAfterText";
 
 function EditForm() {
   const router = useRouter();
@@ -11,15 +12,12 @@ function EditForm() {
   const editId = searchParams.get("id");
 
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiInput, setAiInput] = useState({ before: "", after: "" });
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<{ before: string; after: string }>({ before: "", after: "" });
 
   const [formData, setFormData] = useState({
     title: "",
-    beforeDescription: "",
-    afterDescription: "",
+    description: "",
     date: new Date().toISOString().split('T')[0],
     category: "",
   });
@@ -41,21 +39,12 @@ function EditForm() {
 
       if (target) {
         setServicePageIds((target.servicePages || []).map((sp: any) => sp.id));
-        // descriptionを「【ビフォー】」等で分割して復元を試みる（既存データ対応）
-        let bDesc = "";
-        let aDesc = "";
-        if (target.description?.includes("【アフター】")) {
-          const parts = target.description.split("【アフター】");
-          bDesc = parts[0].replace("【ビフォー】", "").trim();
-          aDesc = parts[1].trim();
-        } else {
-          bDesc = target.description || "";
-        }
+        // 旧形式（【ビフォー】…【アフター】…）が残っていても1つの文章として開く
+        const desc = mergeLegacyDescription(target.description);
 
         setFormData({
           title: target.title,
-          beforeDescription: bDesc,
-          afterDescription: aDesc,
+          description: desc,
           date: new Date(target.createdAt).toISOString().split('T')[0],
           category: target.category || "",
         });
@@ -68,32 +57,6 @@ function EditForm() {
     fetchData();
   }, [editId]);
 
-  const handleAIGenerate = async () => {
-    if (!formData.title || !aiInput.before || !aiInput.after) {
-      alert("タイトル、ビフォーの状態、アフターの状態を入力してください。");
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/before-after/generate", {
-        method: "POST",
-        body: JSON.stringify({ title: formData.title, beforeText: aiInput.before, afterText: aiInput.after }),
-      });
-      const data = await res.json();
-      if (data.beforeContent && data.afterContent) {
-        setFormData({ 
-          ...formData, 
-          beforeDescription: data.beforeContent,
-          afterDescription: data.afterContent 
-        });
-      }
-    } catch (e) {
-      alert("AI生成に失敗しました");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -102,9 +65,7 @@ function EditForm() {
     const form = new FormData(e.currentTarget);
     if (editId) form.append("id", editId);
 
-    // ビフォーとアフターの説明を結合して送信（DBスキーマ維持のため）
-    const combinedDescription = `【ビフォー】\n${formData.beforeDescription}\n\n【アフター】\n${formData.afterDescription}`;
-    form.set("description", combinedDescription);
+    form.set("description", formData.description.trim());
     form.set("category", formData.category);
     form.set("servicePageIds", JSON.stringify(servicePageIds));
 
@@ -205,54 +166,19 @@ function EditForm() {
           </div>
         </div>
 
-        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4 shadow-inner">
-          <h2 className="font-bold text-blue-800 flex items-center gap-2">
-            ✨ AIビフォーアフター説明執筆
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-blue-600">ビフォーの状態</label>
-              <input
-                type="text"
-                placeholder="例：カビで真っ黒、水が流れない"
-                value={aiInput.before}
-                onChange={(e) => setAiInput({ ...aiInput, before: e.target.value })}
-                className="w-full p-2 border rounded text-sm text-black"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-blue-600">アフターの状態</label>
-              <input
-                type="text"
-                placeholder="例：新品同様にピカピカ、除菌済み"
-                value={aiInput.after}
-                onChange={(e) => setAiInput({ ...aiInput, after: e.target.value })}
-                className="w-full p-2 border rounded text-sm text-black"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleAIGenerate}
-            disabled={aiLoading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-black hover:bg-blue-700 disabled:bg-blue-300 transition-all shadow-md"
-          >
-            {aiLoading ? "AIが執筆しています..." : "AIで「ビフォ文」「アフター文」を一括生成"}
-          </button>
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <label className="block text-sm font-black text-slate-700 mb-2">説明文</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={10}
+            className="w-full p-3 border rounded-lg text-sm leading-relaxed"
+            placeholder={"作業前の状態、行った作業、仕上がりなどをまとめて書いてください。\n改行はそのまま表示されます。"}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <label className="block text-sm font-black text-slate-700 mb-2">【ビフォ文】</label>
-              <textarea
-                value={formData.beforeDescription}
-                onChange={(e) => setFormData({ ...formData, beforeDescription: e.target.value })}
-                rows={6}
-                className="w-full p-3 border rounded-lg text-sm leading-relaxed"
-                placeholder="作業前の悩みや状態..."
-              />
-            </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
                 Before画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}
@@ -267,16 +193,6 @@ function EditForm() {
           </div>
 
           <div className="space-y-4">
-            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-              <label className="block text-sm font-black text-blue-900 mb-2">【アフター文】</label>
-              <textarea
-                value={formData.afterDescription}
-                onChange={(e) => setFormData({ ...formData, afterDescription: e.target.value })}
-                rows={6}
-                className="w-full p-3 border rounded-lg text-sm leading-relaxed"
-                placeholder="作業後の変化やプロのこだわり..."
-              />
-            </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
                 After画像 {editId && <span className="text-red-500 text-xs">(変更時のみ選択)</span>}

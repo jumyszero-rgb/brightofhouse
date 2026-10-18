@@ -6,11 +6,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-// BlockNote（Notion風エディタ）はクライアント専用。SSRを無効にして読み込む。
-const BlogBlockNote = dynamic(() => import("@/components/BlogBlockNote"), {
-  ssr: false,
-  loading: () => <div className="p-4 text-sm text-gray-400 border rounded-lg">エディタ読み込み中...</div>,
-});
+// 本文エディタは記事ごとに3方式から選ぶ（BlogPost.editorType）。
+//  - tiptap   ：従来のリッチエディタ（既定）
+//  - blocknote：Notion風（段組み・文字色・背景色）。ブロックJSONを bodyBlocks に保存
+//  - html     ：生HTMLをそのまま保存・表示（Tiptapを通さない）
+// どの方式でも、公開ページが表示するHTMLは content に保存する（公開側の表示ロジックは共通）。
+// エディタはすべてクライアント専用。SSRを無効にして読み込む（@blocknote/* はこの経路でしか読み込まない）。
+const editorLoading = () => <div className="p-4 text-sm text-gray-400 border rounded-lg">エディタ読み込み中...</div>;
+const BlogBlockNote = dynamic(() => import("@/components/BlogBlockNote"), { ssr: false, loading: editorLoading });
+const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { ssr: false, loading: editorLoading });
+const BlogHtmlEditor = dynamic(() => import("@/components/blog/BlogHtmlEditor"), { ssr: false, loading: editorLoading });
+const CharCounter = dynamic(() => import("@/components/blog/CharCounter"), { ssr: false });
+
+type EditorType = "tiptap" | "blocknote" | "html";
+const EDITOR_LABELS: Record<EditorType, string> = { tiptap: "Tiptap", blocknote: "BlockNote", html: "HTML" };
+const normalizeEditorType = (v: unknown): EditorType =>
+  v === "blocknote" || v === "html" ? v : "tiptap";
 
 type BlogCategory = { id: string; name: string; slug: string; order: number; _count?: { posts: number } };
 
@@ -27,6 +38,11 @@ function BlogEditForm() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatSlug, setNewCatSlug] = useState("");
+  // 本文エディタ：方式・BlockNoteのブロック・読み込み完了フラグ・再マウント用キー
+  const [editorType, setEditorType] = useState<EditorType>("tiptap");
+  const [bodyBlocks, setBodyBlocks] = useState<any[] | null>(null);
+  const [postLoaded, setPostLoaded] = useState(!editId);
+  const [editorKey, setEditorKey] = useState(0);
 
   const [formData, setFormData] = useState({
     slug: "",
@@ -70,8 +86,27 @@ function BlogEditForm() {
           noIndex: data.noIndex || false,
           categoryId: data.categoryId || "",
         });
-      });
+        setEditorType(normalizeEditorType(data.editorType));
+        setBodyBlocks(Array.isArray(data.bodyBlocks) && data.bodyBlocks.length > 0 ? data.bodyBlocks : null);
+        setEditorKey((k) => k + 1);
+        setPostLoaded(true);
+      })
+      .catch(() => setPostLoaded(true));
   }, [editId]);
+
+  // エディタ方式の切り替え（今の内容はHTMLとして引き継ぐ）
+  const switchEditor = (next: EditorType) => {
+    if (next === editorType) return;
+    const lossy = next !== "html"; // HTML以外へ変えるときは、そのエディタが対応していない装飾が崩れる・消える可能性がある
+    const msg =
+      `本文の形式が「${EDITOR_LABELS[editorType]}」から「${EDITOR_LABELS[next]}」に変わります。\n今の内容はHTMLとして引き継ぎます。` +
+      (lossy ? `\n\n※ ${EDITOR_LABELS[next]} が対応していない装飾（囲みボックス・段組み・色・独自のHTMLなど）は、崩れたり消えたりする可能性があります。` : "") +
+      `\n\n切り替えますか？`;
+    if (!window.confirm(msg)) return;
+    setEditorType(next);
+    setBodyBlocks(null); // BlockNoteへ切り替える場合は、引き継いだHTMLから変換して開く
+    setEditorKey((k) => k + 1);
+  };
 
   const handleAiGenerate = async () => {
     if (!targetKeywords) return alert("テーマを入力してください");
@@ -123,7 +158,13 @@ function BlogEditForm() {
 
   const handleSave = async () => {
     setLoading(true);
-    const payload = editId ? { ...formData, id: editId } : formData;
+    const base = {
+      ...formData,
+      editorType,
+      // BlockNoteのときだけブロックJSONを保存（他の方式では空にする）
+      bodyBlocks: editorType === "blocknote" ? bodyBlocks : null,
+    };
+    const payload = editId ? { ...base, id: editId } : base;
     // categoryId が空文字なら null にする
     if (!payload.categoryId) (payload as any).categoryId = null;
     const res = await fetch("/api/blog", {
@@ -226,7 +267,57 @@ function BlogEditForm() {
               </button>
             </div>
 
-            <BlogBlockNote key={editId} value={formData.content} onChange={(val) => setFormData(p => ({...p, content: val}))} />
+            {/* 本文エディタの方式 */}
+            <div className="flex items-center gap-2 flex-wrap border-t pt-4">
+              <span className="text-sm font-bold text-slate-600">エディタ：</span>
+              {(["tiptap", "blocknote", "html"] as EditorType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => switchEditor(t)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                    editorType === t
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {EDITOR_LABELS[t]}
+                </button>
+              ))}
+              <span className="text-[11px] text-slate-400">
+                {editorType === "tiptap" && "従来のリッチエディタ"}
+                {editorType === "blocknote" && "Notion風（段組み・文字色・背景色）"}
+                {editorType === "html" && "生HTMLをそのまま保存・表示"}
+              </span>
+            </div>
+
+            {!postLoaded ? (
+              editorLoading()
+            ) : editorType === "tiptap" ? (
+              // Tiptap はエディタ下に文字数を表示する機能を内蔵している
+              <RichTextEditor
+                key={`tiptap-${editorKey}`}
+                value={formData.content}
+                onChange={(val) => setFormData((p) => ({ ...p, content: val }))}
+              />
+            ) : editorType === "blocknote" ? (
+              <div className="space-y-2">
+                <BlogBlockNote
+                  key={`blocknote-${editorKey}`}
+                  value={formData.content}
+                  blocks={bodyBlocks}
+                  onChange={(html) => setFormData((p) => ({ ...p, content: html }))}
+                  onBlocksChange={(b) => setBodyBlocks(b)}
+                />
+                <CharCounter html={formData.content} />
+              </div>
+            ) : (
+              <BlogHtmlEditor
+                key={`html-${editorKey}`}
+                value={formData.content}
+                onChange={(html) => setFormData((p) => ({ ...p, content: html }))}
+              />
+            )}
           </div>
 
           {/* SEO設定エリア */}

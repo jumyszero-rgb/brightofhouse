@@ -1,9 +1,26 @@
 // @/src/app/api/blog/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { bustServerMemo } from "@/lib/serverMemo";
+import { sanitizeBlogHtml } from "@/lib/sanitizeHtml";
+
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+
+// 本文エディタの方式（tiptap / blocknote / html）。
+// editorType が送られてきたときだけ方式・ブロックを更新する（送られない呼び出し元では今の値を変えない）。
+function editorFields(body: any) {
+  if (body.editorType === undefined) return { content: body.content };
+  const editorType = body.editorType === "blocknote" || body.editorType === "html" ? body.editorType : "tiptap";
+  return {
+    editorType,
+    // HTMLモードは生HTMLをそのまま保存（<script> と on* 属性だけ除去）
+    content: editorType === "html" ? sanitizeBlogHtml(body.content || "") : body.content,
+    // BlockNoteのブロックJSON（BlockNote以外では空にする）
+    bodyBlocks: editorType === "blocknote" && Array.isArray(body.bodyBlocks) ? body.bodyBlocks : Prisma.DbNull,
+  };
+}
 
 async function checkAuth() {
   const cookieStore = await cookies();
@@ -81,7 +98,7 @@ export async function POST(request: NextRequest) {
       data: {
         slug: body.slug,
         title: body.title,
-        content: body.content,
+        ...editorFields(body),
         instaContent: body.instaContent,
         xContent: body.xContent,
         googleContent: body.googleContent,
@@ -111,7 +128,7 @@ export async function PUT(request: NextRequest) {
       data: {
         slug: body.slug,
         title: body.title,
-        content: body.content,
+        ...editorFields(body),
         instaContent: body.instaContent,
         xContent: body.xContent,
         googleContent: body.googleContent,

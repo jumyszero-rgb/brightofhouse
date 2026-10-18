@@ -128,3 +128,25 @@ body {
 .bn-content .bn-block-content[data-background-color]{padding:12px 16px;border-radius:8px}
 /* インライン背景色は軽い余白 */
 .bn-content span[data-style-type="backgroundColor"]{padding:1px 4px;border-radius:3px}
+
+/* ===== ブログ本文：HTMLモード・BlockNoteで書いた記事の表示（2026-10） =====
+   Tiptapの出力はインラインstyle付きなのでそのまま出る。外部で作ったHTML（data属性だけ）や
+   BlockNoteの段組みでも同じ見た目になるよう、属性ベースのスタイルを用意する。 */
+.ql-content div[data-box-type] { border-radius: 8px; padding: 16px; margin: 16px 0; }
+.ql-content div[data-box-type="info"] { background: #eff6ff; border: 1px solid #bfdbfe; }
+.ql-content div[data-box-type="warning"] { background: #fefce8; border: 1px solid #fde68a; }
+.ql-content div[data-box-type="success"] { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.ql-content div[data-box-type="danger"] { background: #fef2f2; border: 1px solid #fecaca; }
+.ql-content div[data-box-type="gray"] { background: #f8fafc; border: 1px solid #e2e8f0; }
+.ql-content div[data-box-type] > :first-child { margin-top: 0; }
+.ql-content div[data-box-type] > :last-child { margin-bottom: 0; }
+.ql-content div[data-columns] { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+.ql-content div[data-column] { flex: 1 1 180px; min-width: 0; }
+/* 表と<mark>はHTMLモードの記事だけ（既存のTiptap記事の見た目は変えない） */
+.blog-html mark { background-color: #fef08a; padding: 0 2px; border-radius: 2px; color: inherit; }
+.blog-html table { width: 100%; border-collapse: collapse; }
+.blog-html th, .blog-html td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
+.blog-html th { background: #f8fafc; }
+/* BlockNote の段組み（公開ページはBlockNote本体CSSを読み込まないため最低限を再現） */
+.bn-content .bn-block-column-list { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.bn-content .bn-block-column { flex: 1 1 200px; min-width: 0; }

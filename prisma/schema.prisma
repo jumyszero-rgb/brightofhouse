@@ -325,6 +325,10 @@ model BlogPost {
   noIndex         Boolean       @default(false)
   categoryId      String?
   category        BlogCategory? @relation(fields: [categoryId], references: [id])
+  // 本文エディタの方式："tiptap"（既定） / "blocknote" / "html"。公開表示はどの方式でも content のHTML
+  editorType      String        @default("tiptap")
+  // BlockNote のブロックJSON（editorType="blocknote" のときだけ使用）
+  bodyBlocks      Json?
 }
 
 model BlogSettings {

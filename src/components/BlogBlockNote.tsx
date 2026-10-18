@@ -2,6 +2,8 @@
 // ブログ／サービス詳細 本文用 BlockNote エディター（Notion風・段組み対応）。
 // - value: 既存のHTML文字列（従来記事もそのまま読み込める）
 // - onChange: 編集内容をHTML文字列で返す（公開側はこのHTMLをそのまま描画）
+// - blocks / onBlocksChange（任意・ブログ用）: BlockNoteのブロックJSONで開く／保存する。
+//   blocks があればHTMLを再解析せずにそのまま開けるので、段組み・色が崩れない。
 // - 画像はR2にアップロード（/api/media, 自動WebP変換）
 // - 文字サイズ: 見出し(H)を使わずに文字だけ大きく/小さくできるカスタムスタイルを追加
 "use client";
@@ -17,6 +19,10 @@ import { useEffect, useRef } from "react";
 type Props = {
   value?: string;
   onChange: (html: string) => void;
+  /** 保存済みのブロックJSON（あればHTMLより優先して開く） */
+  blocks?: any[] | null;
+  /** ブロックJSONも受け取りたい場合（ブログの bodyBlocks 保存用） */
+  onBlocksChange?: (blocks: any[]) => void;
 };
 
 // 文字サイズのカスタムスタイル（spanにfont-sizeを付与。見出しではないので太字にならない）
@@ -46,7 +52,8 @@ async function uploadFile(file: File): Promise<string> {
   return data.url as string;
 }
 
-export default function BlogBlockNote({ value, onChange }: Props) {
+export default function BlogBlockNote({ value, onChange, blocks, onBlocksChange }: Props) {
+  const hasBlocks = Array.isArray(blocks) && blocks.length > 0;
   const editor = useCreateBlockNote({
     schema: withMultiColumn(
       BlockNoteSchema.create({
@@ -55,11 +62,13 @@ export default function BlogBlockNote({ value, onChange }: Props) {
     ),
     dropCursor: multiColumnDropCursor,
     uploadFile,
+    initialContent: hasBlocks ? (blocks as any) : undefined,
   });
   const loaded = useRef(false);
 
   useEffect(() => {
     if (loaded.current) return;
+    if (hasBlocks) { loaded.current = true; return; } // ブロックJSONで開いた場合はHTMLを読み直さない
     const html = (value || "").trim();
     if (!html) return;
     loaded.current = true;
@@ -84,6 +93,7 @@ export default function BlogBlockNote({ value, onChange }: Props) {
       html = "";
     }
     onChange(html);
+    onBlocksChange?.(editor.document as any[]);
   };
 
   const applySize = (v: string | null) => {
