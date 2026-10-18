@@ -6,6 +6,35 @@ import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+import { BA_SECTIONS, BA_SLUG_RE, normalizeBaSlug } from "@/lib/beforeAfterText";
+
+const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
+const strOrNull = (v: FormDataEntryValue | null) => str(v) || null;
+
+/** 単体ページ用の項目（フォームから取り出し） */
+function singlePageFields(formData: FormData) {
+  const slug = normalizeBaSlug(formData.get("slug"));
+  if (slug && !BA_SLUG_RE.test(slug)) {
+    throw new Error("スラッグは半角英小文字・数字・ハイフンで入力してください（例：toyohira-drain-pipe-2026）");
+  }
+  const sections: Record<string, string | null> = {};
+  for (const s of BA_SECTIONS) sections[s.key] = strOrNull(formData.get(s.key));
+  return {
+    slug,
+    area: strOrNull(formData.get("area")),
+    workName: strOrNull(formData.get("workName")),
+    ...sections,
+    indexable: formData.get("indexable") === "true",
+    metaTitle: strOrNull(formData.get("metaTitle")),
+    metaDescription: strOrNull(formData.get("metaDescription")),
+  };
+}
+
+/** slug 重複など、利用者に分かる言葉にする */
+function friendlyError(error: any, fallback: string) {
+  if (error?.code === "P2002") return "このスラッグは他の事例で使われています。別のスラッグにしてください。";
+  return error?.message || fallback;
+}
 
 // --- 認証チェック関数 ---
 async function checkAuth() {
@@ -76,7 +105,13 @@ const uploadToR2 = async (file: File) => {
 };
 
 // GET: 一覧取得
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // 公開用：?slug= でタイトルだけ返す（パンくず表示用・認証不要）
+  const slug = request.nextUrl.searchParams.get("slug");
+  if (slug) {
+    const item = await prisma.beforeAfter.findUnique({ where: { slug }, select: { title: true, slug: true } });
+    return item ? NextResponse.json(item) : NextResponse.json(null, { status: 404 });
+  }
   if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const items = await prisma.beforeAfter.findMany({
@@ -95,6 +130,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData();
+    const sp = singlePageFields(formData); // 画像アップロード前に入力チェック
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const dateStr = formData.get("date") as string;
@@ -120,6 +156,7 @@ export async function POST(request: NextRequest) {
         beforeUrl,
         afterUrl,
         category,
+        ...sp,
         createdAt: dateStr ? new Date(dateStr) : new Date(),
         servicePages: { connect: servicePageIds.map((id) => ({ id })) },
       },
@@ -128,7 +165,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newItem);
   } catch (error: any) {
     console.error("POST Detailed Error:", error);
-    return NextResponse.json({ error: error.message || "予期せぬエラーが発生しました" }, { status: 500 });
+    return NextResponse.json({ error: friendlyError(error, "予期せぬエラーが発生しました") }, { status: 500 });
   }
 }
 
@@ -138,6 +175,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const formData = await request.formData();
+    const sp = singlePageFields(formData); // 画像アップロード前に入力チェック
     const id = formData.get("id") as string;
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -165,6 +203,7 @@ export async function PUT(request: NextRequest) {
         beforeUrl,
         afterUrl,
         category,
+        ...sp,
         createdAt: dateStr ? new Date(dateStr) : current.createdAt,
         servicePages: { set: servicePageIds.map((sid) => ({ id: sid })) },
       },
@@ -173,7 +212,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error("PUT Detailed Error:", error);
-    return NextResponse.json({ error: error.message || "更新に失敗しました" }, { status: 500 });
+    return NextResponse.json({ error: friendlyError(error, "更新に失敗しました") }, { status: 500 });
   }
 }
 

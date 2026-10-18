@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import BeforeAfterSlider from "@/components/ui/BeforeAfterSlider";
 import { mergeLegacyDescription } from "@/lib/beforeAfterText";
 
@@ -13,6 +14,8 @@ type Item = {
   afterUrl: string;
   createdAt: Date;
   category?: string | null;
+  /** あれば単体ページ（/before-after/[slug]）へリンクする */
+  slug?: string | null;
 };
 
 export default function BeforeAfterList({ items }: { items: Item[] }) {
@@ -79,7 +82,13 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
             <section key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-slate-800 border-l-4 border-blue-500 pl-3">
-                  {item.title}
+                  {item.slug ? (
+                    <Link href={`/before-after/${item.slug}`} className="hover:text-blue-600 hover:underline underline-offset-2">
+                      {item.title}
+                    </Link>
+                  ) : (
+                    item.title
+                  )}
                 </h2>
                 <span className="text-xs text-slate-400">
                   {new Date(item.createdAt).toLocaleDateString("ja-JP")}
@@ -103,6 +112,13 @@ export default function BeforeAfterList({ items }: { items: Item[] }) {
                     {mergeLegacyDescription(item.description)}
                   </p>
                 </div>
+              )}
+              {item.slug && (
+                <p className="mt-4 text-right">
+                  <Link href={`/before-after/${item.slug}`} className="text-sm font-bold text-blue-600 hover:underline">
+                    この事例を詳しく見る →
+                  </Link>
+                </p>
               )}
             </section>
           ))}

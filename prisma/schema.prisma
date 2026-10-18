@@ -26,6 +26,22 @@ model BeforeAfter {
   updatedAt    DateTime      @updatedAt
   servicePages ServicePage[]
   landingPages LandingPage[]
+  // ===== 単体ページ（/before-after/[slug]）用（2026-10） =====
+  // slug が空の事例は単体ページを作らず、一覧にだけ表示する
+  slug            String?  @unique
+  area            String?  // エリア（例：札幌市豊平区）
+  workName        String?  // 作業内容の見出し（例：排水管高圧洗浄）
+  // 項目ごとの本文（すべて任意・未入力の項目は表示しない）
+  reason          String?  // 依頼のきっかけ
+  siteCondition   String?  // 現場の状態
+  workDetail      String?  // 作業内容
+  workTimeStaff   String?  // 作業時間・人数
+  price           String?  // 料金（税込）
+  staffComment    String?  // 担当者のひとこと
+  // 検索に表示する（既定オフ＝単体ページは noindex・sitemap に載せない）
+  indexable       Boolean  @default(false)
+  metaTitle       String?  // 未入力ならタイトルから自動
+  metaDescription String?  // 未入力なら本文から自動
 }
 
 model CompanyProfile {

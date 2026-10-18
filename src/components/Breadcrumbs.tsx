@@ -11,7 +11,7 @@ const routeMap: { [key: string]: { label: string; api?: string; } } = {
   "area": { label: "地域別サービス一覧", api: "/api/lp" }, // LPとAPIは共有
   "blog": { label: "ブログ一覧", api: "/api/blog" },
   "service": { label: "サービス・料金", api: "/api/service-pages" },
-  "before-after": { label: "清掃実績" },
+  "before-after": { label: "清掃実績", api: "/api/before-after" }, // 単体ページ（/before-after/[slug]）のタイトル取得
   "company": { label: "会社概要" },
   "contact": { label: "法人・業者様のお問い合わせ" },
   "inquiry": { label: "サービスのお問い合わせ" },

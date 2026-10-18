@@ -12,6 +12,8 @@ type Item = {
   beforeUrl: string;
   afterUrl: string;
   createdAt: string;
+  slug?: string | null;
+  indexable?: boolean;
 };
 
 export default function AdminBeforeAfterList() {
@@ -82,6 +84,16 @@ export default function AdminBeforeAfterList() {
                   </td>
                   <td className="p-4 font-medium text-gray-800">
                     {item.title}
+                    {item.slug && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                        <a href={`/before-after/${item.slug}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-mono">
+                          /before-after/{item.slug}
+                        </a>
+                        <span className={item.indexable ? "bg-green-100 text-green-700 px-2 py-0.5 rounded" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
+                          {item.indexable ? "検索に表示" : "noindex"}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4 text-right space-x-2">
                     <Link

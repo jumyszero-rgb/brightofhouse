@@ -59,8 +59,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
+    // 施工事例の単体ページ：「検索に表示する」をオンにした事例だけ（オフは noindex なので載せない）
+    let baPaths: MetadataRoute.Sitemap = [];
+    try {
+      const bas = await prisma.beforeAfter.findMany({
+        where: { indexable: true, slug: { not: null } },
+        select: { slug: true, updatedAt: true },
+      });
+      baPaths = bas.map((b) => ({
+        url: `${baseUrl}/before-after/${b.slug}`,
+        lastModified: b.updatedAt,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      }));
+    } catch (e) {
+      console.error("sitemap: before-after skipped", e); // 列追加前でも他のURLは出す
+    }
+
     // すべてを統合して返却
-    return [...staticPaths, ...lpPaths, ...blogPaths, ...servicePaths] as MetadataRoute.Sitemap;
+    return [...staticPaths, ...lpPaths, ...blogPaths, ...servicePaths, ...baPaths] as MetadataRoute.Sitemap;
   } catch (error) {
     // テーブルがない場合などのフォールバック
     console.error("Error generating sitemap:", error);
