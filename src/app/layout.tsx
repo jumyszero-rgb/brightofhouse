@@ -39,6 +39,13 @@ export const metadata: Metadata = {
     icon: "/icon.png",
     apple: "/apple-icon.png",
   },
+  // スマホ（iPhone等）が文章中の「札幌市…」を住所と判定して地図リンクを勝手に付けるのを止める
+  // （例：空室LPの施工事例「札幌市 空室ハウスクリーニング｜3LDK…」がGoogleマップへのリンクになっていた）。
+  // 電話番号は計測のため PhoneLink（tel:リンク）で明示しているので、自動リンクは住所・メールのみ止める。
+  formatDetection: {
+    address: false,
+    email: false,
+  },
 };
 
 export default async function RootLayout({

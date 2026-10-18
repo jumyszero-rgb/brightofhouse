@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description:
     "北海道ブライトオブハウス（合同会社むすびえむ）への法人・業者様からのお問い合わせ窓口です。お取引・業務提携等のご相談は本フォームより承ります。",
   alternates: { canonical: "/contact" },
+  // 業者様窓口は原則メール：電話番号・住所をスマホが自動でリンクにしないようにする
+  formatDetection: { telephone: false, address: false, email: false },
 };
 
 export default function ContactPage() {
