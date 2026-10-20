@@ -2,8 +2,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { captureTrafficSource } from "@/lib/leadTracking";
-import { trackLead } from "@/lib/attribution";
+import { trackLead, trackPageView } from "@/lib/attribution";
 
 /**
  * 全ページ共通の計測補助（layout.tsx の body に1つ置くだけ・表示なし）。
@@ -13,15 +14,25 @@ import { trackLead } from "@/lib/attribution";
  *  3) LINEリンク（line.me / lin.ee）のタップ → GA4 `line_click`
  *     params: link_url, page_path
  *  4) 2)・3) は GA4 とは別に、サイトのDB（LeadEvent）にも1件ずつ記録（管理画面 /admin/lead-events で即時に見られる）
+ *  5) ページ表示（ページ移動のたび）を、ページ×日ごとの件数としてサイトのDB（PageViewDaily）に記録（人気のページの集計用）
  *
  * ヘッダー・下部固定ボタン・LP（HTMLブロック含む）・サービスページなど、どこに置かれたリンクでも拾えるよう
  * document 全体でクリックを監視する（各リンクを個別に書き換える必要がない）。
  * 発信アプリ起動・LINEアプリ起動でページを離れても落ちないよう transport_type: 'beacon' で送る。
  */
 export default function TrafficSourceCapture() {
+  const pathname = usePathname();
+
   useEffect(() => {
     captureTrafficSource();
   }, []);
+
+  // ページ表示の記録（最初の表示と、サイト内のページ移動のたびに1回）
+  useEffect(() => {
+    if (!pathname) return;
+    captureTrafficSource(); // 先に流入元を保存してから（広告経由の判定に使う）
+    trackPageView(pathname);
+  }, [pathname]);
 
   useEffect(() => {
     const send = (name: string, params: Record<string, unknown>) => {

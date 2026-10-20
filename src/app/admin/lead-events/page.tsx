@@ -31,7 +31,7 @@ type LeadEvent = {
   bookingId: string | null;
 };
 
-type Preset = "today" | "yesterday" | "7d" | "30d" | "custom";
+type Preset = "today" | "7d" | "month" | "custom";
 const TYPE_LABEL: Record<LeadEvent["type"], string> = { phone: "電話", line: "LINE", form: "フォーム", booking: "予約" };
 const TYPE_COLOR: Record<LeadEvent["type"], string> = {
   phone: "bg-blue-100 text-blue-700",
@@ -50,15 +50,30 @@ function rangeOf(p: Preset): { from: string; to: string } {
   switch (p) {
     case "today":
       return { from: jstYmd(0), to: jstYmd(0) };
-    case "yesterday":
-      return { from: jstYmd(1), to: jstYmd(1) };
     case "7d":
       return { from: jstYmd(6), to: jstYmd(0) };
-    case "30d":
-      return { from: jstYmd(29), to: jstYmd(0) };
+    case "month":
+      return monthRange(jstYmd(0).slice(0, 7));
     default:
       return { from: jstYmd(6), to: jstYmd(0) };
   }
+}
+/** "YYYY-MM" → その月の1日〜月末（今月なら今日まで） */
+function monthRange(ym: string): { from: string; to: string } {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym);
+  if (!m) return rangeOf("7d");
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const lastDay = new Date(Date.UTC(y, mo, 0)).getUTCDate(); // その月の日数
+  const from = `${ym}-01`;
+  const end = `${ym}-${String(lastDay).padStart(2, "0")}`;
+  const today = jstYmd(0);
+  return { from, to: end > today ? today : end };
+}
+/** 期間指定：開始と終了が逆なら入れ替える */
+function normalizeRange(r: { from: string; to: string }): { from: string; to: string } {
+  if (!r.from || !r.to) return rangeOf("7d");
+  return r.from <= r.to ? r : { from: r.to, to: r.from };
 }
 function jstTime(iso: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -74,9 +89,12 @@ function jstTime(iso: string): string {
 export default function LeadEventsPage() {
   const [preset, setPreset] = useState<Preset>("today");
   const [custom, setCustom] = useState(() => rangeOf("7d"));
+  const [month, setMonth] = useState(() => jstYmd(0).slice(0, 7)); // "YYYY-MM"
   const [type, setType] = useState<"" | LeadEvent["type"]>("");
   const [events, setEvents] = useState<LeadEvent[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
+  const [pages, setPages] = useState<{ path: string; views: number; adViews: number }[]>([]);
+  const [showAllPages, setShowAllPages] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string>("");
@@ -84,7 +102,8 @@ export default function LeadEventsPage() {
   const [nameRows, setNameRows] = useState<{ id: string; name: string }[]>([]);
   const [savingNames, setSavingNames] = useState(false);
 
-  const range = preset === "custom" ? custom : rangeOf(preset);
+  const range = preset === "custom" ? normalizeRange(custom) : preset === "month" ? monthRange(month) : rangeOf(preset);
+  const todayYmd = jstYmd(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +117,7 @@ export default function LeadEventsPage() {
       const data = await res.json();
       setEvents(Array.isArray(data.events) ? data.events : []);
       setNames(data.campaignNames || {});
+      setPages(Array.isArray(data.pages) ? data.pages : []);
       setUpdatedAt(new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
     } catch (e) {
       setError(e instanceof Error ? e.message : "読み込みに失敗しました");
@@ -106,13 +126,40 @@ export default function LeadEventsPage() {
     }
   }, [range.from, range.to, type]);
 
+  // 60秒ごとに自動更新。ただし通信量（Supabaseの転送量）を抑えるため、
+  //  - 期間に今日が含まれるときだけ（過去の期間は数字が変わらない）
+  //  - このタブが表示されているときだけ（裏に置いたままなら止める・戻ったら1回更新）
+  const includesToday = range.to >= todayYmd;
   useEffect(() => {
     load();
-    const id = setInterval(load, 60 * 1000); // 60秒ごとに自動更新
-    return () => clearInterval(id);
-  }, [load]);
+    if (!includesToday) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load, includesToday]);
 
   // 種類別の件数（広告／広告以外）
+  // ページごとの問い合わせ件数（その期間に、そのページで押された・送信された件数）
+  const leadsByPath = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of events) {
+      let p = (e.pagePath || "").split("?")[0];
+      try { p = decodeURI(p); } catch { /* そのまま */ }
+      if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+      m[p] = (m[p] || 0) + 1;
+    }
+    return m;
+  }, [events]);
+  const totalViews = useMemo(() => pages.reduce((a, p) => a + p.views, 0), [pages]);
+
   const summary = useMemo(() => {
     const out = TYPES.map((t) => {
       const list = events.filter((e) => e.type === t);
@@ -156,8 +203,9 @@ export default function LeadEventsPage() {
         </div>
         <p className="text-xs text-gray-500 leading-relaxed">
           電話ボタン・LINEボタンが押された瞬間と、フォーム送信・予約の完了を記録しています（GA4とは別の自前の記録）。
-          60秒ごとに自動で更新されます{updatedAt && `（最終更新 ${updatedAt}）`}。
+          期間に今日が含まれるときは、この画面を開いている間60秒ごとに自動で更新されます{updatedAt && `（最終更新 ${updatedAt}）`}。
           電話タップは「かけようとした」記録なので、実際に通話したかどうかまではわかりません。
+          ページ表示はページ×日ごとの回数だけを記録しています（個人は特定しません）。
         </p>
 
         {/* 期間・種類 */}
@@ -167,10 +215,9 @@ export default function LeadEventsPage() {
             {(
               [
                 ["today", "今日"],
-                ["yesterday", "昨日"],
-                ["7d", "7日間"],
-                ["30d", "30日間"],
-                ["custom", "期間指定"],
+                ["7d", "7日"],
+                ["month", "月"],
+                ["custom", "カスタム"],
               ] as [Preset, string][]
             ).map(([p, label]) => (
               <button
@@ -181,13 +228,27 @@ export default function LeadEventsPage() {
                 {label}
               </button>
             ))}
-            {preset === "custom" && (
+            {preset === "month" && (
               <span className="flex items-center gap-1 text-sm">
-                <input type="date" value={custom.from} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} className="border rounded px-2 py-1" />
-                〜
-                <input type="date" value={custom.to} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} className="border rounded px-2 py-1" />
+                <input
+                  type="month"
+                  value={month}
+                  max={todayYmd.slice(0, 7)}
+                  onChange={(e) => e.target.value && setMonth(e.target.value)}
+                  className="border rounded px-2 py-1"
+                />
               </span>
             )}
+            {preset === "custom" && (
+              <span className="flex items-center gap-1 text-sm">
+                <input type="date" value={custom.from} max={todayYmd} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} className="border rounded px-2 py-1" />
+                〜
+                <input type="date" value={custom.to} max={todayYmd} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} className="border rounded px-2 py-1" />
+              </span>
+            )}
+            <span className="text-xs text-gray-500">
+              {range.from === range.to ? range.from : `${range.from} 〜 ${range.to}`}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold text-gray-600 mr-1">種類</span>
@@ -217,6 +278,60 @@ export default function LeadEventsPage() {
               <p className="text-xs text-gray-500 mt-1">広告 {s.ad}／広告以外 {s.total - s.ad}</p>
             </div>
           ))}
+        </div>
+
+        {/* 人気のページ（ページ表示の集計） */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
+            <h2 className="font-bold text-gray-800">人気のページ</h2>
+            <p className="text-xs text-gray-500">
+              期間内のページ表示 合計 <span className="font-bold text-gray-800">{totalViews.toLocaleString()}</span> 回
+              （同じ人が何度見ても1回ずつ数えます）
+            </p>
+          </div>
+          {pages.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">この期間のページ表示の記録はありません</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[640px] w-full text-sm">
+                <thead className="bg-gray-50 text-gray-600 text-xs">
+                  <tr>
+                    <th className="p-2 text-right w-10">#</th>
+                    <th className="p-2 text-left">ページ</th>
+                    <th className="p-2 text-right">表示回数</th>
+                    <th className="p-2 text-right">うち広告</th>
+                    <th className="p-2 text-right">問い合わせ</th>
+                    <th className="p-2 text-right">問い合わせ率</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllPages ? pages : pages.slice(0, 20)).map((p, i) => {
+                    const leads = leadsByPath[p.path] || 0;
+                    return (
+                      <tr key={p.path} className="border-t">
+                        <td className="p-2 text-right text-gray-400">{i + 1}</td>
+                        <td className="p-2 break-all">
+                          <a href={p.path} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-blue-700 hover:underline">{p.path}</a>
+                        </td>
+                        <td className="p-2 text-right font-bold">{p.views.toLocaleString()}</td>
+                        <td className="p-2 text-right text-red-600">{p.adViews.toLocaleString()}</td>
+                        <td className="p-2 text-right">{leads || "-"}</td>
+                        <td className="p-2 text-right">{leads && p.views ? `${((leads / p.views) * 100).toFixed(1)}%` : "-"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {pages.length > 20 && (
+                <button onClick={() => setShowAllPages((v) => !v)} className="mt-2 text-sm font-bold text-blue-600 hover:underline">
+                  {showAllPages ? "上位20件だけ表示" : `すべて表示（${pages.length}件）`}
+                </button>
+              )}
+              <p className="text-[11px] text-gray-400 mt-2">
+                ※ 問い合わせは、そのページで電話・LINEのタップ、フォーム送信、予約があった件数です（上の「種類」の絞り込みに連動）。
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 一覧 */}

@@ -607,3 +607,16 @@ model LeadEvent {
 
   @@index([createdAt])
 }
+
+// ページ表示の件数（ページ×日ごと・日本時間の日付）。人気のページの集計用（2026-10-20）
+// 1表示ごとに行を増やさず、同じ日・同じページの行の件数を1ずつ足す（データが増えすぎない）。
+model PageViewDaily {
+  id      String @id @default(uuid())
+  day     String // "YYYY-MM-DD"（日本時間）
+  path    String // ページのパス（?以降は含まない）
+  views   Int    @default(0)
+  adViews Int    @default(0) // うち広告クリック経由（gclid等あり）
+
+  @@unique([day, path])
+  @@index([day])
+}

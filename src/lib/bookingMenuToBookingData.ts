@@ -197,14 +197,31 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
 // 大分類(BookingCategory)をリンクした場合、配下の中分類(BookingMenu)は個別リンクした場合と
 // 全く同じ詳細度(小分類・追加オプションまで)でカレンダーに並べる。その代わり各メニューに
 // 同じ groupId / groupSetDiscount を付与し、複数メニューを横断した「まとめ割引」を可能にする。
-function categoryToMains(category: BookingCategoryForConvert) {
+function categoryToMains(category: BookingCategoryForConvert, menuOrder?: string[]) {
   const setDiscount = (category.setDiscountRules as SetDiscountRules) || {
     enabled: false,
     type: "amount" as const,
     rules: [],
   };
   const group = { id: category.id, title: category.title, setDiscount };
-  return byOrder(category.menus).map((menu) => menuToMain(menu, group));
+  return sortByIdList(byOrder(category.menus), menuOrder).map((menu) => menuToMain(menu, group));
+}
+
+/**
+ * ids（LPごとに指定した並び）にある項目をその順で先頭に、無い項目はもとの順のまま後ろに並べる。
+ * ids が空なら何もしない（予約マスターのカレンダー表示順のまま）。
+ */
+function sortByIdList<T extends { id: string }>(arr: T[], ids?: string[]): T[] {
+  if (!ids || ids.length === 0) return arr;
+  const rank = new Map(ids.map((id, i) => [id, i]));
+  return arr
+    .map((x, i) => ({ x, i }))
+    .sort((a, b) => {
+      const ra = rank.has(a.x.id) ? rank.get(a.x.id)! : ids.length + a.i;
+      const rb = rank.has(b.x.id) ? rank.get(b.x.id)! : ids.length + b.i;
+      return ra - rb;
+    })
+    .map(({ x }) => x);
 }
 
 // 一覧カードの簡易価格表示用に、リンクされた複数メニューの中から最安値(値引後)のものを選ぶ。
@@ -234,12 +251,16 @@ export function bookingMenusToBookingData(menus: BookingMenuForConvert[]) {
 // 大分類（まとめて追加された補助的なメニュー群）より先に表示する。
 export function bookingSelectionToBookingData(
   categories: BookingCategoryForConvert[],
-  menus: BookingMenuForConvert[]
+  menus: BookingMenuForConvert[],
+  // LPのカレンダー予約ブロック用：大分類の並び（選んだ順）と、中分類の並びをLPごとに指定できる。
+  // 省略時は従来どおり予約マスターのカレンダー表示順。
+  order?: { categoryIds?: string[]; menuIds?: string[] }
 ) {
+  const cats = order?.categoryIds?.length ? sortByIdList(byOrder(categories), order.categoryIds) : byOrder(categories);
   return {
     mains: [
       ...byOrder(menus).map((m) => menuToMain(m)),
-      ...byOrder(categories).flatMap(categoryToMains),
+      ...cats.flatMap((c) => categoryToMains(c, order?.menuIds)),
     ],
   };
 }

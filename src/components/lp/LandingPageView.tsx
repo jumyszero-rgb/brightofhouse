@@ -8,7 +8,7 @@ import Image from "next/image";
 import prisma from "@/lib/prisma";
 import { memo } from "@/lib/serverMemo";
 import { LazyServicePageBooking } from "@/components/lp/LazyLpForms";
-import { bookingSelectionToBookingData } from "@/lib/bookingMenuToBookingData";
+import { bookingSelectionToBookingData, resolvePrice } from "@/lib/bookingMenuToBookingData";
 import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
 import LpBlocksRenderer from "@/components/lp/LpBlocksRenderer";
@@ -30,6 +30,13 @@ function bookingFormCategoryIds(b: any): string[] {
   const ids: string[] = Array.isArray(b?.refs?.refIds) ? b.refs.refIds.filter(Boolean) : [];
   if (ids.length) return ids;
   return b?.refs?.refId ? [b.refs.refId] : [];
+}
+
+// メニュー（予約マスター連動）ブロックで選ばれた項目一覧（複数対応の refs.items を優先、旧データの refType/refId にもフォールバック）
+function masterMenuItems(b: any): { refType: string; refId: string }[] {
+  const items = Array.isArray(b?.refs?.items) ? b.refs.items.filter((x: any) => x && x.refId && x.refType) : [];
+  if (items.length) return items;
+  return b?.refs?.refId ? [{ refType: b.refs.refType || "menu", refId: b.refs.refId }] : [];
 }
 
 function PreviewBanner() {
@@ -83,24 +90,60 @@ export default async function LandingPageView({
     const optionIds: string[] = [];
     const formCategoryIds: string[] = [];
     for (const b of rawBlocks) {
-      if (b?.type === "masterMenu" && b?.refs?.refId) {
-        if (b.refs.refType === "menu") menuIds.push(b.refs.refId);
-        else if (b.refs.refType === "subMenu") subMenuIds.push(b.refs.refId);
-        else if (b.refs.refType === "option") optionIds.push(b.refs.refId);
+      if (b?.type === "masterMenu") {
+        for (const it of masterMenuItems(b)) {
+          if (it.refType === "menu") menuIds.push(it.refId);
+          else if (it.refType === "subMenu") subMenuIds.push(it.refId);
+          else if (it.refType === "option") optionIds.push(it.refId);
+        }
       }
       if (b?.type === "bookingForm") formCategoryIds.push(...bookingFormCategoryIds(b));
     }
+    // 口コミ・FAQ（サービス詳細ページと連動）・施工事例ブロックで選ばれたID
+    const strIds = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x) : []);
+    const voicePageIds = Array.from(new Set(rawBlocks.filter((b) => b?.type === "voices").flatMap((b) => strIds(b?.data?.servicePageIds))));
+    const faqPageIds = Array.from(new Set(rawBlocks.filter((b) => b?.type === "faq").flatMap((b) => strIds(b?.data?.servicePageIds))));
+    const baIds = Array.from(new Set(rawBlocks.filter((b) => b?.type === "beforeAfter").flatMap((b) => strIds(b?.data?.ids))));
     // 予約マスターの価格・大分類も作り置き（プレビュー時は常に最新。予約マスター保存で消える）
     const memoKey = `lp:blocks:${lp.id}:${lp.updatedAt ? new Date(lp.updatedAt).getTime() : 0}`;
     const [menus, subMenus, options] = await memo(`${memoKey}:prices`, () => Promise.all([
-      menuIds.length ? prisma.bookingMenu.findMany({ where: { id: { in: menuIds } }, select: { id: true, title: true, basePrice: true, workContent: true } }) : Promise.resolve([] as any[]),
-      subMenuIds.length ? prisma.bookingSubMenu.findMany({ where: { id: { in: subMenuIds } }, select: { id: true, title: true, price: true, workContent: true } }) : Promise.resolve([] as any[]),
-      optionIds.length ? prisma.bookingOption.findMany({ where: { id: { in: optionIds } }, select: { id: true, title: true, price: true, workContent: true } }) : Promise.resolve([] as any[]),
+      menuIds.length ? prisma.bookingMenu.findMany({ where: { id: { in: menuIds } }, select: { id: true, title: true, basePrice: true, webSpecialPrice: true, discountPercent: true, discountRounding: true, priceFrom: true, workContent: true, recommendPoint: true, cautionNote: true } }) : Promise.resolve([] as any[]),
+      subMenuIds.length ? prisma.bookingSubMenu.findMany({ where: { id: { in: subMenuIds } }, select: { id: true, title: true, price: true, webSpecialPrice: true, discountPercent: true, discountRounding: true, priceFrom: true, workContent: true, recommendPoint: true, cautionNote: true } }) : Promise.resolve([] as any[]),
+      optionIds.length ? prisma.bookingOption.findMany({ where: { id: { in: optionIds } }, select: { id: true, title: true, price: true, discountPercent: true, discountRounding: true, priceFrom: true, workContent: true, recommendPoint: true, cautionNote: true } }) : Promise.resolve([] as any[]),
     ]), { fresh: isPreview });
+    // 価格はカレンダー予約フォームと同じ計算（WEB特価 → 個別値引き%）。通常価格と違えば originalPrice も渡す
+    const toItem = (x: any, base: number) => {
+      const p = resolvePrice(base, x.webSpecialPrice ?? null, x.discountPercent ?? null, x.discountRounding);
+      return {
+        title: x.title,
+        price: p.price,
+        originalPrice: p.originalPrice,
+        from: !!x.priceFrom,
+        workContent: x.workContent,
+        recommendPoint: x.recommendPoint,
+        cautionNote: x.cautionNote,
+      };
+    };
     const resolved = {
-      menus: Object.fromEntries(menus.map((m: any) => [m.id, { title: m.title, price: m.basePrice, workContent: m.workContent }])),
-      subMenus: Object.fromEntries(subMenus.map((s: any) => [s.id, { title: s.title, price: s.price, workContent: s.workContent }])),
-      options: Object.fromEntries(options.map((o: any) => [o.id, { title: o.title, price: o.price, workContent: o.workContent }])),
+      menus: Object.fromEntries(menus.map((m: any) => [m.id, toItem(m, m.basePrice)])),
+      subMenus: Object.fromEntries(subMenus.map((s: any) => [s.id, toItem(s, s.price)])),
+      options: Object.fromEntries(options.map((o: any) => [o.id, toItem(o, o.price)])),
+    };
+    const [testimonials, faqs, beforeAfters] = await memo(`${memoKey}:linked`, () => Promise.all([
+      voicePageIds.length
+        ? prisma.testimonial.findMany({ where: { servicePageId: { in: voicePageIds }, isActive: true }, orderBy: { order: "asc" }, select: { id: true, servicePageId: true, authorLabel: true, rating: true, body: true } })
+        : Promise.resolve([] as any[]),
+      faqPageIds.length
+        ? prisma.serviceFaq.findMany({ where: { servicePageId: { in: faqPageIds } }, orderBy: { order: "asc" }, select: { id: true, servicePageId: true, question: true, answer: true } })
+        : Promise.resolve([] as any[]),
+      baIds.length
+        ? prisma.beforeAfter.findMany({ where: { id: { in: baIds } }, select: { id: true, title: true, beforeUrl: true, afterUrl: true, slug: true } })
+        : Promise.resolve([] as any[]),
+    ]), { fresh: isPreview });
+    const linked = {
+      testimonials: testimonials as { id: string; servicePageId: string | null; authorLabel: string; rating: number | null; body: string }[],
+      faqs: faqs as { id: string; servicePageId: string; question: string; answer: string }[],
+      beforeAfters: beforeAfters as { id: string; title: string; beforeUrl: string; afterUrl: string; slug: string | null }[],
     };
     const uniqueFormCategoryIds = Array.from(new Set(formCategoryIds));
     const formCats: any[] = uniqueFormCategoryIds.length
@@ -111,8 +154,16 @@ export default async function LandingPageView({
     const bookingForms: Record<string, any> = {};
     for (const b of rawBlocks) {
       if (b?.type !== "bookingForm") continue;
-      const cats = bookingFormCategoryIds(b).map((id) => catById.get(id)).filter(Boolean);
-      if (cats.length && b.id) bookingForms[b.id] = bookingSelectionToBookingData(cats as any[], []);
+      const catIds = bookingFormCategoryIds(b);
+      const cats = catIds.map((id) => catById.get(id)).filter(Boolean);
+      // 並びはこのブロックで指定した順（大分類＝選んだ順、中分類＝refs.menuOrder）。未指定なら予約マスターのカレンダー表示順
+      const menuOrder: string[] = Array.isArray(b?.refs?.menuOrder) ? b.refs.menuOrder.filter(Boolean) : [];
+      if (cats.length && b.id) {
+        bookingForms[b.id] = bookingSelectionToBookingData(cats as any[], [], {
+          categoryIds: b?.refs?.catOrderCustom ? catIds : undefined,
+          menuIds: menuOrder,
+        });
+      }
     }
     // 本文中の [[key]] ショートコードを展開（richText本文 / blocknote HTML）
     const scMap = await getShortcodeMap();
@@ -123,12 +174,22 @@ export default async function LandingPageView({
       if (b?.type === "blocknote" && b?.data?.html) {
         return { ...b, data: { ...b.data, html: applyShortcodes(b.data.html, scMap) } };
       }
+      if (b?.type === "masterMenu" && (b?.data?.introHtml || b?.data?.outroHtml)) {
+        return {
+          ...b,
+          data: {
+            ...b.data,
+            introHtml: b.data.introHtml ? applyShortcodes(b.data.introHtml, scMap) : "",
+            outroHtml: b.data.outroHtml ? applyShortcodes(b.data.outroHtml, scMap) : "",
+          },
+        };
+      }
       return b;
     });
     return (
       <>
         {isPreview && <PreviewBanner />}
-        <LpBlocksRenderer blocks={renderBlocks} resolved={resolved} bookingForms={bookingForms} lpTitle={lp.title} slug={lp.slug} />
+        <LpBlocksRenderer blocks={renderBlocks} resolved={resolved} bookingForms={bookingForms} linked={linked} lpTitle={lp.title} slug={lp.slug} />
       </>
     );
   }

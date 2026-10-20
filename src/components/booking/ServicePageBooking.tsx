@@ -136,6 +136,62 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [openCautions, setOpenCautions] = useState<Record<string, boolean>>({});
   const toggleCaution = (id: string) => setOpenCautions(prev => ({ ...prev, [id]: !prev[id] }));
 
+  // おすすめ・作業内容・注意事項の共通表示（表示順：おすすめ → 作業内容▼ → 注意事項▼）
+  //  - おすすめ（comment）：アイキャッチなので折り畳まず太字でそのまま表示
+  //  - 作業内容（workContent）・注意事項（cautionNote）：長くなるので折り畳み（初期は閉じる）
+  //  small=true はオプション行用（少し小さめ）
+  const renderItemDetails = (
+    key: string,
+    item: { comment?: string; workContent?: string; cautionNote?: string },
+    small = false
+  ) => {
+    if (!item.comment && !item.workContent && !item.cautionNote) return null;
+    const text = small ? "text-xs" : "text-sm";
+    const workKey = `work:${key}`;
+    const cautionKey = `caution:${key}`;
+    return (
+      <div className="space-y-1.5 mt-1.5">
+        {item.comment && <p className={`${text} font-bold text-slate-700 leading-relaxed`}>💬 {item.comment}</p>}
+        {item.workContent && (
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleCaution(workKey)}
+              aria-expanded={!!openCautions[workKey]}
+              className={`${text} font-bold text-blue-700 hover:underline`}
+            >
+              作業内容 {openCautions[workKey] ? "▲" : "▼"}
+            </button>
+            {openCautions[workKey] && (
+              <ul className={`${text} text-slate-700 leading-relaxed mt-1 space-y-0.5 list-disc list-outside pl-5 bg-slate-50 border border-slate-200 rounded p-2`}>
+                {item.workContent.split("\n").filter(Boolean).map((line, i) => (
+                  <li key={i} className={line.startsWith("※") ? "list-none -ml-3" : undefined}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {item.cautionNote && (
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleCaution(cautionKey)}
+              aria-expanded={!!openCautions[cautionKey]}
+              className={`${text} font-bold text-red-600 hover:underline`}
+            >
+              ⚠️ 注意事項 {openCautions[cautionKey] ? "▲" : "▼"}
+            </button>
+            {openCautions[cautionKey] && (
+              <div className={`mt-1 p-2 bg-red-50 border border-red-200 rounded ${text} text-red-700 leading-relaxed whitespace-pre-wrap`}>
+                {item.cautionNote}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const legacyOptions = (bookingData?.options || []).map(o => ({
     ...o,
     durationMin: o.durationMin || (o as any).duration || 0,
@@ -554,14 +610,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           )}
         </div>
-        {opt.comment && <p className="text-[10px] text-slate-500 ml-2 mt-0.5">💬 {opt.comment}</p>}
-        {opt.workContent && (
-          <ul className="text-[10px] text-slate-500 ml-2 mt-0.5 space-y-0.5 list-disc list-outside pl-4">
-            {opt.workContent.split("\n").filter(Boolean).map((line, i) => (
-              <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
-            ))}
-          </ul>
-        )}
+        <div className="ml-2">{renderItemDetails(`opt:${opt.id}`, opt, true)}</div>
       </div>
     );
   };
@@ -629,28 +678,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 </div>
               );
             })()}
-            {fi.comment && <p className="text-xs text-slate-500 ml-8 mt-1">💬 {fi.comment}</p>}
-            {fi.workContent && (
-              <ul className="text-xs text-slate-600 ml-8 mt-1 space-y-0.5 list-disc list-outside pl-4">
-                {fi.workContent.split("\n").filter(Boolean).map((line, i) => (
-                  <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
-                ))}
-              </ul>
-            )}
-
-            {/* 注意事項（折り畳み） */}
-            {fi.cautionNote && (
-              <div className="ml-8 mt-1">
-                <button type="button" onClick={() => toggleCaution(fi.id)} className="text-[10px] font-bold text-red-600 hover:underline">
-                  {openCautions[fi.id] ? "▲ 注意事項を閉じる" : "⚠️ 注意事項を確認"}
-                </button>
-                {openCautions[fi.id] && (
-                  <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 whitespace-pre-wrap">
-                    {fi.cautionNote}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="ml-8">{renderItemDetails(`fi:${fi.id}`, fi)}</div>
 
             {/* このfoldItem(小分類)に紐づく追加オプション（チェック時のみ表示） */}
             {checked && fiOptions.length > 0 && (
@@ -691,26 +719,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             )}
           </div>
         )}
-        {main.comment && <p className="text-xs text-slate-500">💬 {main.comment}</p>}
-        {main.workContent && (
-          <ul className="text-xs text-slate-600 space-y-0.5 list-disc list-outside pl-4">
-            {main.workContent.split("\n").filter(Boolean).map((line, i) => (
-              <li key={i} className={line.startsWith("※") ? "list-none" : undefined}>{line}</li>
-            ))}
-          </ul>
-        )}
-        {main.cautionNote && (
-          <div>
-            <button type="button" onClick={() => toggleCaution(key)} className="text-[10px] font-bold text-red-600 hover:underline">
-              {openCautions[key] ? "▲ 注意事項を閉じる" : "⚠️ 注意事項を確認"}
-            </button>
-            {openCautions[key] && (
-              <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 whitespace-pre-wrap">
-                {main.cautionNote}
-              </div>
-            )}
-          </div>
-        )}
+        {renderItemDetails(`main:${key}`, main)}
       </div>
     );
   };
@@ -1050,7 +1059,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                                       {(opt.maxQty || 0) > 1 && <span className="text-[10px] text-slate-400">最大{opt.maxQty}</span>}
                                     </div>
                                   </div>
-                                  {fi.comment && <p className="text-xs text-slate-500 ml-4 mt-1">💬 {fi.comment}</p>}
+                                  {fi.comment && <p className="text-sm font-bold text-slate-700 ml-4 mt-1">💬 {fi.comment}</p>}
                                 </div>
                               );
                             })}

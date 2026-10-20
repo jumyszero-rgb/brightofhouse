@@ -44,3 +44,24 @@ export function trackLead(type: LeadType, extra: { phoneNumber?: string; booking
     /* 記録に失敗しても画面の動作は止めない */
   }
 }
+
+/**
+ * ページ表示の記録（人気のページの集計用）。ページ×日ごとの件数だけを保存し、個人を特定する情報は送らない。
+ * 管理画面・API・プレビューは数えない。
+ */
+export function trackPageView(pathname: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (/^\/(admin|api)(\/|$)/.test(pathname)) return;
+    if (new URLSearchParams(window.location.search).has("preview")) return;
+    const t = getTrafficSource();
+    const body = JSON.stringify({ path: pathname, isAd: !!(t.gclid || t.gbraid || t.wbraid) });
+    const url = "/api/pageview";
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      if (navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))) return;
+    }
+    fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+  } catch {
+    /* 記録に失敗しても画面の動作は止めない */
+  }
+}
