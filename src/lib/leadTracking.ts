@@ -7,6 +7,16 @@
 
 export type TrafficSource = {
   gclid?: string;
+  /** iOS等で gclid の代わりに付く広告クリックID */
+  gbraid?: string;
+  wbraid?: string;
+  /** Google広告の「最終ページURLのサフィックス」 kw={keyword}&mt={matchtype}&cid={campaignid} */
+  kw?: string;
+  mt?: string;
+  cid?: string;
+  /** 広告グループID（検索 ag={adgroupid}）／アセットグループID（P-MAX asg={assetgroupid}） */
+  ag?: string;
+  asg?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -19,6 +29,8 @@ export type TrafficSource = {
 
 const KEY = "bh_traffic_source";
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+/** 広告クリックID・サフィックス（URLにあれば保存） */
+const AD_KEYS = ["gbraid", "wbraid", "kw", "mt", "cid", "ag", "asg"] as const;
 
 function externalReferrer(): string {
   try {
@@ -42,6 +54,10 @@ export function captureTrafficSource(): void {
     for (const k of UTM_KEYS) {
       const v = sp.get(k);
       if (v) picked[k] = v;
+    }
+    for (const k of AD_KEYS) {
+      const v = sp.get(k);
+      if (v) picked[k] = v.slice(0, 200);
     }
     const ref = externalReferrer();
     if (ref) picked.referrer = ref;
@@ -79,6 +95,7 @@ export function trafficSourceFields(): Record<string, string> {
   const out: Record<string, string> = {};
   if (t.gclid) out.gclid = t.gclid;
   for (const k of UTM_KEYS) if (t[k]) out[k] = t[k] as string;
+  for (const k of AD_KEYS) if (t[k]) out[k] = t[k] as string;
   if (t.landingUrl) out.landingUrl = t.landingUrl;
   // 保存が無い（sessionStorage不可など）場合も、今の参照元だけは添える
   const ref = t.referrer || externalReferrer();

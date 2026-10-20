@@ -3,6 +3,7 @@
 
 import { useEffect } from "react";
 import { captureTrafficSource } from "@/lib/leadTracking";
+import { trackLead } from "@/lib/attribution";
 
 /**
  * 全ページ共通の計測補助（layout.tsx の body に1つ置くだけ・表示なし）。
@@ -11,6 +12,7 @@ import { captureTrafficSource } from "@/lib/leadTracking";
  *     params: phone_number（実際にタップされた番号。広告経由で0800に置き換わっていれば0800）, page_path
  *  3) LINEリンク（line.me / lin.ee）のタップ → GA4 `line_click`
  *     params: link_url, page_path
+ *  4) 2)・3) は GA4 とは別に、サイトのDB（LeadEvent）にも1件ずつ記録（管理画面 /admin/lead-events で即時に見られる）
  *
  * ヘッダー・下部固定ボタン・LP（HTMLブロック含む）・サービスページなど、どこに置かれたリンクでも拾えるよう
  * document 全体でクリックを監視する（各リンクを個別に書き換える必要がない）。
@@ -37,10 +39,12 @@ export default function TrafficSourceCapture() {
       if (/^tel:/i.test(href)) {
         const phone = href.replace(/^tel:/i, "").replace(/[^0-9+]/g, "");
         send("phone_tap", { phone_number: phone });
+        trackLead("phone", { phoneNumber: phone });
         return;
       }
       if (/(^|\/\/|\.)line\.me\/|lin\.ee\//i.test(href)) {
         send("line_click", { link_url: href.slice(0, 200) });
+        trackLead("line");
       }
     };
     document.addEventListener("click", onClick, true);

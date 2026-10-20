@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import BookingCalendar from "@/components/BookingCalendar";
 import { useBooking, BookingCategory, BookingMenu, BookingSubMenu, BookingOption } from "@/hooks/useBooking";
+import { sendGenerateLead, trafficSourceFields } from "@/lib/leadTracking";
+import { trackLead } from "@/lib/attribution";
 
 type Props = {
   initialCategoryId?: string;
@@ -90,6 +92,9 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
       endTime: new Date(selectedTime.getTime() + totals.totalMinutes * 60000).toISOString(),
       totalPrice: totals.totalPrice,
       totalMinutes: totals.totalMinutes,
+      // 流入元（gclid / utm_* / 着地ページ）と送信ページ。予約の通知メールの【流入元】に載せる。
+      ...trafficSourceFields(),
+      pagePath: window.location.pathname,
     };
 
     try {
@@ -99,6 +104,11 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
         body: JSON.stringify(bookingData),
       });
       if (res.ok) {
+        // 自前の記録（管理画面 /admin/lead-events）と GA4 の generate_lead（lead_type=booking）
+        let bookingId: string | undefined;
+        try { bookingId = (await res.clone().json())?.id; } catch { /* 予約IDなしでも記録 */ }
+        trackLead("booking", { bookingId });
+        await sendGenerateLead({ lead_type: "booking", lead_source: "booking-page" });
         alert("仮予約を承りました。担当者より折り返しご連絡いたします。");
         window.location.href = "/";
       }

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendBookingNotification, sendBookingConfirmationToUser } from "@/lib/mail";
+import { resolveCampaignName, resolveAdGroupName } from "@/lib/campaignNames";
 
 // 空き枠取得 (指定カテゴリの予約済み時間を取得)
 export async function GET(request: NextRequest) {
@@ -62,6 +63,12 @@ export async function POST(request: NextRequest) {
         landingUrl: str(body.landingUrl),
         pagePath: str(body.pagePath),
         referrer: str(body.referrer),
+        gbraid: str(body.gbraid),
+        wbraid: str(body.wbraid),
+        kw: str(body.kw),
+        mt: str(body.mt),
+        campaignName: await resolveCampaignName(str(body.cid)),
+        adGroupName: await resolveAdGroupName(str(body.ag), str(body.asg)),
       },
     };
 

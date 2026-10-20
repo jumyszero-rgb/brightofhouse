@@ -1,5 +1,6 @@
 // @/src/lib/leadMail.ts
 import nodemailer from "nodemailer";
+import { matchTypeLabel } from "@/lib/leadSource";
 
 /**
  * LPの軽量リードフォーム用メール。
@@ -47,11 +48,17 @@ export type LeadData = {
   utm_content?: string;
   landingUrl?: string;
   referrer?: string; // 初回ランディング時の外部参照元
+  gbraid?: string;
+  wbraid?: string;
+  kw?: string; // キーワード（Google広告のサフィックス kw={keyword}）
+  mt?: string; // マッチタイプ e/p/b
+  campaignName?: string; // キャンペーン名（ID）
+  adGroupName?: string; // 広告グループ（P-MAXはアセットグループ）
 };
 
 /** 流入元の表示ブロックを作る */
 function sourceBlock(lead: LeadData): string {
-  const inflow = lead.gclid
+  const inflow = lead.gclid || lead.gbraid || lead.wbraid
     ? "Google広告クリック（gclidあり）"
     : (lead.utm_source || lead.utm_medium || lead.utm_campaign ? "参照元あり" : "自然流入/不明");
   const lines = [
@@ -61,6 +68,10 @@ function sourceBlock(lead: LeadData): string {
   ];
   if (lead.utm_term || lead.utm_content) {
     lines.push(`utm_term: ${lead.utm_term || "-"} / utm_content: ${lead.utm_content || "-"}`);
+  }
+  if (lead.campaignName || lead.adGroupName || lead.kw || lead.mt) {
+    lines.push(`キャンペーン: ${lead.campaignName || "-"} / キーワード: ${lead.kw || "-"} / マッチ: ${matchTypeLabel(lead.mt) || "-"}`);
+    if (lead.adGroupName) lines.push(`広告グループ: ${lead.adGroupName}`);
   }
   lines.push(`着地ページ: ${lead.landingUrl || "-"}`);
   lines.push(`参照元: ${lead.referrer || "-"}`);

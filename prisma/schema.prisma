@@ -370,6 +370,8 @@ model SiteSettings {
   calendarStartHour Int      @default(5)
   calendarEndHour   Int      @default(22)
   fontKey           String   @default("zen-maru")
+  // 問い合わせ行動の管理画面：Google広告のID → 表示名（キャンペーン・広告グループ・アセットグループ共通。{"24353055989":"ハウスクリーニング"}）
+  campaignNames     Json?
   updatedAt         DateTime @updatedAt
 }
 
@@ -576,4 +578,32 @@ model Shortcode {
   html      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// 問い合わせ行動（電話タップ・LINEタップ・フォーム送信・予約）の自前記録（2026-10-20）
+// GA4の反映待ちなしで「どこから来た人か」を管理画面 /admin/lead-events ですぐ見るため。
+// 個人情報（氏名・お客様の電話番号・IP）は保存しない。phoneNumber はタップされた当社の番号。
+model LeadEvent {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  type        String   // phone | line | form | booking
+  phoneNumber String?
+  pagePath    String
+  landingPath String?
+  referrer    String?
+  isAd        Boolean  @default(false) // gclid/gbraid/wbraid のいずれかがあれば true
+  gclid       String?
+  campaignId  String?
+  adGroupId   String?  // 広告グループID（検索キャンペーン）
+  assetGroupId String? // アセットグループID（P-MAX）
+  keyword     String?
+  matchType   String?  // e=完全一致 p=フレーズ一致 b=インテントマッチ
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmTerm     String?
+  device      String?
+  bookingId   String?
+
+  @@index([createdAt])
 }

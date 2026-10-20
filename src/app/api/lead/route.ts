@@ -5,6 +5,7 @@ import { r2Client } from "@/lib/s3";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
 import { sendLeadNotification, sendLeadConfirmationToUser, LeadData } from "@/lib/leadMail";
+import { resolveCampaignName, resolveAdGroupName } from "@/lib/campaignNames";
 
 /**
  * LPの軽量リードフォーム送信先。
@@ -73,6 +74,13 @@ export async function POST(request: NextRequest) {
       utm_content: str("utm_content"),
       landingUrl: str("landingUrl"),
       referrer: str("referrer"),
+      // 広告のクリックID（iOS等）とサフィックス（キーワード・マッチタイプ・キャンペーン）
+      gbraid: str("gbraid"),
+      wbraid: str("wbraid"),
+      kw: str("kw"),
+      mt: str("mt"),
+      campaignName: await resolveCampaignName(str("cid")),
+      adGroupName: await resolveAdGroupName(str("ag"), str("asg")),
     };
 
     // お客様への自動返信を先に“待って”送り、結果を管理者通知に載せる。

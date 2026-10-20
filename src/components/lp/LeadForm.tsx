@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { BRAND } from "@/lib/lpContent";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
+import { trackLead } from "@/lib/attribution";
 
 const TIMING_OPTIONS = [
   "なるべく早く",
@@ -101,6 +102,7 @@ export default function LeadForm({
       if (!res.ok) throw new Error();
       // 送信成功のレスポンスを受けた時点で generate_lead を1回だけ送る（サンキューページの表示には頼らない）。
       // 送信が終わる（最大1.2秒）のを待ってからサンキューページへ移動する。
+      trackLead("form"); // 自前の記録（管理画面 /admin/lead-events）
       await sendGenerateLead({ lead_type: "form", lead_source: source });
       window.location.href = `/lp/thank-you?from=${encodeURIComponent(source)}`;
     } catch {

@@ -6,6 +6,7 @@ import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } f
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
+import { trackLead } from "@/lib/attribution";
 
 type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
 
@@ -472,6 +473,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       });
 
       if (res.ok) {
+        // 自前の記録（管理画面 /admin/lead-events）。予約IDも添える
+        let bookingId: string | undefined;
+        try { bookingId = (await res.clone().json())?.id; } catch { /* 予約IDなしでも記録 */ }
+        trackLead("booking", { bookingId });
         // 送信成功のレスポンスを受けた時点で generate_lead（lead_type=booking）を1回だけ送る。
         // （サンキューページの表示には頼らない。送信完了を最大1.2秒待ってから移動）
         if (!leadSentRef.current) {

@@ -1,5 +1,6 @@
 // @/src/lib/mail.ts
 import nodemailer from "nodemailer";
+import { matchTypeLabel } from "@/lib/leadSource";
 
 function createTransporter() {
   const SMTP_HOST = process.env.SMTP_HOST;
@@ -41,12 +42,18 @@ type BookingSource = {
   landingUrl?: string;
   pagePath?: string;
   referrer?: string;
+  gbraid?: string;
+  wbraid?: string;
+  kw?: string;
+  mt?: string;
+  campaignName?: string;
+  adGroupName?: string; // 広告グループ（P-MAXはアセットグループ）
 };
 
 /** 予約通知用の【流入元】ブロック（LPお問い合わせの通知と同じ書式） */
 function bookingSourceBlock(src: BookingSource | undefined): string {
   const s = src || {};
-  const inflow = s.gclid
+  const inflow = s.gclid || s.gbraid || s.wbraid
     ? "Google広告クリック（gclidあり）"
     : (s.utm_source || s.utm_medium || s.utm_campaign ? "参照元あり" : "自然流入/不明");
   const lines = [
@@ -56,6 +63,10 @@ function bookingSourceBlock(src: BookingSource | undefined): string {
   ];
   if (s.utm_term || s.utm_content) {
     lines.push(`utm_term: ${s.utm_term || "-"} / utm_content: ${s.utm_content || "-"}`);
+  }
+  if (s.campaignName || s.adGroupName || s.kw || s.mt) {
+    lines.push(`キャンペーン: ${s.campaignName || "-"} / キーワード: ${s.kw || "-"} / マッチ: ${matchTypeLabel(s.mt) || "-"}`);
+    if (s.adGroupName) lines.push(`広告グループ: ${s.adGroupName}`);
   }
   lines.push(`着地ページ: ${s.landingUrl || "-"}`);
   lines.push(`参照元: ${s.referrer || "-"}`);
