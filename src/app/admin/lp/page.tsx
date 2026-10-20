@@ -52,54 +52,19 @@ export default function AdminLPList() {
 
   const [duplicating, setDuplicating] = useState<string | null>(null);
   const handleDuplicate = async (lp: any) => {
-    if (!confirm(`「${lp.title}」を複製しますか？`)) return;
+    if (!confirm(`「${lp.title}」を複製しますか？\n（下書き・検索に出さない状態でコピーされます）`)) return;
     setDuplicating(lp.id);
     try {
-      const res = await fetch(`/api/lp?id=${lp.id}`);
-      const data = await res.json();
-
-      const form = new FormData();
-      form.set("slug", `${data.slug}-copy-${Date.now().toString().slice(-5)}`);
-      form.set("title", `${data.title}（コピー）`);
-      form.set("linkTitle", data.linkTitle || "");
-      form.set("status", "DRAFT");
-      form.set("category", data.category || "CAMPAIGN");
-      form.set("showOnHome", "false");
-      form.set("catchphrase", data.catchphrase || "");
-      form.set("subCopy", data.subCopy || "");
-      form.set("content", data.content || "");
-      form.set("ctaText", data.ctaText || "");
-      form.set("ctaLink", data.ctaLink || "");
-      form.set("metaKeywords", data.metaKeywords || "");
-      form.set("metaDescription", data.metaDescription || "");
-      form.set("showBottomCta", String(data.showBottomCta !== false));
-      form.set("noIndex", "true");
-      form.set("canonicalUrl", "");
-      form.set("existingHeroImage", data.heroImage || "");
-      form.set("bookingMenuIds", JSON.stringify((data.bookingMenus || []).map((m: any) => m.id)));
-      form.set("bookingCategoryIds", JSON.stringify((data.bookingCategories || []).map((c: any) => c.id)));
-      form.set("bookingData", data.bookingData ? JSON.stringify(data.bookingData) : "");
-      form.set("templateStyle", data.templateStyle || "SIMPLE");
-      form.set("heroEyebrow", data.heroEyebrow || "");
-      form.set("heroSubtitle", data.heroSubtitle || "");
-      form.set("heroPriceLead", data.heroPriceLead || "");
-      form.set("serviceLabel", data.serviceLabel || "");
-      form.set("menuIntro", data.menuIntro || "");
-      form.set("campaignBadge", data.campaignBadge || "");
-      form.set("setNote", data.setNote || "");
-      form.set("pains", JSON.stringify(data.pains || []));
-      form.set("menuItems", JSON.stringify(data.menuItems || []));
-      form.set("menuOptions", JSON.stringify(data.menuOptions || []));
-      form.set("baseWork", JSON.stringify(data.baseWork || []));
-      form.set("recommended", JSON.stringify(data.recommended || []));
-      form.set("reasons", JSON.stringify(data.reasons || []));
-      form.set("faqItems", JSON.stringify(data.faqItems || []));
-      form.set("voices", JSON.stringify(data.voices || []));
-      form.set("beforeAfterIds", JSON.stringify((data.beforeAfters || []).map((b: any) => b.id)));
-
-      const createRes = await fetch("/api/lp", { method: "POST", body: form });
-      if (!createRes.ok) throw new Error("複製に失敗しました");
+      // サーバー側で丸ごとコピー（ブロックLPのブロック・予約マスター連動・口コミ／FAQ連動・施工事例なども全部）
+      const res = await fetch("/api/lp/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: lp.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "複製に失敗しました");
       await fetchLPs();
+      alert(`複製しました：${data.title}\nURL：/lp/${data.slug}（下書き）`);
     } catch (e: any) {
       alert(e.message || "複製に失敗しました");
     } finally {
