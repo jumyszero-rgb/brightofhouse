@@ -1,14 +1,15 @@
 // @/src/components/booking/ServicePageBooking.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
 import { trackLead } from "@/lib/attribution";
 
-type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount };
+// parentFoldItemId：ぶら下げた中分類の下の小分類など「項目の中の項目」。親にチェックが入っているときだけ表示・計算する
+type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount; parentFoldItemId?: string; groupOnly?: boolean };
 
 type DiscountRule = { count: number; value: number };
 type QtyDiscount = { enabled: boolean; rules: DiscountRule[]; rounding?: RoundingMode };
@@ -227,7 +228,20 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   };
 
   const toggleFoldItem = (id: string) => {
-    setSelectedFoldItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedFoldItemIds(prev => {
+      if (!prev.includes(id)) return [...prev, id];
+      // 外すときは、その中の項目（ぶら下げた中分類の小分類など）も一緒に外す
+      const all = mains.flatMap(m => m.foldItems || []);
+      const drop = new Set<string>([id]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const fi of all) {
+          if (fi.parentFoldItemId && drop.has(fi.parentFoldItemId) && !drop.has(fi.id)) { drop.add(fi.id); grew = true; }
+        }
+      }
+      return prev.filter(x => !drop.has(x));
+    });
   };
 
   // main自体(基本料金)を単独で選択できるか（折り畳みが無いか、小分類が「追加項目」の場合）
@@ -242,7 +256,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   // セット値引き計算（中分類内での小分類選択個数に応じた値引き）
   const calcSetDiscount = (main: MainService, idx: number): number => {
     if (!main.setDiscount?.enabled || !main.foldItems || !isFoldActive(main, idx)) return 0;
-    const selectedCount = main.foldItems.filter(fi => selectedFoldItemIds.includes(fi.id)).length;
+    // 「開くための見出し」（基本料金0円のぶら下げ中分類）は点数に数えない
+    const selectedCount = main.foldItems.filter(fi => selectedFoldItemIds.includes(fi.id) && !fi.groupOnly).length;
     if (selectedCount < 2) return 0;
 
     const rules = [...(main.setDiscount.rules || [])].sort((a, b) => b.count - a.count);
@@ -421,7 +436,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       else if (m.foldTitle) lines.push({ indent: 0, title: m.foldTitle || m.title });
       activeFolds.forEach(fi => {
         const fq = getUnitQty(fi.id, fi.maxQty);
-        lines.push({ indent: 1, title: fi.title, qty: fq > 1 ? fq : undefined, price: fi.price });
+        lines.push({ indent: fi.parentFoldItemId ? 2 : 1, title: fi.title, qty: fq > 1 ? fq : undefined, price: fi.groupOnly ? undefined : fi.price });
         (m.options || [])
           .filter(o => o.parentFoldItemId === fi.id && getQty(o.id) > 0 && isOptionActive(m, idx, o))
           .forEach(o => lines.push({ indent: 2, title: o.title, qty: getQty(o.id), price: o.price }));
@@ -629,10 +644,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   // 小分類(foldItem)一覧の描画。中分類チェックで展開される場合・手入力の折り畳みグループの
   // どちらからも共用する。各小分類はさらに紐づく追加オプションをネストして表示する。
-  const renderFoldItemsList = (main: MainService) => (
-    <>
-      {(main.foldItems || []).map(fi => {
+  const renderFoldItemsList = (main: MainService) => {
+    const renderFoldItem = (fi: FoldItem): ReactNode => {
         const checked = selectedFoldItemIds.includes(fi.id);
+        // この項目の中の項目（ぶら下げた中分類の小分類など）。チェックしたときだけ開く
+        const children = (main.foldItems || []).filter(c => c.parentFoldItemId === fi.id);
         const fiOptions = (main.options || []).filter(o => o.parentFoldItemId === fi.id);
         return (
           <div key={fi.id}>
@@ -687,11 +703,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 {fiOptions.map(opt => renderOptionRow(opt))}
               </div>
             )}
+
+            {/* この項目の中の項目（ぶら下げた中分類の小分類など・チェック時のみ表示） */}
+            {checked && children.length > 0 && (
+              <div className="ml-6 mt-2 mb-2 pl-3 border-l-4 border-blue-200 space-y-2">
+                <p className="text-[10px] font-bold text-blue-600">┗ 追加できる項目</p>
+                {children.map(c => renderFoldItem(c))}
+              </div>
+            )}
           </div>
         );
-      })}
-    </>
-  );
+    };
+    return <>{(main.foldItems || []).filter(fi => !fi.parentFoldItemId).map(fi => renderFoldItem(fi))}</>;
+  };
 
   // 中分類(main)のおすすめ・作業内容・注意事項の描画。3種のrenderMain分岐すべてから共用する。
   // チェック済み(選択中)の場合のみ呼び出す想定 — タイトル行とは別の余白を確保したブロックとして表示する。
@@ -734,7 +758,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     const hasDirectOptions = !!main.options && main.options.some(o => !o.parentFoldItemId);
     if (main.hasBaseSelection && (hasFoldItems || hasDirectOptions)) {
       const checked = selectedMains.includes(idx);
-      const selectedInThisMain = (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id));
+      const selectedInThisMain = (main.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id) && !fi.groupOnly);
       const discount = calcSetDiscount(main, idx);
       return (
         <div key={main.id || `main-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden">

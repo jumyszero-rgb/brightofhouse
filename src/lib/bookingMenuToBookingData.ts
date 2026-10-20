@@ -72,6 +72,9 @@ type AttachSource = {
   priceFrom?: boolean;
   basePrice?: number;
   price?: number;
+  // 中分類をぶら下げたときに一緒に付いてくる小分類・オプション
+  subMenus?: (AttachSource & { order?: number; options?: BookingOptionForMenu[] })[];
+  options?: BookingOptionForMenu[];
 };
 type BookingAttachmentForConvert = {
   id: string;
@@ -181,27 +184,48 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
   const directOptions = menu.options || [];
   const hasDirectOptions = directOptions.length > 0;
   // ぶら下げた項目（元の項目の名前・価格・説明をそのまま使う）。小分類の後ろに「追加できる項目」として並べる。
-  //  id は「att:ぶら下げID」にする（同じ項目を別の中分類にもぶら下げたとき、選択が連動しないように）。
-  const attachedItems = (menu.attachments || [])
-    .map((a) => {
-      const src = a.refSubMenu || a.refMenu;
-      if (!src) return null;
-      const base = a.refSubMenu ? (a.refSubMenu.price ?? 0) : (a.refMenu?.basePrice ?? 0);
-      return {
-        id: `att:${a.id}`,
-        title: src.title,
-        ...resolvePrice(base, src.webSpecialPrice, src.discountPercent, src.discountRounding),
-        from: !!src.priceFrom,
-        durationMin: src.durationMin,
-        durationMax: src.durationMax ?? src.durationMin,
-        workContent: src.workContent || "",
-        comment: src.recommendPoint || "",
-        cautionNote: src.cautionNote || "",
-        maxQty: src.maxQty ?? undefined,
-        qtyDiscount: (src.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => !!x);
+  //  - 小分類をぶら下げた → 1項目（その小分類のオプションは、チェック時に開くオプション）
+  //  - 中分類をぶら下げた → その中分類が1項目になり、チェックすると下にその小分類が開く（位置だけが変わり、中身はそのまま）
+  //    中分類直下のオプション・小分類のオプションも、それぞれの下に付いてくる
+  //  id は「att:ぶら下げID(:元のID)」にする（同じ項目を別の中分類にもぶら下げたとき、選択が連動しないように）。
+  const toFold = (src: AttachSource, id: string, base: number, parentFoldItemId?: string, groupOnly = false) => ({
+    id,
+    title: src.title,
+    ...resolvePrice(base, src.webSpecialPrice, src.discountPercent, src.discountRounding),
+    from: !!src.priceFrom,
+    // 基本料金0円で小分類を持つ中分類は「開くための見出し」なので、時間も足さない
+    durationMin: groupOnly ? 0 : src.durationMin,
+    durationMax: groupOnly ? 0 : (src.durationMax ?? src.durationMin),
+    workContent: src.workContent || "",
+    comment: src.recommendPoint || "",
+    cautionNote: src.cautionNote || "",
+    maxQty: groupOnly ? undefined : (src.maxQty ?? undefined),
+    qtyDiscount: groupOnly ? undefined : ((src.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined),
+    ...(parentFoldItemId ? { parentFoldItemId } : {}),
+    ...(groupOnly ? { groupOnly: true } : {}),
+  });
+  const attachedItems: ReturnType<typeof toFold>[] = [];
+  const attachedOptions: ReturnType<typeof mapOption>[] = [];
+  const optWithId = (o: BookingOptionForMenu, newId: string, parentId: string) => ({ ...mapOption(o, parentId), id: newId });
+  for (const a of menu.attachments || []) {
+    if (a.refSubMenu) {
+      const sid = `att:${a.id}`;
+      attachedItems.push(toFold(a.refSubMenu, sid, a.refSubMenu.price ?? 0));
+      for (const o of byOrder(a.refSubMenu.options || [])) attachedOptions.push(optWithId(o, `${sid}:o:${o.id}`, sid));
+    } else if (a.refMenu) {
+      const m = a.refMenu;
+      const pid = `att:${a.id}`;
+      const subs = byOrder(m.subMenus || []);
+      const groupOnly = !m.basePrice && m.webSpecialPrice == null && subs.length > 0;
+      attachedItems.push(toFold(m, pid, m.basePrice ?? 0, undefined, groupOnly));
+      for (const o of byOrder(m.options || [])) attachedOptions.push(optWithId(o, `${pid}:o:${o.id}`, pid));
+      for (const sm of subs) {
+        const cid = `${pid}:${sm.id}`;
+        attachedItems.push(toFold(sm, cid, sm.price ?? 0, pid));
+        for (const o of byOrder(sm.options || [])) attachedOptions.push(optWithId(o, `${cid}:o:${o.id}`, cid));
+      }
+    }
+  }
   const hasFoldItems = hasSubMenus || attachedItems.length > 0;
   const mainPricing = resolvePrice(menu.basePrice, menu.webSpecialPrice, menu.discountPercent, menu.discountRounding);
 
@@ -243,6 +267,7 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
     options: [
       ...(hasSubMenus ? byOrder(menu.subMenus).flatMap((sm) => byOrder(sm.options).map((o) => mapOption(o, sm.id))) : []),
       ...byOrder(directOptions).map((o) => mapOption(o)),
+      ...attachedOptions,
     ],
     setDiscount,
     groupId: group?.id,

@@ -201,7 +201,11 @@ function AttachmentsEditor({ menu, categories, onChanged }: { menu: BookingMenu;
     for (const c of categories) {
       for (const m of c.menus) {
         if (a.refMenuId && m.id === a.refMenuId) {
-          return { label: `${c.title} ＞ ${m.title}（中分類）`, price: m.webSpecialPrice ?? m.basePrice, hiddenSrc: m.showOnCalendar === false };
+          return {
+            label: `${c.title} ＞ ${m.title}（中分類${m.subMenus.length ? `・小分類${m.subMenus.length}件も一緒に` : ""}）`,
+            price: m.webSpecialPrice ?? m.basePrice,
+            hiddenSrc: m.showOnCalendar === false,
+          };
         }
         const sm = a.refSubMenuId ? m.subMenus.find((x) => x.id === a.refSubMenuId) : undefined;
         if (sm) return { label: `${c.title} ＞ ${m.title} ＞ ${sm.title}`, price: sm.webSpecialPrice ?? sm.price, hiddenSrc: m.showOnCalendar === false };
@@ -245,7 +249,8 @@ function AttachmentsEditor({ menu, categories, onChanged }: { menu: BookingMenu;
         <p className="text-[11px] text-slate-600 leading-relaxed">
           ほかの大分類の中分類・小分類を、この中分類の「追加できる項目」として予約フォームに出します（小分類の後ろに並びます）。
           名前・価格・作業内容などは<b>元の項目のもの</b>がそのまま出ます（元を直せば反映）。元の中分類が「カレンダーに表示」オフでも、ここでは表示されます。
-          値引き（まとめ割・セット値引き）はこの中分類のルールで計算します。ぶら下げた中分類の小分類・オプションは出ません（必要なものは小分類を個別にぶら下げてください）。
+          <b>中分類をぶら下げると、その小分類・オプションも一緒に付いてきます</b>（予約フォームではその中分類にチェックすると下に開きます。位置が変わるだけで中身はそのまま）。
+          基本料金0円の中分類は「開くための見出し」になり、金額・時間・点数には数えません。値引き（セット値引きなど）はこの中分類のルールで計算します。
         </p>
         {list.length > 0 ? (
           <ul className="space-y-1">
@@ -286,7 +291,7 @@ function AttachmentsEditor({ menu, categories, onChanged }: { menu: BookingMenu;
         </div>
         {src && (
           <div className="bg-white border rounded divide-y">
-            {[{ key: `m:${src.id}`, label: `${src.title}（中分類そのもの）`, price: src.webSpecialPrice ?? src.basePrice, ref: { refMenuId: src.id } },
+            {[{ key: `m:${src.id}`, label: `${src.title}（中分類ごと${src.subMenus.length ? `・小分類${src.subMenus.length}件も一緒に` : ""}）`, price: src.webSpecialPrice ?? src.basePrice, ref: { refMenuId: src.id } },
               ...src.subMenus.map((sm) => ({ key: `s:${sm.id}`, label: `${sm.title}（小分類）`, price: sm.webSpecialPrice ?? sm.price, ref: { refSubMenuId: sm.id } }))
             ].map((row) => (
               <div key={row.key} className="flex items-center gap-2 px-2 py-1.5 text-xs">

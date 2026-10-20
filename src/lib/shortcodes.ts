@@ -61,7 +61,7 @@ export type PmSub = PriceFields & { price: number; webSpecialPrice: number | nul
 /** ぶら下げた項目（ほかの中分類・小分類への参照）。料金表では小分類の後ろに並べる */
 export type PmAttachment = {
   id: string;
-  refMenu: (PriceFields & { basePrice: number; webSpecialPrice: number | null }) | null;
+  refMenu: (PriceFields & { basePrice: number; webSpecialPrice: number | null; subMenus: (PriceFields & { price: number; webSpecialPrice: number | null })[] }) | null;
   refSubMenu: (PriceFields & { price: number; webSpecialPrice: number | null }) | null;
 };
 export type PmMenu = PriceFields & { basePrice: number; webSpecialPrice: number | null; showOnCalendar: boolean; subMenus: PmSub[]; options: PmOption[]; attachments: PmAttachment[] };
@@ -124,7 +124,15 @@ export async function getPriceMaster(opts?: { fresh?: boolean }): Promise<PmCate
                   orderBy: { order: "asc" },
                   select: {
                     id: true,
-                    refMenu: { select: { ...priceSelect, basePrice: true, webSpecialPrice: true } },
+                    refMenu: {
+                      select: {
+                        ...priceSelect,
+                        basePrice: true,
+                        webSpecialPrice: true,
+                        // 中分類をぶら下げたときは、その小分類も一緒に出す
+                        subMenus: { orderBy: { order: "asc" }, select: { ...priceSelect, price: true, webSpecialPrice: true } },
+                      },
+                    },
                     refSubMenu: { select: { ...priceSelect, price: true, webSpecialPrice: true } },
                   },
                 },
@@ -216,8 +224,8 @@ const TH = "padding:.5em .7em;border-bottom:2px solid #cbd5e1;background:#f8fafc
 /**
  * 表の1行。level="menu"（中分類の基本料金）は大きめ・太字、level="sub"（小分類）は一回り小さく字下げ。
  */
-function row(name: string, sub: string, p: Price, level: "menu" | "sub"): string {
-  const isSub = level === "sub";
+function row(name: string, sub: string, p: Price, level: "menu" | "sub" | "sub2"): string {
+  const isSub = level !== "menu";
   const nameStyle = isSub ? "font-weight:600;color:#334155;font-size:.9em;" : "font-weight:800;color:#0f172a;font-size:1em;";
   const priceSize = isSub ? ".95em" : "1.1em";
   const priceCell = p.estimate
@@ -225,7 +233,7 @@ function row(name: string, sub: string, p: Price, level: "menu" | "sub"): string
     : `${p.original != null && p.original !== p.price ? `<s style="color:#94a3b8;font-size:.8em">${yen(p.original)}</s><br>` : ""}<span style="font-weight:800;color:#dc2626;font-size:${priceSize}">${yen(p.price)}${p.from ? "〜" : ""}</span>`;
   return (
     `<tr>` +
-    `<td style="${TD}word-break:break-word;overflow-wrap:anywhere;${isSub ? "padding-left:1.4em;" : ""}">` +
+    `<td style="${TD}word-break:break-word;overflow-wrap:anywhere;${level === "sub2" ? "padding-left:2.6em;" : isSub ? "padding-left:1.4em;" : ""}">` +
     (isSub ? `<span style="color:#94a3b8;font-size:.85em;margin-left:-.9em;margin-right:.2em;">└</span>` : "") +
     `<span style="${nameStyle}">${esc(name)}</span>` +
     (sub ? `<br><span style="font-size:.75em;color:#64748b">${esc(sub)}</span>` : "") +
@@ -251,10 +259,20 @@ function menuListHtml(m: PmMenu): string {
   }
   // ぶら下げた項目（予約フォームと同じく小分類の後ろ。元の項目の名前・価格）
   for (const a of m.attachments || []) {
-    const src = a.refSubMenu || a.refMenu;
-    if (!src) continue;
-    const base = a.refSubMenu ? a.refSubMenu.price : a.refMenu!.basePrice;
-    rows.push(row(src.title, durationText(src.durationMin, src.durationMax), priceOf(src, base, src.webSpecialPrice), "sub"));
+    if (a.refSubMenu) {
+      const s = a.refSubMenu;
+      rows.push(row(s.title, durationText(s.durationMin, s.durationMax), priceOf(s, s.price, s.webSpecialPrice), "sub"));
+    } else if (a.refMenu) {
+      // 中分類をぶら下げた：中分類の行（基本料金0円なら名前だけの見出し行）→ その小分類
+      const am = a.refMenu;
+      const subs = am.subMenus || [];
+      if (!am.basePrice && am.webSpecialPrice == null && subs.length) {
+        rows.push(`<tr><td colspan="2" style="${TD}padding-left:1.4em;font-weight:700;color:#334155;font-size:.9em;"><span style="color:#94a3b8;font-size:.85em;margin-left:-.9em;margin-right:.2em;">└</span>${esc(am.title)}</td></tr>`);
+      } else {
+        rows.push(row(am.title, durationText(am.durationMin, am.durationMax), priceOf(am, am.basePrice, am.webSpecialPrice), "sub"));
+      }
+      for (const s of subs) rows.push(row(s.title, durationText(s.durationMin, s.durationMax), priceOf(s, s.price, s.webSpecialPrice), "sub2"));
+    }
   }
   if (!rows.length) return "";
   return (
