@@ -12,7 +12,7 @@ import { bookingSelectionToBookingData, resolvePrice } from "@/lib/bookingMenuTo
 import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
 import LpBlocksRenderer from "@/components/lp/LpBlocksRenderer";
-import { getShortcodeMap, applyShortcodes } from "@/lib/shortcodes";
+import { getShortcodeContext, applyShortcodesWith } from "@/lib/shortcodes";
 
 const PHONE = "0120-792-684";
 const LINE_URL = "https://line.me/ti/p/RBwKccvQ1O";
@@ -69,14 +69,23 @@ export default async function LandingPageView({
     );
   }
 
+  // SIMPLE / HTML の本文のショートコード展開（置き換え結果ごと作り置き）
+  const contentKey = `lp:content:${lp.id}:${lp.updatedAt ? new Date(lp.updatedAt).getTime() : 0}`;
+  const expandContent = async (): Promise<string> => {
+    const raw: string = lp.content || "";
+    if (!raw.includes("[[")) return raw;
+    return memo(contentKey, async () => applyShortcodesWith(raw, await getShortcodeContext({ preview: isPreview })), { fresh: isPreview });
+  };
+
   // ===== HTML（1枚もの全面表示。オレンジ帯ヒーロー・白カード枠なし） =====
   if (lp.templateStyle === "HTML") {
+    const content = await expandContent();
     return (
       <>
         {isPreview && <PreviewBanner />}
         <div
           className="lp-fullhtml"
-          dangerouslySetInnerHTML={{ __html: lp.content || "" }}
+          dangerouslySetInnerHTML={{ __html: content }}
         />
       </>
     );
@@ -165,27 +174,36 @@ export default async function LandingPageView({
         });
       }
     }
-    // 本文中の [[key]] ショートコードを展開（richText本文 / blocknote HTML）
-    const scMap = await getShortcodeMap();
-    const renderBlocks = rawBlocks.map((b: any) => {
-      if (b?.type === "richText" && b?.data?.body) {
-        return { ...b, data: { ...b.data, body: applyShortcodes(b.data.body, scMap) } };
-      }
-      if (b?.type === "blocknote" && b?.data?.html) {
-        return { ...b, data: { ...b.data, html: applyShortcodes(b.data.html, scMap) } };
-      }
-      if (b?.type === "masterMenu" && (b?.data?.introHtml || b?.data?.outroHtml)) {
-        return {
-          ...b,
-          data: {
-            ...b.data,
-            introHtml: b.data.introHtml ? applyShortcodes(b.data.introHtml, scMap) : "",
-            outroHtml: b.data.outroHtml ? applyShortcodes(b.data.outroHtml, scMap) : "",
-          },
-        };
-      }
-      return b;
-    });
+    // 本文中のショートコード（[[key]] と予約マスターの料金 [[price:…]] [[menu-list:…]] [[category-list:…]]）を展開。
+    // 置き換え結果もこのLPの作り置きに入れる（ページを開くたびに置き換えない）。
+    // LP・予約マスター・ショートコードを admin で保存すると bustServerMemo で消え、次の表示で作り直す。
+    const renderBlocks: any[] = await memo(`${memoKey}:render`, async () => {
+      if (!rawBlocks.some((b) => JSON.stringify(b?.data ?? "").includes("[["))) return rawBlocks;
+      const sc = await getShortcodeContext({ preview: isPreview });
+      const ap = (h: unknown) => (typeof h === "string" && h ? applyShortcodesWith(h, sc) : h);
+      return rawBlocks.map((b: any) => {
+        const d = b?.data;
+        if (!d) return b;
+        switch (b.type) {
+          case "richText":
+            return d.body ? { ...b, data: { ...d, body: ap(d.body) } } : b;
+          case "blocknote":
+          case "html":
+            return d.html ? { ...b, data: { ...d, html: ap(d.html) } } : b;
+          case "masterMenu":
+            return d.introHtml || d.outroHtml ? { ...b, data: { ...d, introHtml: ap(d.introHtml || ""), outroHtml: ap(d.outroHtml || "") } } : b;
+          case "seasonal": {
+            const entries = d.entries && typeof d.entries === "object" ? d.entries : null;
+            if (!entries) return b;
+            const next: Record<string, any> = {};
+            for (const [k, e] of Object.entries(entries as Record<string, any>)) next[k] = e && e.body ? { ...e, body: ap(e.body) } : e;
+            return { ...b, data: { ...d, entries: next } };
+          }
+          default:
+            return b;
+        }
+      });
+    }, { fresh: isPreview });
     return (
       <>
         {isPreview && <PreviewBanner />}
@@ -195,6 +213,7 @@ export default async function LandingPageView({
   }
 
   // ===== SIMPLE（本文＋CTA・従来のオレンジ帯ヒーロー＋白カード） =====
+  const simpleContent = await expandContent();
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-black">
       {isPreview && <PreviewBanner />}
@@ -244,10 +263,10 @@ export default async function LandingPageView({
       {/* メインコンテンツ */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-12 border border-slate-200">
-          {lp.content && (
+          {simpleContent && (
             <div
               className="ql-content prose prose-slate prose-base md:prose-xl max-w-none text-slate-700 mb-16 leading-loose"
-              dangerouslySetInnerHTML={{ __html: lp.content }}
+              dangerouslySetInnerHTML={{ __html: simpleContent }}
             />
           )}
 

@@ -417,7 +417,10 @@ export default function AdminBookingMasterPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">予約システム専用 メニュー管理 (4階層)</h1>
-          <Link href="/admin" className="text-sm text-gray-500 hover:underline">← ダッシュボードへ戻る</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/shortcodes/prices" className="text-sm font-bold text-blue-600 hover:underline">💴 料金ショートコード一覧</Link>
+            <Link href="/admin" className="text-sm text-gray-500 hover:underline">← ダッシュボードへ戻る</Link>
+          </div>
         </div>
 
         {loading && <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center"><div className="bg-white p-4 rounded shadow font-bold">処理中...</div></div>}

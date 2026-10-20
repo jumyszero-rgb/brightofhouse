@@ -51,10 +51,16 @@ function load<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p;
 }
 
-export async function memo<T>(key: string, fn: () => Promise<T>, opts?: { fresh?: boolean }): Promise<T> {
+/**
+ * opts.fresh   … 作り置きを使わず常にDBから（プレビュー用）
+ * opts.persist … 時間で古くしない。admin で保存したとき（bustServerMemo）だけ入れ替える。
+ *                予約マスターの価格（ショートコード用）のように「admin以外では変わらない」データ向け。
+ */
+export async function memo<T>(key: string, fn: () => Promise<T>, opts?: { fresh?: boolean; persist?: boolean }): Promise<T> {
   if (opts?.fresh) return fn();
   const e = store.get(key);
   const now = Date.now();
+  if (e?.has && opts?.persist) return clone(e.value as T);
   if (e?.has) {
     const age = now - e.at;
     if (age < FRESH_MS) return clone(e.value as T);
