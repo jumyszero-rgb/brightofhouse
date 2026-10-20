@@ -1,4 +1,5 @@
 // @/src/app/service/[slug]/page.tsx
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import { notFound, permanentRedirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import type { Metadata } from "next";
@@ -56,13 +57,8 @@ export default async function ServiceDetailPage({
   const { preview } = await searchParams;
   const isPreview = preview === "true";
 
-  const subMenusInclude = {
-    subMenus: {
-      include: { options: { orderBy: { order: "asc" as const } } },
-      orderBy: { order: "asc" as const },
-    },
-    options: { orderBy: { order: "asc" as const } },
-  } as const;
+  // 小分類・オプション・ぶら下げた項目（共通の include）
+  const subMenusInclude = bookingMenuCalendarInclude;
 
   const serviceItemInclude = {
     serviceItem: { include: { details: true, options: true } },

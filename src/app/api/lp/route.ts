@@ -1,4 +1,5 @@
 // @/src/app/api/lp/route.ts
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import { NextRequest, NextResponse } from "next/server";
 import { bustServerMemo } from "@/lib/serverMemo";
 import prisma from "@/lib/prisma";
@@ -79,12 +80,7 @@ export async function GET(request: NextRequest) {
 
   try {
     if (id) {
-      const subMenusInclude = {
-        subMenus: {
-          include: { options: { orderBy: { order: "asc" as const } } },
-          orderBy: { order: "asc" as const },
-        },
-      };
+      const subMenusInclude = bookingMenuCalendarInclude; // 小分類・オプション・ぶら下げた項目
       const lp = await prisma.landingPage.findUnique({
         where: { id },
         include: {

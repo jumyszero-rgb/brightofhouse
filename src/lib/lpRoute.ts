@@ -1,16 +1,12 @@
 // @/src/lib/lpRoute.ts
 // 固定URLのLPルート（house / akishitsu / kouatsu / mizumawari(set)）で共通して使う
 // DB(LandingPage)取得ヘルパー。RICH/BLOCKS描画に必要な関連を全部includeする。
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import prisma from "@/lib/prisma";
 import { memo } from "@/lib/serverMemo";
 
-const subMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-  options: { orderBy: { order: "asc" as const } },
-} as const;
+// 小分類・オプション・ぶら下げた項目（共通の include）
+const subMenusInclude = bookingMenuCalendarInclude;
 
 export const lpRouteInclude = {
   bookingMenus: { include: subMenusInclude },

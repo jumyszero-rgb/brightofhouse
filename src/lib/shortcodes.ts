@@ -11,6 +11,7 @@
 //    末尾に :both を付けると、通常価格がある項目は「<s>9,800円</s> 6,600円」
 //    [[menu-list:中分類ID]]           → 中分類名の見出し＋料金表（内容／価格）
 //    [[category-list:大分類ID]]       → 大分類の中の中分類ごとに、見出し＋料金表
+//    [[info:menu:中分類ID:recommend]] → おすすめ（work＝作業内容、notes＝注意事項）。sub / option も同じ形
 //
 //  - 金額は予約マスターの作り置き（serverMemo・persist）から読む。表示のたびにDBへは問い合わせない。
 //    予約マスターを保存したとき（bustServerMemo）だけ入れ替わる。LP本文には金額を保存しない。
@@ -50,10 +51,20 @@ type PriceFields = {
   discountRounding: string;
   priceFrom: boolean;
   order: number;
+  // おすすめ・作業内容・注意事項（[[info:…]] 用。カレンダー予約フォームと同じ項目）
+  recommendPoint: string | null;
+  workContent: string | null;
+  cautionNote: string | null;
 };
 export type PmOption = PriceFields & { price: number };
 export type PmSub = PriceFields & { price: number; webSpecialPrice: number | null; options: PmOption[] };
-export type PmMenu = PriceFields & { basePrice: number; webSpecialPrice: number | null; subMenus: PmSub[]; options: PmOption[] };
+/** ぶら下げた項目（ほかの中分類・小分類への参照）。料金表では小分類の後ろに並べる */
+export type PmAttachment = {
+  id: string;
+  refMenu: (PriceFields & { basePrice: number; webSpecialPrice: number | null }) | null;
+  refSubMenu: (PriceFields & { price: number; webSpecialPrice: number | null }) | null;
+};
+export type PmMenu = PriceFields & { basePrice: number; webSpecialPrice: number | null; showOnCalendar: boolean; subMenus: PmSub[]; options: PmOption[]; attachments: PmAttachment[] };
 export type PmCategory = { id: string; title: string; order: number; menus: PmMenu[] };
 
 /** ショートコード置き換え用の予約マスター（索引つき） */
@@ -62,6 +73,8 @@ export type PriceIndex = {
   menus: Map<string, PmMenu>;
   subs: Map<string, PmSub>;
   options: Map<string, PmOption>;
+  /** カレンダー非表示の中分類と、その配下の小分類・オプションのID */
+  hidden: Set<string>;
 };
 
 const priceSelect = {
@@ -73,6 +86,9 @@ const priceSelect = {
   discountRounding: true,
   priceFrom: true,
   order: true,
+  recommendPoint: true,
+  workContent: true,
+  cautionNote: true,
 } as const;
 
 /** 予約マスター全体（料金表示に必要な項目だけ）。作り置きは予約マスター保存時にだけ入れ替わる */
@@ -93,6 +109,7 @@ export async function getPriceMaster(opts?: { fresh?: boolean }): Promise<PmCate
                 ...priceSelect,
                 basePrice: true,
                 webSpecialPrice: true,
+                showOnCalendar: true,
                 subMenus: {
                   orderBy: { order: "asc" },
                   select: {
@@ -103,6 +120,14 @@ export async function getPriceMaster(opts?: { fresh?: boolean }): Promise<PmCate
                   },
                 },
                 options: { orderBy: { order: "asc" }, select: { ...priceSelect, price: true } },
+                attachments: {
+                  orderBy: { order: "asc" },
+                  select: {
+                    id: true,
+                    refMenu: { select: { ...priceSelect, basePrice: true, webSpecialPrice: true } },
+                    refSubMenu: { select: { ...priceSelect, price: true, webSpecialPrice: true } },
+                  },
+                },
               },
             },
           },
@@ -114,11 +139,25 @@ export async function getPriceMaster(opts?: { fresh?: boolean }): Promise<PmCate
   }
 }
 
+/**
+ * 索引を作る。予約マスターで「カレンダーに表示」をオフにした中分類（作成中など）は、
+ * その小分類・オプションごと索引に入れない（＝ショートコードでも出さない）。hidden に控えておき、プレビューで理由を出す。
+ */
 export function buildPriceIndex(cats: PmCategory[]): PriceIndex {
-  const idx: PriceIndex = { categories: new Map(), menus: new Map(), subs: new Map(), options: new Map() };
-  for (const c of cats || []) {
+  const idx: PriceIndex = { categories: new Map(), menus: new Map(), subs: new Map(), options: new Map(), hidden: new Set() };
+  for (const c0 of cats || []) {
+    const hiddenMenus = (c0.menus || []).filter((m) => m.showOnCalendar === false);
+    for (const m of hiddenMenus) {
+      idx.hidden.add(m.id);
+      for (const o of m.options || []) idx.hidden.add(o.id);
+      for (const s of m.subMenus || []) {
+        idx.hidden.add(s.id);
+        for (const o of s.options || []) idx.hidden.add(o.id);
+      }
+    }
+    const c = { ...c0, menus: (c0.menus || []).filter((m) => m.showOnCalendar !== false) };
     idx.categories.set(c.id, c);
-    for (const m of c.menus || []) {
+    for (const m of c.menus) {
       idx.menus.set(m.id, m);
       for (const o of m.options || []) idx.options.set(o.id, o);
       for (const s of m.subMenus || []) {
@@ -202,13 +241,20 @@ const menuBaseIsZero = (m: PmMenu) => !m.basePrice && m.webSpecialPrice == null;
 /** 中分類の料金表（見出し＋表）。基本料金（0円なら出さない）→ 小分類 の順。行が1つも無ければ空 */
 function menuListHtml(m: PmMenu): string {
   const rows: string[] = [];
-  const hasSubs = (m.subMenus || []).length > 0;
+  const hasSubs = (m.subMenus || []).length > 0 || (m.attachments || []).length > 0;
   // 中分類そのものの料金（小分類があるときは「基本料金」として先頭に出す）
   if (!menuBaseIsZero(m)) {
     rows.push(row(hasSubs ? `${m.title}（基本料金）` : m.title, durationText(m.durationMin, m.durationMax), priceOf(m, m.basePrice, m.webSpecialPrice), "menu"));
   }
   for (const s of m.subMenus || []) {
     rows.push(row(s.title, durationText(s.durationMin, s.durationMax), priceOf(s, s.price, s.webSpecialPrice), "sub"));
+  }
+  // ぶら下げた項目（予約フォームと同じく小分類の後ろ。元の項目の名前・価格）
+  for (const a of m.attachments || []) {
+    const src = a.refSubMenu || a.refMenu;
+    if (!src) continue;
+    const base = a.refSubMenu ? a.refSubMenu.price : a.refMenu!.basePrice;
+    rows.push(row(src.title, durationText(src.durationMin, src.durationMax), priceOf(src, base, src.webSpecialPrice), "sub"));
   }
   if (!rows.length) return "";
   return (
@@ -228,29 +274,61 @@ function categoryListHtml(c: PmCategory): string {
   return `<div class="bh-price-category">${parts.join("")}</div>`;
 }
 
-function notFound(code: string, preview: boolean): string {
-  return preview
-    ? `<span style="color:#dc2626;font-weight:700;">［ショートコードのIDが見つかりません：${esc(code)}］</span>`
-    : "";
+function notFound(code: string, preview: boolean, hidden = false): string {
+  if (!preview) return "";
+  return hidden
+    ? `<span style="color:#dc2626;font-weight:700;">［予約マスターで「カレンダーに表示」がオフの項目のため表示しません：${esc(code)}］</span>`
+    : `<span style="color:#dc2626;font-weight:700;">［ショートコードのIDが見つかりません：${esc(code)}］</span>`;
 }
 
-// [[price:menu:ID]] / [[price:sub:ID:both]] / [[menu-list:ID]] / [[category-list:ID]]
-const PRICE_INNER = String.raw`(price|menu-list|category-list)\s*:\s*([A-Za-z0-9_:-]+?)`;
+// [[price:menu:ID]] / [[price:sub:ID:both]] / [[menu-list:ID]] / [[category-list:ID]] / [[info:menu:ID:work]]
+const PRICE_INNER = String.raw`(price|menu-list|category-list|info)\s*:\s*([A-Za-z0-9_:-]+?)`;
 const PRICE_RE = new RegExp(String.raw`\[\[\s*${PRICE_INNER}\s*\]\]`, "g");
 // 一覧は表（ブロック要素）なので、<p>[[menu-list:ID]]</p> のように段落だけで書かれていたら段落ごと置き換える
 const LIST_PARA_RE = /<p\b[^>]*>\s*(?:<[a-z]+\b[^>]*>\s*)*\[\[\s*(menu-list|category-list)\s*:\s*([A-Za-z0-9_-]+)\s*\]\]\s*(?:<\/[a-z]+>\s*)*<\/p>/g;
 
+/** price:sub:ID:both → ID / menu-list の ID はそのまま */
+function lastId(arg: string): string {
+  const parts = arg.split(":");
+  return parts.length >= 2 ? parts[1] : parts[0];
+}
+
+/**
+ * [[info:種類:ID:項目]]　予約マスターの「おすすめ」「作業内容」「注意事項」を、カレンダー予約フォームと同じ項目から出す。
+ *   項目：recommend＝おすすめ（recommendPoint）／work＝作業内容（workContent）／notes＝注意事項（cautionNote）
+ *   改行は <br> にして残す。中身はすべて無害化（HTMLタグは文字として表示）。
+ */
+const INFO_FIELD = { recommend: "recommendPoint", work: "workContent", notes: "cautionNote" } as const;
+const INFO_LABEL = { recommend: "おすすめ", work: "作業内容", notes: "注意事項" } as const;
+function renderInfo(code: string, arg: string, prices: PriceIndex, preview: boolean): string {
+  const [type, id = "", field = ""] = arg.split(":");
+  const item = type === "menu" ? prices.menus.get(id) : type === "sub" ? prices.subs.get(id) : type === "option" ? prices.options.get(id) : undefined;
+  if (!item) return notFound(code, preview, prices.hidden.has(id));
+  const key = INFO_FIELD[field as keyof typeof INFO_FIELD];
+  if (!key) {
+    return preview ? `<span style="color:#dc2626;font-weight:700;">［項目の指定は recommend / work / notes のどれかです：${esc(code)}］</span>` : "";
+  }
+  const text = String(item[key] ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!text) {
+    return preview
+      ? `<span style="color:#dc2626;font-weight:700;">［内容が登録されていません（${INFO_LABEL[field as keyof typeof INFO_LABEL]}）：${esc(code)}］</span>`
+      : "";
+  }
+  return esc(text).replace(/\n/g, "<br>");
+}
+
 function renderPriceCode(kind: string, arg: string, prices: PriceIndex, preview: boolean): string {
   const code = `${kind}:${arg}`;
+  if (kind === "info") return renderInfo(code, arg, prices, preview);
   if (kind === "menu-list") {
     const m = prices.menus.get(arg);
-    if (!m) return notFound(code, preview);
+    if (!m) return notFound(code, preview, prices.hidden.has(lastId(arg)));
     return menuListHtml(m) || (preview ? `<span style="color:#dc2626;font-weight:700;">［表示できる料金がありません（基本料金0円・小分類なし）：${esc(code)}］</span>` : "");
   }
   if (kind === "category-list") {
     const c = prices.categories.get(arg);
     const html = c ? categoryListHtml(c) : "";
-    return html || notFound(code, preview);
+    return html || notFound(code, preview, prices.hidden.has(lastId(arg)));
   }
   // price:種類:ID[:both]
   const parts = arg.split(":");
@@ -259,20 +337,20 @@ function renderPriceCode(kind: string, arg: string, prices: PriceIndex, preview:
   const both = parts[2] === "both";
   if (type === "menu") {
     const m = prices.menus.get(id);
-    if (!m) return notFound(code, preview);
+    if (!m) return notFound(code, preview, prices.hidden.has(lastId(arg)));
     // 基本料金0円の中分類は何も出さない（プレビューでは理由を表示）
     if (menuBaseIsZero(m)) return preview ? `<span style="color:#dc2626;font-weight:700;">［この中分類は基本料金が0円のため表示しません：${esc(code)}］</span>` : "";
     return priceText(priceOf(m, m.basePrice, m.webSpecialPrice), both);
   }
   if (type === "sub") {
     const s = prices.subs.get(id);
-    return s ? priceText(priceOf(s, s.price, s.webSpecialPrice), both) : notFound(code, preview);
+    return s ? priceText(priceOf(s, s.price, s.webSpecialPrice), both) : notFound(code, preview, prices.hidden.has(lastId(arg)));
   }
   if (type === "option") {
     const o = prices.options.get(id);
-    return o ? priceText(priceOf(o, o.price, null), both) : notFound(code, preview);
+    return o ? priceText(priceOf(o, o.price, null), both) : notFound(code, preview, prices.hidden.has(lastId(arg)));
   }
-  return notFound(code, preview);
+  return notFound(code, preview, prices.hidden.has(lastId(arg)));
 }
 
 // ===== 置き換え本体 =====

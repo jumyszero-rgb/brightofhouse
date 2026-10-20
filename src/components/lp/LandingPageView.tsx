@@ -3,6 +3,7 @@
 // templateStyle（SIMPLE / RICH / BLOCKS / HTML）で描画を出し分ける。
 // /lp/[slug] と /lp/mizumawari/[item] の両ルートから使われ、
 // どのURLでも同じテンプレ切替（全面HTML含む）ができるようにする。
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import Link from "next/link";
 import Image from "next/image";
 import prisma from "@/lib/prisma";
@@ -17,13 +18,8 @@ import { getShortcodeContext, applyShortcodesWith } from "@/lib/shortcodes";
 const PHONE = "0120-792-684";
 const LINE_URL = "https://line.me/ti/p/RBwKccvQ1O";
 
-const subMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-  options: { orderBy: { order: "asc" as const } },
-} as const;
+// 小分類・オプション・ぶら下げた項目（共通の include）
+const subMenusInclude = bookingMenuCalendarInclude;
 
 // カレンダー予約フォームブロックの大分類ID一覧（複数対応の refIds を優先、旧データの refId にもフォールバック）
 function bookingFormCategoryIds(b: any): string[] {

@@ -1,4 +1,5 @@
 // @/src/app/lp/[slug]/page.tsx
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { memo } from "@/lib/serverMemo";
@@ -13,13 +14,8 @@ type Props = {
   searchParams: Promise<{ preview?: string }>;
 };
 
-const subMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-  options: { orderBy: { order: "asc" as const } },
-} as const;
+// 小分類・オプション・ぶら下げた項目（共通の include）
+const subMenusInclude = bookingMenuCalendarInclude;
 
 const lpInclude = {
   bookingMenus: { include: subMenusInclude },

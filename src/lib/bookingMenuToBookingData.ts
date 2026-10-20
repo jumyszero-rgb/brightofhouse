@@ -55,6 +55,31 @@ type BookingSubMenuForMenu = {
   options: BookingOptionForMenu[];
 };
 
+/** ぶら下げた項目の元データ（中分類なら basePrice、小分類なら price） */
+type AttachSource = {
+  id: string;
+  title: string;
+  durationMin: number;
+  durationMax: number | null;
+  workContent: string | null;
+  recommendPoint: string | null;
+  cautionNote: string | null;
+  discountPercent: number | null;
+  discountRounding: string;
+  webSpecialPrice: number | null;
+  maxQty: number | null;
+  qtyDiscountRules: unknown;
+  priceFrom?: boolean;
+  basePrice?: number;
+  price?: number;
+};
+type BookingAttachmentForConvert = {
+  id: string;
+  order?: number;
+  refMenu?: AttachSource | null;
+  refSubMenu?: AttachSource | null;
+};
+
 type BookingMenuForConvert = {
   id: string;
   title: string;
@@ -71,11 +96,15 @@ type BookingMenuForConvert = {
   maxQty: number | null;
   qtyDiscountRules: unknown;
   priceFrom?: boolean;
+  /** false ならカレンダー（予約フォーム）に出さない（作成中の中分類など）。未設定は表示 */
+  showOnCalendar?: boolean;
   order?: number;
   calendarOrder?: number | null;
   subMenus: BookingSubMenuForMenu[];
   // 小分類を経由せず中分類に直接ぶら下がるオプション（小分類が無い中分類でも数量選択できるようにする）。
   options: BookingOptionForMenu[];
+  // ほかの大分類の中分類・小分類を参照でぶら下げたもの（予約マスターの「ほかの項目をぶら下げる」）。
+  attachments?: BookingAttachmentForConvert[];
 };
 
 type BookingCategoryForConvert = {
@@ -94,6 +123,10 @@ const calOrd = (x: { calendarOrder?: number | null; order?: number }) =>
   (x.calendarOrder ?? x.order ?? 0);
 const byOrder = <T extends { calendarOrder?: number | null; order?: number }>(arr: T[]): T[] =>
   [...arr].sort((a, b) => calOrd(a) - calOrd(b));
+
+/** カレンダーに出す中分類だけ（予約マスターの「カレンダーに表示」がオフのものを除く） */
+const calendarVisible = <T extends { showOnCalendar?: boolean }>(arr: T[]): T[] =>
+  (arr || []).filter((m) => m.showOnCalendar !== false);
 
 // 100円未満を切り上げ/切り捨て/四捨五入する（値引き後価格・値引き額の端数処理用）。
 export function roundAmount(value: number, mode: RoundingMode | string | undefined): number {
@@ -147,6 +180,29 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
   const hasSubMenus = menu.subMenus.length > 0;
   const directOptions = menu.options || [];
   const hasDirectOptions = directOptions.length > 0;
+  // ぶら下げた項目（元の項目の名前・価格・説明をそのまま使う）。小分類の後ろに「追加できる項目」として並べる。
+  //  id は「att:ぶら下げID」にする（同じ項目を別の中分類にもぶら下げたとき、選択が連動しないように）。
+  const attachedItems = (menu.attachments || [])
+    .map((a) => {
+      const src = a.refSubMenu || a.refMenu;
+      if (!src) return null;
+      const base = a.refSubMenu ? (a.refSubMenu.price ?? 0) : (a.refMenu?.basePrice ?? 0);
+      return {
+        id: `att:${a.id}`,
+        title: src.title,
+        ...resolvePrice(base, src.webSpecialPrice, src.discountPercent, src.discountRounding),
+        from: !!src.priceFrom,
+        durationMin: src.durationMin,
+        durationMax: src.durationMax ?? src.durationMin,
+        workContent: src.workContent || "",
+        comment: src.recommendPoint || "",
+        cautionNote: src.cautionNote || "",
+        maxQty: src.maxQty ?? undefined,
+        qtyDiscount: (src.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  const hasFoldItems = hasSubMenus || attachedItems.length > 0;
   const mainPricing = resolvePrice(menu.basePrice, menu.webSpecialPrice, menu.discountPercent, menu.discountRounding);
 
   return {
@@ -161,15 +217,15 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
     // 小分類は基本料金への「追加項目」であり、代替の選択肢ではない。
     // そのためメニュー自身は常に単体で選択可能（hasBaseSelection）にし、
     // 小分類・中分類直下オプションは基本料金の下に追加できる項目として別枠で表示する。
-    hasBaseSelection: hasSubMenus || hasDirectOptions,
+    hasBaseSelection: hasFoldItems || hasDirectOptions,
     maxQty: menu.maxQty ?? undefined,
     qtyDiscount: (menu.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
     comment: menu.recommendPoint || "",
     workContent: menu.workContent || "",
     cautionNote: menu.cautionNote || "",
-    foldTitle: hasSubMenus || hasDirectOptions ? "追加できる項目" : "",
-    foldItems: hasSubMenus
-      ? byOrder(menu.subMenus).map((sm) => ({
+    foldTitle: hasFoldItems || hasDirectOptions ? "追加できる項目" : "",
+    foldItems: [
+      ...byOrder(menu.subMenus).map((sm) => ({
           id: sm.id,
           title: sm.title,
           ...resolvePrice(sm.price, sm.webSpecialPrice, sm.discountPercent, sm.discountRounding),
@@ -181,8 +237,9 @@ function menuToMain(menu: BookingMenuForConvert, group?: { id: string; title: st
           cautionNote: sm.cautionNote || "",
           maxQty: sm.maxQty ?? undefined,
           qtyDiscount: (sm.qtyDiscountRules as { enabled: boolean; rules: { count: number; value: number }[]; rounding?: RoundingMode } | null) || undefined,
-        }))
-      : [],
+        })),
+      ...attachedItems,
+    ],
     options: [
       ...(hasSubMenus ? byOrder(menu.subMenus).flatMap((sm) => byOrder(sm.options).map((o) => mapOption(o, sm.id))) : []),
       ...byOrder(directOptions).map((o) => mapOption(o)),
@@ -204,7 +261,7 @@ function categoryToMains(category: BookingCategoryForConvert, menuOrder?: string
     rules: [],
   };
   const group = { id: category.id, title: category.title, setDiscount };
-  return sortByIdList(byOrder(category.menus), menuOrder).map((menu) => menuToMain(menu, group));
+  return sortByIdList(byOrder(calendarVisible(category.menus)), menuOrder).map((menu) => menuToMain(menu, group));
 }
 
 /**
@@ -240,7 +297,7 @@ export function cheapestBookingMenu<T extends { basePrice: number; priceNote?: s
 
 export function bookingMenusToBookingData(menus: BookingMenuForConvert[]) {
   return {
-    mains: byOrder(menus).map((m) => menuToMain(m)),
+    mains: byOrder(calendarVisible(menus)).map((m) => menuToMain(m)),
   };
 }
 
@@ -259,7 +316,7 @@ export function bookingSelectionToBookingData(
   const cats = order?.categoryIds?.length ? sortByIdList(byOrder(categories), order.categoryIds) : byOrder(categories);
   return {
     mains: [
-      ...byOrder(menus).map((m) => menuToMain(m)),
+      ...byOrder(calendarVisible(menus)).map((m) => menuToMain(m)),
       ...cats.flatMap((c) => categoryToMains(c, order?.menuIds)),
     ],
   };

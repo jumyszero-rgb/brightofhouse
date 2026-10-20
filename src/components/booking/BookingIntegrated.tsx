@@ -51,7 +51,11 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
     const fetchData = async () => {
       const res = await fetch("/api/booking-master"); 
       if (res.ok) {
-        const data = await res.json();
+        const raw = await res.json();
+        // 予約マスターで「カレンダーに表示」をオフにした中分類（作成中など）は出さない
+        const data = Array.isArray(raw)
+          ? raw.map((c: BookingCategory) => ({ ...c, menus: (c.menus || []).filter((m: BookingMenu & { showOnCalendar?: boolean }) => m.showOnCalendar !== false) }))
+          : [];
         setCategories(data);
         
         if (initialCategoryId) {

@@ -647,7 +647,10 @@ function BlocksBuilder() {
                     <ul className="divide-y">
                       {orderedMenus(c).map((m: any, mi: number) => (
                         <li key={m.id} className="flex items-center gap-2 px-3 py-1 text-xs">
-                          <span className="flex-1 min-w-0">{m.title}</span>
+                          <span className={`flex-1 min-w-0 ${m.showOnCalendar === false ? "text-gray-400" : ""}`}>
+                            {m.title}
+                            {m.showOnCalendar === false && <span className="ml-1 text-[10px] font-bold text-gray-500">（カレンダー非表示のため出ません）</span>}
+                          </span>
                           <button type="button" onClick={() => moveMenu(c, mi, -1)} className="w-5 h-5 rounded bg-gray-100 hover:bg-gray-200">↑</button>
                           <button type="button" onClick={() => moveMenu(c, mi, 1)} className="w-5 h-5 rounded bg-gray-100 hover:bg-gray-200">↓</button>
                         </li>

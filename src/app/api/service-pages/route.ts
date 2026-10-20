@@ -1,4 +1,5 @@
 // @/src/app/api/service-pages/route.ts
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -104,12 +105,7 @@ async function syncFaqsAndTestimonials(servicePageId: string, formData: FormData
   }
 }
 
-const bookingMenuWithSubMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-};
+const bookingMenuWithSubMenusInclude = bookingMenuCalendarInclude; // 小分類・オプション・ぶら下げた項目
 
 const bookingMenuInclude = {
   bookingMenus: { include: bookingMenuWithSubMenusInclude },

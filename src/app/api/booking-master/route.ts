@@ -34,6 +34,8 @@ export async function GET() {
               orderBy: { order: "asc" },
             },
             options: { orderBy: { order: "asc" } },
+            // ぶら下げた項目（ほかの中分類・小分類への参照）。表示名は画面側で予約マスター全体から引く
+            attachments: { orderBy: { order: "asc" } },
           },
           orderBy: { order: "asc" },
         },
@@ -54,6 +56,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    // 中分類の下に、ほかの中分類・小分類をぶら下げる（参照）
+    if (body.type === "attachment") {
+      const parentMenuId = String(body.parentMenuId || "");
+      const refMenuId = body.refMenuId ? String(body.refMenuId) : null;
+      const refSubMenuId = body.refSubMenuId ? String(body.refSubMenuId) : null;
+      if (!parentMenuId || (!refMenuId && !refSubMenuId) || (refMenuId && refSubMenuId)) {
+        return NextResponse.json({ error: "ぶら下げる項目を1つ選んでください" }, { status: 400 });
+      }
+      if (refMenuId === parentMenuId) return NextResponse.json({ error: "自分自身はぶら下げられません" }, { status: 400 });
+      if (refSubMenuId) {
+        const sub = await prisma.bookingSubMenu.findUnique({ where: { id: refSubMenuId }, select: { menuId: true } });
+        if (!sub) return NextResponse.json({ error: "小分類が見つかりません" }, { status: 400 });
+        if (sub.menuId === parentMenuId) return NextResponse.json({ error: "この中分類の小分類はすでに表示されています" }, { status: 400 });
+      }
+      const dup = await prisma.bookingMenuAttachment.findFirst({ where: { parentMenuId, refMenuId, refSubMenuId } });
+      if (dup) return NextResponse.json({ error: "すでにぶら下げています" }, { status: 400 });
+      const count = await prisma.bookingMenuAttachment.count({ where: { parentMenuId } });
+      return NextResponse.json(await prisma.bookingMenuAttachment.create({
+        data: { parentMenuId, refMenuId, refSubMenuId, order: Number.isFinite(Number(body.order)) ? Number(body.order) : count },
+      }));
+    }
 
     if (body.type === "category") {
       return NextResponse.json(await prisma.bookingCategory.create({
@@ -89,6 +113,7 @@ export async function POST(request: NextRequest) {
           imageUrl: body.imageUrl || null,
           topFeaturedOrder: body.topFeaturedOrder != null && body.topFeaturedOrder !== "" ? Number(body.topFeaturedOrder) : null,
           showOnServiceList: !!body.showOnServiceList,
+          showOnCalendar: body.showOnCalendar != null ? !!body.showOnCalendar : true,
           detailPageSlug: body.detailPageSlug || null,
           listPriceOverride: body.listPriceOverride || null,
           priceFrom: !!body.priceFrom,
@@ -162,6 +187,13 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { type, id, ...data } = body;
 
+    if (type === "attachment") {
+      return NextResponse.json(await prisma.bookingMenuAttachment.update({
+        where: { id },
+        data: { order: Number(data.order) || 0 },
+      }));
+    }
+
     if (type === "category") {
       return NextResponse.json(await prisma.bookingCategory.update({
         where: { id },
@@ -199,6 +231,7 @@ export async function PUT(request: NextRequest) {
           imageUrl: data.imageUrl ?? undefined,
           topFeaturedOrder: data.topFeaturedOrder === "" ? null : (data.topFeaturedOrder != null ? Number(data.topFeaturedOrder) : undefined),
           showOnServiceList: data.showOnServiceList != null ? !!data.showOnServiceList : undefined,
+          showOnCalendar: data.showOnCalendar != null ? !!data.showOnCalendar : undefined,
           detailPageSlug: data.detailPageSlug !== undefined ? (data.detailPageSlug || null) : undefined,
           listPriceOverride: data.listPriceOverride !== undefined ? (data.listPriceOverride || null) : undefined,
           priceFrom: data.priceFrom != null ? !!data.priceFrom : undefined,
@@ -272,6 +305,7 @@ export async function DELETE(request: NextRequest) {
     else if (type === "menu") await prisma.bookingMenu.delete({ where: { id } });
     else if (type === "submenu") await prisma.bookingSubMenu.delete({ where: { id } });
     else if (type === "option") await prisma.bookingOption.delete({ where: { id } });
+    else if (type === "attachment") await prisma.bookingMenuAttachment.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });

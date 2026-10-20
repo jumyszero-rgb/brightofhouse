@@ -8,9 +8,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { resolvePrice } from "@/lib/bookingMenuToBookingData";
 
-type Opt = { id: string; title: string; price: number; discountPercent: number | null; discountRounding: string; priceFrom?: boolean };
+type Texts = { recommendPoint?: string | null; workContent?: string | null; cautionNote?: string | null };
+type Opt = Texts & { id: string; title: string; price: number; discountPercent: number | null; discountRounding: string; priceFrom?: boolean };
 type Sub = Opt & { webSpecialPrice: number | null; options: Opt[] };
-type Menu = { id: string; title: string; basePrice: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; priceFrom?: boolean; subMenus: Sub[]; options: Opt[] };
+type Menu = Texts & { id: string; title: string; showOnCalendar?: boolean; basePrice: number; webSpecialPrice: number | null; discountPercent: number | null; discountRounding: string; priceFrom?: boolean; subMenus: Sub[]; options: Opt[] };
 type Cat = { id: string; title: string; order: number; menus: Menu[] };
 
 const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
@@ -24,16 +25,20 @@ function priceInfo(base: number, web: number | null, pct: number | null, roundin
   };
 }
 
-function CopyBtn({ code, label, copied, onCopy }: { code: string; label: string; copied: string | null; onCopy: (c: string) => void }) {
+function CopyBtn({ code, label, copied, onCopy, dim, tone }: { code: string; label: string; copied: string | null; onCopy: (c: string) => void; dim?: boolean; tone?: "info" }) {
   const done = copied === code;
   return (
     <button
       type="button"
       onClick={() => onCopy(code)}
-      title={code}
+      title={dim ? `${code}（内容が登録されていません）` : code}
       className={`text-[11px] font-bold px-2 py-1 rounded border whitespace-nowrap transition-colors ${
-        done ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-      }`}
+        done
+          ? "bg-emerald-600 text-white border-emerald-600"
+          : tone === "info"
+          ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+      } ${dim && !done ? "opacity-35" : ""}`}
     >
       {done ? "コピーしました" : label}
     </button>
@@ -52,6 +57,8 @@ function Row({
   codes,
   copied,
   onCopy,
+  hidden,
+  info,
 }: {
   depth: number;
   kind: string;
@@ -64,6 +71,10 @@ function Row({
   codes: { label: string; code: string }[];
   copied: string | null;
   onCopy: (c: string) => void;
+  /** 予約マスターで「カレンダーに表示」がオフの中分類（とその配下）。ショートコードでも出ない */
+  hidden?: boolean;
+  /** おすすめ・作業内容・注意事項のショートコード用 */
+  info?: { type: "menu" | "sub" | "option"; id: string } & Texts;
 }) {
   const p =
     kind === "中分類" && !base && web == null
@@ -72,10 +83,13 @@ function Row({
   const kindColor =
     kind === "中分類" ? "bg-blue-100 text-blue-700" : kind === "小分類" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700";
   return (
-    <div className="flex flex-col md:flex-row md:items-center gap-2 py-2 border-b last:border-b-0" style={{ paddingLeft: depth * 16 }}>
+    <div className={`flex flex-col md:flex-row md:items-center gap-2 py-2 border-b last:border-b-0 ${hidden ? "opacity-50" : ""}`} style={{ paddingLeft: depth * 16 }}>
       <div className="flex-1 min-w-0">
         <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mr-2 ${kindColor}`}>{kind}</span>
         <span className="text-sm font-bold text-slate-800">{title}</span>
+        {hidden && kind === "中分類" && (
+          <span className="ml-2 text-[10px] font-bold bg-gray-600 text-white px-1.5 py-0.5 rounded">カレンダー非表示（ショートコードでも出ません）</span>
+        )}
         <span className="ml-3 text-sm">
           {p.normal && <s className="text-slate-400 text-xs mr-1">{p.normal}</s>}
           <b className="text-red-600">{p.now}</b>
@@ -85,6 +99,14 @@ function Row({
         {codes.map((c) => (
           <CopyBtn key={c.code} code={c.code} label={c.label} copied={copied} onCopy={onCopy} />
         ))}
+        {info && (
+          <>
+            <span className="w-px bg-slate-200 mx-0.5" aria-hidden />
+            <CopyBtn code={`[[info:${info.type}:${info.id}:recommend]]`} label="おすすめ" copied={copied} onCopy={onCopy} tone="info" dim={!(info.recommendPoint || "").trim()} />
+            <CopyBtn code={`[[info:${info.type}:${info.id}:work]]`} label="作業内容" copied={copied} onCopy={onCopy} tone="info" dim={!(info.workContent || "").trim()} />
+            <CopyBtn code={`[[info:${info.type}:${info.id}:notes]]`} label="注意事項" copied={copied} onCopy={onCopy} tone="info" dim={!(info.cautionNote || "").trim()} />
+          </>
+        )}
       </div>
     </div>
   );
@@ -164,6 +186,7 @@ export default function PriceShortcodesPage() {
             <li><b>単体価格</b>：「6,600円」／<b>両方の価格</b>：通常価格がある項目は「<s>9,800円</s> 6,600円」（無ければ単体と同じ）</li>
             <li><b>中分類一覧</b>：中分類名の見出し＋料金表（内容／価格）。「基本料金」→小分類（一回り小さく字下げ）の順。基本料金が0円の中分類は基本料金の行を出しません。表のショートコードは1行に単独で書いてください</li>
             <li><b>大分類一覧</b>：大分類の中の中分類ごとに、見出し＋料金表</li>
+            <li><b>おすすめ／作業内容／注意事項</b>（黄色のボタン）：カレンダー予約フォームと同じ文章を出します（改行もそのまま）。内容が未登録のボタンは薄く表示しています</li>
             <li>存在しないID（削除した項目など）は公開ページでは何も表示されず、プレビュー（?preview=true）では赤字で「ショートコードのIDが見つかりません」と出ます</li>
           </ul>
         </div>
@@ -211,6 +234,8 @@ export default function PriceShortcodesPage() {
                         ]}
                         copied={copied}
                         onCopy={onCopy}
+                        hidden={m.showOnCalendar === false}
+                        info={{ type: "menu", ...m }}
                       />
                       {(m.options || []).map((o) => (
                         <Row
@@ -229,6 +254,8 @@ export default function PriceShortcodesPage() {
                           ]}
                           copied={copied}
                           onCopy={onCopy}
+                          hidden={m.showOnCalendar === false}
+                          info={{ type: "option", ...o }}
                         />
                       ))}
                       {(m.subMenus || []).map((s) => (
@@ -250,6 +277,8 @@ export default function PriceShortcodesPage() {
                             ]}
                             copied={copied}
                             onCopy={onCopy}
+                            hidden={m.showOnCalendar === false}
+                            info={{ type: "sub", ...s }}
                           />
                           {(s.options || []).map((o) => (
                             <Row
@@ -268,6 +297,8 @@ export default function PriceShortcodesPage() {
                               ]}
                               copied={copied}
                               onCopy={onCopy}
+                              hidden={m.showOnCalendar === false}
+                              info={{ type: "option", ...o }}
                             />
                           ))}
                         </div>

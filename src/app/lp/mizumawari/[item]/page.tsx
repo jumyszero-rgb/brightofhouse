@@ -1,4 +1,5 @@
 // @/src/app/lp/mizumawari/[item]/page.tsx
+import { bookingMenuCalendarInclude } from "@/lib/bookingInclude";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
@@ -18,13 +19,8 @@ type Props = {
   searchParams: Promise<{ preview?: string }>;
 };
 
-const subMenusInclude = {
-  subMenus: {
-    include: { options: { orderBy: { order: "asc" as const } } },
-    orderBy: { order: "asc" as const },
-  },
-  options: { orderBy: { order: "asc" as const } },
-} as const;
+// 小分類・オプション・ぶら下げた項目（共通の include）
+const subMenusInclude = bookingMenuCalendarInclude;
 
 async function getDbLp(item: string, fresh = false) {
   return memo(`lp:slug:mizumawari-${item}`, () => prisma.landingPage.findUnique({

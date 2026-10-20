@@ -76,7 +76,8 @@ function QtyDiscountEditor({ value, onChange }: { value: QtyDiscountRules; onCha
 
 type BookingOption = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; maxQty: number | null; discountPercent: number | null; discountRounding: string; qtyDiscountRules: QtyDiscountRules; order: number; calendarOrder: number | null; subMenuId: string | null; menuId: string | null };
 type BookingSubMenu = { id: string; title: string; price: number; durationMin: number; durationMax: number | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; order: number; calendarOrder: number | null; menuId: string; options: BookingOption[] };
-type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; maxQty: number | null; qtyDiscountRules: QtyDiscountRules; imageUrl: string | null; topFeaturedOrder: number | null; showOnServiceList: boolean; detailPageSlug: string | null; listPriceOverride: string | null; priceFrom: boolean; order: number; calendarOrder: number | null; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[] };
+type BookingMenu = { id: string; title: string; basePrice: number; priceNote: string | null; workContent: string | null; cautionNote: string | null; recommendPoint: string | null; onSiteEstimate: string; durationMin: number; durationMax: number | null; setDiscountRules: SetDiscountRules; discountPercent: number | null; discountRounding: string; webSpecialPrice: number | null; maxQty: number | null; qtyDiscountRules: QtyDiscountRules; imageUrl: string | null; topFeaturedOrder: number | null; showOnServiceList: boolean; detailPageSlug: string | null; listPriceOverride: string | null; priceFrom: boolean; showOnCalendar?: boolean; order: number; calendarOrder: number | null; categoryId: string; subMenus: BookingSubMenu[]; options: BookingOption[]; attachments?: BookingAttachment[] };
+type BookingAttachment = { id: string; parentMenuId: string; refMenuId: string | null; refSubMenuId: string | null; order: number };
 type MinItemsRule = { enabled: boolean; min: number; from: string; to: string } | null;
 type BookingCategory = { id: string; title: string; order: number; calendarOrder: number | null; setDiscountRules: SetDiscountRules; minItemsRule?: MinItemsRule; listPriceNote?: string | null; menus: BookingMenu[] };
 
@@ -180,6 +181,126 @@ function SetDiscountEditor({ value, onChange }: { value: SetDiscountRules; onCha
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 中分類の下に、ほかの大分類の中分類・小分類を「参照」としてぶら下げる。
+ * 例：空室ハウスクリーニングの下に、セット用の大分類「水回り（ハウスクリーニングセット）」の項目をぶら下げる。
+ * 名前・価格・説明は元の項目のものを表示する（ここでは保存しない）。元を消すと、ぶら下げも自動で消える。
+ */
+function AttachmentsEditor({ menu, categories, onChanged }: { menu: BookingMenu; categories: BookingCategory[]; onChanged: () => Promise<void> | void }) {
+  const [catId, setCatId] = useState("");
+  const [menuId, setMenuId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const list = [...(menu.attachments || [])].sort((a, b) => a.order - b.order);
+
+  // ID → 表示用（大分類 > 中分類 > 小分類・価格・カレンダー非表示か）
+  const lookup = (a: BookingAttachment) => {
+    for (const c of categories) {
+      for (const m of c.menus) {
+        if (a.refMenuId && m.id === a.refMenuId) {
+          return { label: `${c.title} ＞ ${m.title}（中分類）`, price: m.webSpecialPrice ?? m.basePrice, hiddenSrc: m.showOnCalendar === false };
+        }
+        const sm = a.refSubMenuId ? m.subMenus.find((x) => x.id === a.refSubMenuId) : undefined;
+        if (sm) return { label: `${c.title} ＞ ${m.title} ＞ ${sm.title}`, price: sm.webSpecialPrice ?? sm.price, hiddenSrc: m.showOnCalendar === false };
+      }
+    }
+    return null;
+  };
+
+  const call = async (method: string, body: object) => {
+    const res = await fetch("/api/booking-master", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      let msg = "処理に失敗しました";
+      try { msg = (await res.json())?.error || msg; } catch { /* 既定の文言 */ }
+      throw new Error(msg);
+    }
+  };
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    try { await fn(); await onChanged(); } catch (e) { alert(e instanceof Error ? e.message : "処理に失敗しました"); } finally { setBusy(false); }
+  };
+  const add = (ref: { refMenuId?: string; refSubMenuId?: string }) =>
+    run(() => call("POST", { type: "attachment", parentMenuId: menu.id, ...ref, order: list.length }));
+  const remove = (id: string) => run(() => call("DELETE", { type: "attachment", id }));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    const next = [...list];
+    [next[i], next[j]] = [next[j], next[i]];
+    run(async () => { await Promise.all(next.map((a, k) => call("PUT", { type: "attachment", id: a.id, order: k }))); });
+  };
+
+  const cat = categories.find((c) => c.id === catId);
+  const src = cat?.menus.find((m) => m.id === menuId);
+  const isAdded = (ref: { refMenuId?: string; refSubMenuId?: string }) =>
+    list.some((a) => (ref.refMenuId && a.refMenuId === ref.refMenuId) || (ref.refSubMenuId && a.refSubMenuId === ref.refSubMenuId));
+
+  return (
+    <div>
+      <h4 className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-3 border-l-4 border-orange-300 pl-2">ほかの項目をぶら下げる（参照）</h4>
+      <div className={`bg-orange-50 border border-orange-100 rounded-lg p-4 space-y-3 ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+        <p className="text-[11px] text-slate-600 leading-relaxed">
+          ほかの大分類の中分類・小分類を、この中分類の「追加できる項目」として予約フォームに出します（小分類の後ろに並びます）。
+          名前・価格・作業内容などは<b>元の項目のもの</b>がそのまま出ます（元を直せば反映）。元の中分類が「カレンダーに表示」オフでも、ここでは表示されます。
+          値引き（まとめ割・セット値引き）はこの中分類のルールで計算します。ぶら下げた中分類の小分類・オプションは出ません（必要なものは小分類を個別にぶら下げてください）。
+        </p>
+        {list.length > 0 ? (
+          <ul className="space-y-1">
+            {list.map((a, i) => {
+              const info = lookup(a);
+              return (
+                <li key={a.id} className="flex items-center gap-2 bg-white border border-orange-200 rounded px-2 py-1.5 text-xs">
+                  <span className="flex-1 min-w-0">
+                    {info ? (
+                      <>
+                        <b>{info.label}</b>
+                        <span className="ml-2 text-red-600 font-bold">¥{(info.price || 0).toLocaleString()}</span>
+                        {info.hiddenSrc && <span className="ml-2 text-[10px] text-gray-500">（元はカレンダー非表示・ここには表示されます）</span>}
+                      </>
+                    ) : (
+                      <span className="text-red-600">元の項目が見つかりません</span>
+                    )}
+                  </span>
+                  <button type="button" onClick={() => move(i, -1)} className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200">↑</button>
+                  <button type="button" onClick={() => move(i, 1)} className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200">↓</button>
+                  <button type="button" onClick={() => remove(a.id)} className="text-red-500 font-bold hover:underline ml-1">外す</button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-[11px] text-slate-400">まだぶら下げていません。</p>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <select className="p-2 border rounded text-black text-xs" value={catId} onChange={(e) => { setCatId(e.target.value); setMenuId(""); }}>
+            <option value="">① 大分類を選択</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+          </select>
+          <select className="p-2 border rounded text-black text-xs disabled:bg-slate-100" disabled={!cat} value={menuId} onChange={(e) => setMenuId(e.target.value)}>
+            <option value="">② 中分類を選択</option>
+            {(cat?.menus || []).filter((m) => m.id !== menu.id).map((m) => <option key={m.id} value={m.id}>{m.title}{m.showOnCalendar === false ? "（カレンダー非表示）" : ""}</option>)}
+          </select>
+        </div>
+        {src && (
+          <div className="bg-white border rounded divide-y">
+            {[{ key: `m:${src.id}`, label: `${src.title}（中分類そのもの）`, price: src.webSpecialPrice ?? src.basePrice, ref: { refMenuId: src.id } },
+              ...src.subMenus.map((sm) => ({ key: `s:${sm.id}`, label: `${sm.title}（小分類）`, price: sm.webSpecialPrice ?? sm.price, ref: { refSubMenuId: sm.id } }))
+            ].map((row) => (
+              <div key={row.key} className="flex items-center gap-2 px-2 py-1.5 text-xs">
+                <span className="flex-1 min-w-0">{row.label}<span className="ml-2 text-slate-500">¥{(row.price || 0).toLocaleString()}</span></span>
+                {isAdded(row.ref) ? (
+                  <span className="text-emerald-700 font-bold">追加済み</span>
+                ) : (
+                  <button type="button" onClick={() => add(row.ref)} className="px-2 py-0.5 rounded bg-orange-500 text-white font-bold hover:bg-orange-600">＋ ぶら下げる</button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -684,6 +805,17 @@ export default function AdminBookingMasterPage() {
                               {menu.onSiteEstimate !== "NONE" && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{ON_SITE_ESTIMATE_LABEL[menu.onSiteEstimate]}</span>}
                               {menu.recommendPoint && <span className="text-[10px] text-pink-600">✨ {menu.recommendPoint}</span>}
                             </div>
+                            {/* カレンダー（予約フォーム）への表示設定（中分類ごと・その場で保存）。作成中はオフにしておく */}
+                            <div className={`flex items-center gap-2 flex-wrap rounded px-2 py-1.5 border ${menu.showOnCalendar === false ? "bg-gray-100 border-gray-300" : "bg-violet-50 border-violet-200"}`}>
+                              <label className="flex items-center gap-1.5 text-xs font-bold text-violet-800 cursor-pointer">
+                                <input type="checkbox" checked={menu.showOnCalendar !== false} onChange={(e) => handleAction("PUT", { ...menu, type: "menu", showOnCalendar: e.target.checked })} />
+                                カレンダーに表示
+                              </label>
+                              {menu.showOnCalendar === false
+                                ? <span className="text-[10px] font-bold bg-gray-600 text-white px-2 py-0.5 rounded-full">カレンダー非表示（作成中）</span>
+                                : <span className="text-[10px] font-bold bg-violet-600 text-white px-2 py-0.5 rounded-full">カレンダー表示中</span>}
+                              <span className="text-[10px] text-slate-500">※オフにすると、予約フォーム（サービス詳細ページ・LP・/booking）と料金ショートコードに出ません</span>
+                            </div>
                             {/* サービス一覧(/service)への表示設定（中分類ごと・その場で保存） */}
                             <div className="flex items-center gap-2 flex-wrap bg-cyan-50 border border-cyan-200 rounded px-2 py-1.5">
                               <label className="flex items-center gap-1.5 text-xs font-bold text-cyan-800 cursor-pointer">
@@ -954,6 +1086,9 @@ export default function AdminBookingMasterPage() {
                           <button onClick={() => { handleAction("POST", { type: "submenu", menuId: menu.id, title: newSubMenu.title, price: newSubMenu.price, durationMin: newSubMenu.durationMin, durationMax: newSubMenu.durationMax || null, onSiteEstimate: newSubMenu.onSiteEstimate, workContent: newSubMenu.workContent, recommendPoint: newSubMenu.recommendPoint, cautionNote: newSubMenu.cautionNote, discountPercent: newSubMenu.discountPercent || null, discountRounding: newSubMenu.discountRounding, webSpecialPrice: newSubMenu.webSpecialPrice || null, maxQty: newSubMenu.maxQty || null, order: menu.subMenus.length }); setNewSubMenu({ menuId: "", title: "", price: 0, durationMin: 0, durationMax: 0, workContent: "", cautionNote: "", recommendPoint: "", onSiteEstimate: "NONE", discountPercent: "", discountRounding: "NONE", webSpecialPrice: "", maxQty: "" }); }} className="self-end bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-700">小分類追加</button>
                         </div>
                       </div>
+
+                      {/* ほかの大分類の中分類・小分類をぶら下げる（参照） */}
+                      <AttachmentsEditor menu={menu} categories={categories} onChanged={fetchData} />
 
                       {/* 中分類直下のオプション（小分類を作らずに数量選択できる追加オプションだけ付けたい場合） */}
                       <div>
