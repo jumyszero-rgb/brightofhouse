@@ -186,6 +186,22 @@ function BlocksBuilder() {
     setMsg(res.ok ? "保存しました" : "保存に失敗しました");
   };
 
+  // タイトル・URL(slug)の変更（ブロック編集画面の中で完結。旧「編集」画面に行かなくてよい）
+  const [editMeta, setEditMeta] = useState<{ title: string; slug: string } | null>(null);
+  const saveMeta = async () => {
+    if (!lpId || !editMeta) return;
+    const res = await fetch("/api/lp", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: lpId, title: editMeta.title, slug: editMeta.slug }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data?.error || "変更に失敗しました"); return; }
+    setMeta((m) => (m ? { ...m, title: data.title, slug: data.slug } : m));
+    setEditMeta(null);
+    setMsg("タイトル・URLを変更しました");
+  };
+
   const setStatus = async (status: string) => {
     if (!lpId) return;
     const res = await fetch("/api/lp", {
@@ -241,8 +257,45 @@ function BlocksBuilder() {
         {/* ヘッダー */}
         <div className="bg-white rounded-xl shadow p-4 border mb-4 flex flex-wrap items-center gap-3 justify-between sticky top-2 z-20">
           <div>
-            <h1 className="text-lg font-bold">ブロック編集：{meta?.title}</h1>
-            <p className="text-xs text-gray-500">/lp/{meta?.slug}　状態：{meta?.status === "PUBLISHED" ? "公開中" : "下書き"}</p>
+            {editMeta ? (
+              <div className="space-y-1.5">
+                <input
+                  className="w-full p-1.5 border rounded text-sm font-bold"
+                  value={editMeta.title}
+                  onChange={(e) => setEditMeta({ ...editMeta, title: e.target.value })}
+                  placeholder="ページタイトル"
+                />
+                <div className="flex items-center gap-1 text-xs">
+                  <span className="text-gray-500">/lp/</span>
+                  <input
+                    className="flex-1 min-w-0 p-1.5 border rounded text-xs font-mono"
+                    value={editMeta.slug}
+                    onChange={(e) => setEditMeta({ ...editMeta, slug: e.target.value.trim().toLowerCase() })}
+                    placeholder="例：mizumawari-house"
+                  />
+                </div>
+                {meta?.status === "PUBLISHED" && editMeta.slug !== meta?.slug && (
+                  <p className="text-[11px] text-red-600">※公開中のLPです。URLを変えると、今のURL（広告のリンク先など）は表示されなくなります。</p>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={saveMeta} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700">変更を保存</button>
+                  <button onClick={() => setEditMeta(null)} className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold">やめる</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-lg font-bold">ブロック編集：{meta?.title}</h1>
+                <p className="text-xs text-gray-500">
+                  /lp/{meta?.slug}　状態：{meta?.status === "PUBLISHED" ? "公開中" : "下書き"}
+                  <button
+                    onClick={() => meta && setEditMeta({ title: meta.title, slug: meta.slug })}
+                    className="ml-2 text-blue-600 font-bold hover:underline"
+                  >
+                    タイトル・URLを変更
+                  </button>
+                </p>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <a href={`/lp/${meta?.slug}?preview=true`} target="_blank" className="bg-amber-100 text-amber-700 px-3 py-2 rounded text-sm font-bold hover:bg-amber-200">プレビュー</a>

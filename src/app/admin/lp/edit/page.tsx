@@ -46,7 +46,8 @@ function EditForm() {
   const [categoryToAdd, setCategoryToAdd] = useState("");
 
   // ===== リッチLPテンプレート =====
-  const [templateStyle, setTemplateStyle] = useState<"SIMPLE" | "RICH" | "HTML">("SIMPLE");
+  // BLOCKS＝ブロック編集で作ったLP。この画面ではデザインを切り替えない（保存しても BLOCKS のまま）
+  const [templateStyle, setTemplateStyle] = useState<"SIMPLE" | "RICH" | "HTML" | "BLOCKS">("SIMPLE");
   const [richFields, setRichFields] = useState({
     heroEyebrow: "", heroSubtitle: "", heroPriceLead: "", serviceLabel: "",
     menuIntro: "", campaignBadge: "", setNote: "",
@@ -109,7 +110,9 @@ function EditForm() {
         setBookingMenuIds((data.bookingMenus || []).map((m: any) => m.id));
         setBookingCategoryIds((data.bookingCategories || []).map((c: any) => c.id));
 
-        setTemplateStyle(data.templateStyle === "RICH" ? "RICH" : data.templateStyle === "HTML" ? "HTML" : "SIMPLE");
+        setTemplateStyle(
+          data.templateStyle === "RICH" ? "RICH" : data.templateStyle === "HTML" ? "HTML" : data.templateStyle === "BLOCKS" ? "BLOCKS" : "SIMPLE"
+        );
         setRichFields({
           heroEyebrow: data.heroEyebrow || "",
           heroSubtitle: data.heroSubtitle || "",
@@ -361,7 +364,11 @@ function EditForm() {
 
         <div className="pb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">本文</label>
-          {templateStyle === "HTML" ? (
+          {templateStyle === "BLOCKS" ? (
+            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded p-3">
+              ブロック編集で作ったLPのため、この本文欄は使いません。本文は「ブロック編集」で編集してください。
+            </p>
+          ) : templateStyle === "HTML" ? (
             <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded p-3">
               「全面HTML」モードでは、この本文欄は使いません。下の「🎨 リッチLPテンプレート」内の<strong>HTMLソース欄</strong>に貼り付けてください。
             </p>
@@ -513,6 +520,21 @@ function EditForm() {
         <div className="bg-fuchsia-50 p-6 rounded-xl border border-fuchsia-200 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-fuchsia-900 mb-2">🎨 リッチLPテンプレート</h2>
+            {templateStyle === "BLOCKS" ? (
+              <div className="bg-white border-2 border-fuchsia-300 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-bold text-fuchsia-900">このLPは「ブロック編集」で作ったLPです。</p>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  デザインと本文はブロック編集で編集してください。この画面で保存しても、ブロックのデザインのまま変わりません
+                  （ここではタイトル・URL・SEO・公開設定などを変更できます）。
+                </p>
+                {editId && (
+                  <a href={`/admin/lp/blocks?id=${editId}`} className="inline-block bg-fuchsia-600 text-white text-sm font-bold px-4 py-2 rounded hover:bg-fuchsia-700">
+                    ブロック編集を開く
+                  </a>
+                )}
+              </div>
+            ) : (
+            <>
             <p className="text-xs text-fuchsia-600 mb-3">
               「詳細」を選ぶと、/lp/mizumawari 等の独立LPと同じ構成（お悩み・料金表・施工事例・お客様の声・FAQなど）で公開されます。「シンプル」の場合は上の本文＋CTAのみの従来通りの表示です。
             </p>
@@ -545,6 +567,8 @@ function EditForm() {
                   className="w-full p-3 border border-fuchsia-300 rounded font-mono text-xs text-black bg-slate-50"
                 />
               </div>
+            )}
+            </>
             )}
           </div>
 

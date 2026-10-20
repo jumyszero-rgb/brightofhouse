@@ -296,13 +296,28 @@ export async function PATCH(request: NextRequest) {
   bustServerMemo(); // 公開ページの作り置きを捨てる（保存内容をすぐ反映）
   try {
     const body = await request.json();
-    const { id, blocks, templateStyle, status } = body || {};
+    const { id, blocks, templateStyle, status, title, slug } = body || {};
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
     const data: any = {};
     if (blocks !== undefined) data.blocks = blocks;
     if (templateStyle !== undefined) data.templateStyle = templateStyle;
     if (status !== undefined) data.status = status;
+    // ブロック編集画面からのタイトル・URL(slug)の変更
+    if (title !== undefined) {
+      const t = String(title).trim();
+      if (!t) return NextResponse.json({ error: "タイトルを入力してください" }, { status: 400 });
+      data.title = t.slice(0, 200);
+    }
+    if (slug !== undefined) {
+      const sl = String(slug).trim();
+      if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(sl)) {
+        return NextResponse.json({ error: "URLは半角の英小文字・数字・ハイフンで入力してください（例：mizumawari-house）" }, { status: 400 });
+      }
+      const dup = await prisma.landingPage.findFirst({ where: { slug: sl, NOT: { id } }, select: { id: true } });
+      if (dup) return NextResponse.json({ error: "そのURLはほかのLPで使われています" }, { status: 409 });
+      data.slug = sl;
+    }
 
     const updated = await prisma.landingPage.update({ where: { id }, data });
     if (updated.status === "PUBLISHED") {
