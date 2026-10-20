@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import { buildFigure } from "@/lib/blogFigure";
 
 type MediaItem = {
   key: string;
@@ -71,14 +72,25 @@ export default function AdminMediaPage() {
     else load();
   };
 
-  const copyUrl = async (url: string) => {
+  // コピー済み表示は「どの画像の・どちらのボタンか」で管理（例："url:https://…" / "tag:https://…"）
+  const copyText = async (text: string, mark: string) => {
     try {
-      await navigator.clipboard.writeText(url);
-      setCopied(url);
-      setTimeout(() => setCopied((c) => (c === url ? null : c)), 1500);
+      await navigator.clipboard.writeText(text);
+      setCopied(mark);
+      setTimeout(() => setCopied((c) => (c === mark ? null : c)), 1500);
     } catch {
-      window.prompt("URLをコピーしてください", url);
+      window.prompt("コピーしてください", text);
     }
+  };
+
+  /** タグなし：URLだけ */
+  const copyUrl = (url: string) => copyText(url, `url:${url}`);
+
+  /** タグ付き：ブログのHTMLモードにそのまま貼れる <figure> のHTML（キャプションは任意） */
+  const copyTag = (url: string) => {
+    const caption = window.prompt("キャプション（空欄でなし）", "");
+    if (caption === null) return; // キャンセル
+    copyText(buildFigure(url, caption), `tag:${url}`);
   };
 
   const remove = async (key: string) => {
@@ -169,11 +181,19 @@ export default function AdminMediaPage() {
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <p className="text-[11px] text-gray-500 break-all leading-tight">{it.key}</p>
                     <p className="text-[11px] text-gray-400">{formatSize(it.size)}</p>
-                    <div className="mt-auto flex gap-2">
-                      <button
-                        onClick={() => copyUrl(it.url)}
-                        className="flex-1 text-xs font-bold py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
-                      >{copied === it.url ? "コピー済✓" : "URLコピー"}</button>
+                    <div className="mt-auto flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => copyUrl(it.url)}
+                          title="画像のURLだけをコピー"
+                          className="flex-1 text-xs font-bold py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
+                        >{copied === `url:${it.url}` ? "コピー済✓" : "タグなし（URL）"}</button>
+                        <button
+                          onClick={() => copyTag(it.url)}
+                          title="ブログのHTMLモードに貼れる <figure> タグ付きでコピー"
+                          className="flex-1 text-xs font-bold py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                        >{copied === `tag:${it.url}` ? "コピー済✓" : "タグ付き"}</button>
+                      </div>
                       <button
                         onClick={() => remove(it.key)}
                         className="text-xs font-bold py-1.5 px-3 rounded bg-red-100 text-red-600 border border-red-200 hover:bg-red-200"
