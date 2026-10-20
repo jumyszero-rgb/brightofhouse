@@ -5,7 +5,6 @@ import Image from "next/image";
 import PhoneLink from "@/components/PhoneLink";
 import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import { BRAND } from "@/lib/lpContent";
-import LpFoldAnchorOpener from "@/components/lp/LpFoldAnchorOpener";
 import { MENU_BUTTON_DEFAULTS, type MenuButtonKey } from "@/lib/lpMenuButtons";
 
 type MasterItem = {
@@ -153,20 +152,22 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
   //  （申込フォームが無いLPでは、カレンダー予約が #lead も兼ねる＝従来のCTAボタンがそのまま使える）
   const firstLeadId = list.find((b) => b.type === "leadForm")?.id;
   const firstBookingId = list.find((b) => b.type === "bookingForm")?.id;
-  const hasFold = list.some((b) => b.fold?.enabled && (b.fold?.title || "").trim());
 
   return (
     <main className="min-h-screen bg-white text-slate-800">
-      {hasFold && <LpFoldAnchorOpener />}
       {list.map((block, index) => {
         const node = renderBlock(block, index);
         if (!node) return null;
+        // ページ内リンクの飛び先（ブロックの一番外側に付ける）。折りたたみ中でも、飛べば LpFoldAnchorOpener が開いてスクロールする
+        //  最初の申込フォーム＝#lead、最初のカレンダー予約＝#booking（申込フォームが無いLPでは #lead も兼ねる＝data-anchor）
+        const anchorId = block.id === firstLeadId ? "lead" : block.id === firstBookingId ? "booking" : undefined;
+        const anchorAlias = block.id === firstBookingId && !firstLeadId ? "lead" : undefined;
         // 折りたたみ（見出しだけ表示・タップで開く）。ヒーローは対象外
         const fold = block.fold;
         const foldTitle = (fold?.title || "").trim();
         if (block.type !== "hero" && fold?.enabled && foldTitle) {
           return (
-            <details key={block.id} open={!!fold.open} className="lp-fold group border-b border-slate-200 first:border-t">
+            <details key={block.id} id={anchorId} data-anchor={anchorAlias} open={!!fold.open} className="lp-fold group border-b border-slate-200 first:border-t">
               <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none bg-white hover:bg-slate-50">
                 <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
                   <h2 className="text-lg md:text-xl font-black text-slate-800 leading-snug">{foldTitle}</h2>
@@ -175,6 +176,13 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
               </summary>
               {node}
             </details>
+          );
+        }
+        if (anchorId) {
+          return (
+            <div key={block.id} id={anchorId} data-anchor={anchorAlias}>
+              {node}
+            </div>
           );
         }
         return node;
@@ -414,7 +422,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
 
           case "leadForm":
             return (
-              <section key={block.id} id={block.id === firstLeadId ? "lead" : undefined} className="py-12 bg-slate-50 scroll-mt-16">
+              <section key={block.id} className="py-12 bg-slate-50">
                 <div className="max-w-2xl mx-auto px-4">
                   {d.heading && <h2 className="text-2xl font-black text-center text-slate-800 mb-2">{d.heading}</h2>}
                   {d.note && <p className="text-center text-sm text-slate-500 mb-6">{d.note}</p>}
@@ -426,9 +434,7 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
           case "bookingForm": {
             const bd = bookingForms?.[block.id] ?? bookingForms?.[block.refs?.refId];
             return (
-              <section key={block.id} id={block.id === firstBookingId ? "booking" : undefined} className="py-12 bg-slate-50 scroll-mt-16">
-                {/* 申込フォームが無いLPでは、従来の #lead（CTAボタン等）もここへ飛ぶ */}
-                {!firstLeadId && block.id === firstBookingId && <span id="lead" className="block scroll-mt-16" aria-hidden />}
+              <section key={block.id} className="py-12 bg-slate-50">
                 <div className="max-w-5xl mx-auto px-4">
                   {d.heading && <h2 className="text-2xl font-black text-center text-slate-800 mb-6">{d.heading}</h2>}
                   {bd ? (

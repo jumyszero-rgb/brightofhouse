@@ -2,7 +2,6 @@
 import Image from "next/image";
 import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import PhoneLink from "@/components/PhoneLink";
-import AfterHoursNote from "@/components/lp/AfterHoursNote";
 import { BRAND, type LpContent } from "@/lib/lpContent";
 
 function Stars({ n = 5 }: { n?: number }) {
@@ -550,9 +549,13 @@ export default function LpTemplate({ content, bookingData }: Props) {
         </section>
 
         {/* ===== リードフォーム（予約マスター連動時はカレンダー予約フォームに差し替え） ===== */}
-        <section id="lead" className="pb-24 md:pb-16 pt-4 scroll-mt-20">
+        <section id="lead" className="pb-8 md:pb-16 pt-4 scroll-mt-20">
           {bookingData ? (
-            <LazyServicePageBooking pageTitle={serviceLabel} bookingData={bookingData} />
+            <>
+              {/* 固定バーの「📅 予約」の飛び先 */}
+              <span id="booking" className="block scroll-mt-20" aria-hidden />
+              <LazyServicePageBooking pageTitle={serviceLabel} bookingData={bookingData} />
+            </>
           ) : (
             <>
               <p className="text-center text-lg md:text-2xl font-black mb-2">
@@ -567,42 +570,7 @@ export default function LpTemplate({ content, bookingData }: Props) {
         </section>
       </div>
 
-      {/* ===== モバイル固定CTAバー（電話／LINEで写真見積もり／無料相談） ===== */}
-      <div className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur border-t border-slate-200 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-3 gap-2 items-start">
-        <div>
-          {/* 広告経由の人には通話計測用の0800番号で発信（表示は「電話する」のまま） */}
-          <PhoneLink
-            className="flex items-center justify-center h-12 bg-white border border-blue-600 text-blue-700 font-bold rounded-full text-xs"
-            display="📞 電話する"
-          />
-          {/* 18:00〜翌9:00だけ表示 */}
-          <AfterHoursNote className="mt-1 text-[10px] leading-tight text-slate-500 text-center">
-            時間外はLINE・予約で
-            <br />
-            24時間受付
-          </AfterHoursNote>
-        </div>
-        {BRAND.lineUrl ? (
-          <a
-            href={BRAND.lineUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center h-12 bg-[#06c755] text-white font-black rounded-full text-[11px] leading-tight text-center"
-          >
-            LINEで
-            <br />
-            写真見積もり
-          </a>
-        ) : (
-          <span aria-hidden />
-        )}
-        <a
-          href="#lead"
-          className="flex items-center justify-center h-12 bg-amber-400 text-slate-900 font-black rounded-full text-xs"
-        >
-          無料相談
-        </a>
-      </div>
+      {/* スマホ用の固定バーは SiteShell の MobileActionBar（全ページ共通）で出す */}
     </div>
   );
 }

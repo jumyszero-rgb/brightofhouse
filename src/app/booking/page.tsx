@@ -44,7 +44,10 @@ export default async function BookingPage() {
         </div>
 
         {/* 予約システム統合コンポーネント */}
-        <BookingIntegrated masterData={masterData} />
+        {/* 固定バーの「予約」の飛び先 */}
+        <div id="booking">
+          <BookingIntegrated masterData={masterData} />
+        </div>
 
       </div>
     </main>

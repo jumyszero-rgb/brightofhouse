@@ -16,7 +16,7 @@ export default function Header() {
     `hover:text-blue-600 transition-colors ${pathname === path ? "text-blue-600 font-bold" : "text-slate-600"}`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm text-black">
+    <header data-fixed-header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm text-black">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
 
         {/* スマホ用 (左: ハンバーガー + ロゴ) */}

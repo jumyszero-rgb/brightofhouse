@@ -34,7 +34,10 @@ export default function InquiryPage() {
           <p className="text-[11px] text-slate-400 mt-1">受付 9:00〜18:00</p>
         </div>
 
-        <LeadForm service="お問い合わせ・お見積り（ホームページ）" source="hp/inquiry" />
+        {/* 固定バーの「無料で相談」の飛び先 */}
+        <div id="lead">
+          <LeadForm service="お問い合わせ・お見積り（ホームページ）" source="hp/inquiry" />
+        </div>
 
         {/* 業者・営業の方を業者用窓口へ誘導（このフォームはお客様専用） */}
         <p className="mt-8 text-xs text-slate-500 leading-relaxed text-center">

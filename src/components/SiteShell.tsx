@@ -4,15 +4,16 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
-import BottomNav from "@/components/BottomNav";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import LpHeader from "@/components/lp/LpHeader";
 import LpFooter from "@/components/lp/LpFooter";
 import PhoneLink from "@/components/PhoneLink";
+import MobileActionBar from "@/components/MobileActionBar";
+import LpFoldAnchorOpener from "@/components/lp/LpFoldAnchorOpener";
 
 /**
  * /lp 配下は「広告用の最小レイアウト」（ナビ無しヘッダ＋会社情報のみのフッタ）に切り替える。
- * それ以外は従来どおり Header / Breadcrumbs / footer / BottomNav を出す。
+ * それ以外は従来どおり Header / Breadcrumbs / footer を出す。スマホの固定バー（MobileActionBar）はどちらも共通。
  *
  * root layout が <html>/<body> を持っているため、入れ子 layout では親の chrome を消せない。
  * そこで chrome をこの client コンポーネントに集約し、pathname で出し分けている。
@@ -28,6 +29,10 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
         <LpHeader />
         <main>{children}</main>
         <LpFooter />
+        {/* スマホ用の固定バー（📞 電話／💬 LINE／📅 予約）。全ページ共通 */}
+        <MobileActionBar />
+        {/* ページ内リンク（#booking・#lead など）：折りたたみを開いて、ヘッダーに隠れない位置までスクロール */}
+        <LpFoldAnchorOpener />
       </>
     );
   }
@@ -147,7 +152,10 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <BottomNav />
+      {/* スマホ用の固定バー（📞 電話／💬 LINE／📅 予約）。全ページ共通（以前の BottomNav から置き換え） */}
+      <MobileActionBar />
+      {/* ページ内リンク（#booking・#lead など）：折りたたみを開いて、ヘッダーに隠れない位置までスクロール */}
+      <LpFoldAnchorOpener />
     </>
   );
 }
