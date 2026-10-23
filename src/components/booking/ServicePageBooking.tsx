@@ -689,7 +689,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         const fiOptions = (main.options || []).filter(o => o.parentFoldItemId === fi.id);
         return (
           <div key={fi.id}>
-            <label className={`flex items-center justify-between gap-3 min-h-[48px] px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+            <label className={`flex items-center justify-between gap-3 min-h-[48px] px-2.5 md:px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
               <div className="flex items-center gap-3 min-w-0">
                 <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-5 h-5 shrink-0 accent-blue-600" />
                 <div className="min-w-0">
@@ -705,7 +705,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               const q = getUnitQty(fi.id, fi.maxQty);
               const qd = calcQtyDiscount(fi.price || 0, fi.qtyDiscount, q);
               return (
-                <div className="ml-3 md:ml-8 mt-1 flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
+                <div className="ml-1 md:ml-8 mt-1 flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
                   <span className="text-xs font-bold text-blue-700">数量</span>
                   <button type="button" onClick={() => setUnitQty(fi.id, Math.max(1, q - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
                   <span className="w-5 text-center font-bold text-xs">{q}</span>
@@ -722,11 +722,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 </div>
               );
             })()}
-            <div className="ml-3 md:ml-8">{renderItemDetails(`fi:${fi.id}`, fi)}</div>
+            <div className="ml-1 md:ml-8">{renderItemDetails(`fi:${fi.id}`, fi)}</div>
 
             {/* このfoldItem(小分類)に紐づく追加オプション（チェック時のみ表示） */}
             {checked && fiOptions.length > 0 && (
-              <div className="ml-2 md:ml-8 mt-2 mb-2 pl-2 md:pl-3 border-l-4 border-indigo-200 space-y-1">
+              <div className="ml-1 md:ml-8 mt-2 mb-2 pl-1.5 md:pl-3 border-l-4 border-indigo-200 space-y-1">
                 <p className="text-[10px] font-bold text-indigo-600">┗ オプション</p>
                 {fiOptions.map(opt => renderOptionRow(opt))}
               </div>
@@ -734,7 +734,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
             {/* この項目の中の項目（ぶら下げた中分類の小分類など・チェック時のみ表示） */}
             {checked && children.length > 0 && (
-              <div className="ml-1 md:ml-6 mt-2 mb-2 pl-2 md:pl-3 border-l-4 border-blue-200 space-y-2">
+              <div className="ml-0.5 md:ml-6 mt-2 mb-2 pl-1.5 md:pl-3 border-l-4 border-blue-200 space-y-2">
                 <p className="text-[10px] font-bold text-blue-600">┗ 追加できる項目</p>
                 {children.map(c => renderFoldItem(c))}
               </div>
@@ -790,7 +790,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       const discount = calcSetDiscount(main, idx);
       return (
         <div key={main.id || `main-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <label className={`flex items-center justify-between gap-3 min-h-[52px] px-3 py-3 md:p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+          <label className={`flex items-center justify-between gap-3 min-h-[52px] px-2.5 py-3 md:p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
             <div className="flex items-center gap-3 min-w-0">
               <input
                 type="checkbox"
@@ -816,7 +816,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             {priceBlock(main.price, main.originalPrice, main.from)}
           </label>
           {checked && (
-            <div className="p-3 pt-2 pl-3 md:p-4 md:pt-3 md:pl-10 space-y-2 border-t border-slate-100">
+            <div className="px-1.5 pb-2 pt-2 md:p-4 md:pt-3 md:pl-10 space-y-2 border-t border-slate-100">
               {renderMainDetails(main, main.id || `main-${idx}`)}
               <p className="text-[10px] font-bold text-slate-400">▼ 追加できる項目</p>
               {/* セット値引き案内（この中分類内での小分類選択個数に応じた値引き） */}
@@ -855,7 +855,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       const discount = calcSetDiscount(main, idx);
       return (
         <div key={foldKey} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700 focus:outline-none">
+          <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full px-3 py-3 md:p-4 cursor-pointer hover:bg-slate-50 font-bold text-blue-700 focus:outline-none">
             <span>{openFolds[foldKey] ? "▲" : "▼"} {main.foldTitle}</span>
             <div className="flex items-center gap-2">
               {selectedInThisMain.length > 0 && (
@@ -867,7 +867,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
             </div>
           </button>
           {openFolds[foldKey] && (
-            <div className="p-4 pt-0 space-y-2">
+            <div className="px-1.5 pb-2 md:p-4 md:pt-0 space-y-2">
               {renderMainDetails(main, foldKey)}
               {/* セット値引き案内 */}
               {main.setDiscount?.enabled && main.setDiscount.rules.length > 0 && (
@@ -901,7 +901,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     const flatKey = main.id || `main-${idx}`;
     return (
       <div key={flatKey}>
-        <label className={`flex items-center justify-between gap-3 min-h-[52px] px-3 py-3 md:p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+        <label className={`flex items-center justify-between gap-3 min-h-[52px] px-2.5 py-3 md:p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
           <div className="flex items-center gap-3 min-w-0">
             <input
               type="checkbox"
@@ -922,7 +922,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           {priceBlock(main.price, main.originalPrice, main.from)}
         </label>
         {selectedMains.includes(idx) && (
-          <div className="ml-3 mr-2 md:ml-8 md:mr-4 mt-1 mb-2">
+          <div className="ml-1 mr-1 md:ml-8 md:mr-4 mt-1 mb-2">
             {renderMainDetails(main, flatKey)}
           </div>
         )}
@@ -932,8 +932,8 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
   if (!bookingData) return null;
   return (
-    <div id="booking-section" className="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden text-black scroll-mt-24">
-      <div className="bg-blue-600 p-6 text-white text-center">
+    <div id="booking-section" className="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden text-black scroll-mt-24 max-md:mx-[calc(50%-50vw)] max-md:rounded-none max-md:border-x-0 max-md:shadow-none">
+      <div className="bg-blue-600 px-3 py-5 md:p-6 text-white text-center">
         <h3 className="text-xl font-bold">ネットで即時見積・仮予約・このサービスについてのお問い合わせ</h3>
         <p className="text-blue-100 text-xs mt-2 whitespace-pre-wrap leading-relaxed">
           ※お問い合わせの場合も日時を選択お願いします。{"\n"}
@@ -941,10 +941,10 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         </p>
       </div>
 
-      <div className="p-6 md:p-10 space-y-10">
+      <div className="px-2 py-6 md:p-10 space-y-10">
 
         {/* LINE案内 */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 md:p-4 flex items-center gap-3 md:gap-4">
           <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border" />
           <div>
             <p className="font-bold text-green-700 text-sm">LINEでもお問い合わせ可能です</p>
@@ -953,7 +953,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         </div>
 
         {/* 作業内容が決まっていない場合はメニュー選択自体を不要にする */}
-        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4">
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 md:p-4">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -996,7 +996,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   const groupSubtotal = groupMembers.reduce((sum, { m, idx: i }) => sum + mainSelectedSubtotal(m, i), 0);
                   rendered.push(
                     <div key={`group-${groupId}`} className={`border-2 rounded-xl overflow-hidden ${groupOpen ? "border-blue-300 bg-slate-50/60" : "border-slate-200 bg-white"}`}>
-                      <label className={`flex items-center gap-3 min-h-[52px] px-3 py-3 cursor-pointer select-none ${groupOpen ? "bg-blue-50" : "hover:bg-slate-50"}`}>
+                      <label className={`flex items-center gap-2.5 md:gap-3 min-h-[52px] px-2.5 md:px-3 py-3 cursor-pointer select-none ${groupOpen ? "bg-blue-50" : "hover:bg-slate-50"}`}>
                         <input type="checkbox" checked={groupOpen} onChange={() => {
                           const willClose = groupOpen; // 現在開いている→閉じる操作
                           toggleGroup(groupId);
@@ -1029,7 +1029,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                       </label>
 
                       {groupOpen && (
-                        <div className="px-2 pb-2 md:px-3 md:pb-3 pt-2">
+                        <div className="px-1 pb-1 md:px-3 md:pb-3 pt-1.5 md:pt-2">
                           {/* まとめ割引の案内（大分類内の中分類を横断した選択個数による値引き） */}
                           {discount?.enabled && discount.rules?.length > 0 && (
                             <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-3">
@@ -1072,14 +1072,14 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                     const foldKey = opt.id || `opt-fold-${optIdx}`;
                     return (
                       <div key={foldKey} className="bg-white border border-slate-200 rounded-xl overflow-hidden col-span-full">
-                        <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700 focus:outline-none">
+                        <button type="button" onClick={() => toggleFold(foldKey)} className="flex items-center justify-between w-full px-3 py-3 md:p-4 cursor-pointer hover:bg-slate-50 font-bold text-indigo-700 focus:outline-none">
                           <span>{openFolds[foldKey] ? "▲" : "▼"} {opt.foldTitle}</span>
                           {opt.foldItems.some(fi => getQty(fi.id) > 0) && (
                             <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">選択中</span>
                           )}
                         </button>
                         {openFolds[foldKey] && (
-                          <div className="p-4 pt-0 space-y-2">
+                          <div className="px-1.5 pb-2 md:p-4 md:pt-0 space-y-2">
                             {opt.foldItems.map(fi => {
                               const qty = getQty(fi.id);
                               return (
@@ -1164,7 +1164,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         )}
         {/* 日程に関する選択（カレンダーの前）。スマホの「日時を選ぶ →」の飛び先 */}
         {!inquiryOnly && (
-          <div id="booking-step2" className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3 scroll-mt-20">
+          <div id="booking-step2" className="p-3 md:p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3 scroll-mt-20">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
