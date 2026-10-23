@@ -52,6 +52,17 @@ export async function POST(request: NextRequest) {
     const type = typeof b.type === "string" ? b.type : "";
     if (!TYPES.has(type)) return NextResponse.json({ error: "bad type" }, { status: 400 });
 
+    // 過去の広告訪問の日時（ブラウザから届いた値）。おかしな値（未来・400日より前・日付でない）は捨てる
+    const adDate = (v: unknown): Date | null => {
+      if (typeof v !== "string" || v.length > 40) return null;
+      const t = Date.parse(v);
+      if (!t) return null;
+      const now = Date.now();
+      if (t > now + 24 * 60 * 60 * 1000 || t < now - 400 * 24 * 60 * 60 * 1000) return null;
+      return new Date(t);
+    };
+    const firstAdAt = adDate(b.firstAdAt);
+
     const gclid = s500(b.gclid);
     const gbraid = s500(b.gbraid);
     const wbraid = s500(b.wbraid);
@@ -76,6 +87,12 @@ export async function POST(request: NextRequest) {
         utmTerm: s500(b.utm_term),
         device: b.device === "mobile" || b.device === "desktop" ? (b.device as string) : null,
         bookingId: type === "booking" ? s500(b.bookingId) : null,
+        firstAdAt,
+        firstAdKeyword: firstAdAt ? s500(b.firstAdKeyword) : null,
+        firstAdMatchType: firstAdAt ? s500(b.firstAdMatchType) : null,
+        firstAdLanding: firstAdAt ? s500(b.firstAdLanding) : null,
+        firstAdCampaignId: firstAdAt ? s500(b.firstAdCampaignId) : null,
+        lastAdAt: adDate(b.lastAdAt),
       },
     });
 

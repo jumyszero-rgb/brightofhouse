@@ -624,6 +624,13 @@ model LeadEvent {
   utmTerm     String?
   device      String?
   bookingId   String?
+  // 過去の広告訪問（ブラウザに残した記録・90日以内）。今回の訪問が広告でなくても入る
+  firstAdAt         DateTime? // 初めて広告から来た日時
+  firstAdKeyword    String?
+  firstAdMatchType  String?
+  firstAdLanding    String?
+  firstAdCampaignId String?
+  lastAdAt          DateTime? // 最後に広告から来た日時
 
   @@index([createdAt])
 }
@@ -636,6 +643,8 @@ model PageViewDaily {
   path    String // ページのパス（?以降は含まない）
   views   Int    @default(0)
   adViews Int    @default(0) // うち広告クリック経由（gclid等あり）
+  mobileViews  Int @default(0) // うちスマホ（画面幅768px未満）
+  desktopViews Int @default(0) // うちPC（画面幅768px以上）。この列を入れる前の分は、どちらにも入っていない
 
   @@unique([day, path])
   @@index([day])

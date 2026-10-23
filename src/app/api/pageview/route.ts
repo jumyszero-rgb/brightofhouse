@@ -58,13 +58,20 @@ export async function POST(request: NextRequest) {
     path = path.slice(0, 300);
     if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     const isAd = b.isAd === true;
+    const mobile = b.device === "mobile";
+    const desktop = b.device === "desktop";
     const day = jstDay();
 
-    const update = { views: { increment: 1 }, ...(isAd ? { adViews: { increment: 1 } } : {}) };
+    const update = {
+      views: { increment: 1 },
+      ...(isAd ? { adViews: { increment: 1 } } : {}),
+      ...(mobile ? { mobileViews: { increment: 1 } } : {}),
+      ...(desktop ? { desktopViews: { increment: 1 } } : {}),
+    };
     try {
       await prisma.pageViewDaily.upsert({
         where: { day_path: { day, path } },
-        create: { day, path, views: 1, adViews: isAd ? 1 : 0 },
+        create: { day, path, views: 1, adViews: isAd ? 1 : 0, mobileViews: mobile ? 1 : 0, desktopViews: desktop ? 1 : 0 },
         update,
       });
     } catch (e: any) {

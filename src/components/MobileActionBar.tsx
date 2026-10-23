@@ -46,7 +46,7 @@ export default function MobileActionBar() {
       <div className="h-20 md:hidden" aria-hidden />
       <nav
         aria-label="お問い合わせ"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,30,46,0.08)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-[1fr_1.35fr_1fr] gap-2 items-start"
+        className="md:hidden [.bh-booking-bar_&]:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,30,46,0.08)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-[1fr_1.35fr_1fr] gap-2 items-start"
       >
         {/* 📞 電話（広告経由は転送番号） */}
         <div className="min-w-0">

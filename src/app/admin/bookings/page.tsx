@@ -76,6 +76,15 @@ export default function AdminBookingsPage() {
           </Link>
         </div>
 
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 leading-relaxed">
+          <p className="font-bold">2026年10月の仕様変更：新しい申し込みはここには保存されません</p>
+          <p className="text-xs mt-1">
+            個人情報をサイトのデータベースに残さないため、カレンダー予約の申し込みは通知メールでのみお届けします（お客様には控えメール）。
+            申し込みがあっても空き状況（×・▲）は自動では変わりません。必要なら「カレンダー空き枠設定」で変更してください。
+            この一覧に残っているのは、仕様変更前の申し込みです（不要になったら削除してください）。
+          </p>
+        </div>
+
         <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">

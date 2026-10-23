@@ -1,6 +1,7 @@
 // @/src/components/lp/LeadForm.tsx
 "use client";
 
+import PrivacyStorageNote from "@/components/PrivacyStorageNote";
 import { useState } from "react";
 import { BRAND } from "@/lib/lpContent";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
@@ -319,6 +320,7 @@ export default function LeadForm({
           </p>
         )}
 
+        <PrivacyStorageNote className="mb-3" photos />
         <button
           type="submit"
           disabled={loading}

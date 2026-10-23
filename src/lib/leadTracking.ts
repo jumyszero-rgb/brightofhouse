@@ -43,11 +43,89 @@ function externalReferrer(): string {
   }
 }
 
+// ===== 過去の広告訪問（ブラウザに残す・個人情報は入れない） =====
+// 広告から来たとき（URLに gclid / gbraid / wbraid）に記録し、あとで「直接・検索・Googleマップ」などから
+// 戻ってきて問い合わせた人も「前に広告で来た人」と分かるようにする。
+//  - boh_first_ad：初めて広告から来た記録（日時・着地ページ・キーワード・マッチタイプ・キャンペーンID）。上書きしない
+//  - boh_last_ad ：最後に広告から来た日時。毎回上書き
+//  - どちらも90日を過ぎたら消す
+//  ※ブラウザに残す方式なので、別のスマホ・PC・ブラウザで戻ってきた場合は追えない
+const FIRST_AD_KEY = "boh_first_ad";
+const LAST_AD_KEY = "boh_last_ad";
+const AD_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+type FirstAd = { at: string; landing?: string; kw?: string; mt?: string; cid?: string };
+type LastAd = { at: string };
+
+export type AdHistory = {
+  firstAdAt?: string;
+  firstAdKeyword?: string;
+  firstAdMatchType?: string;
+  firstAdLanding?: string;
+  firstAdCampaignId?: string;
+  lastAdAt?: string;
+};
+
+function readFresh<T extends { at: string }>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as T;
+    const t = Date.parse(v?.at || "");
+    if (!t || Date.now() - t > AD_TTL_MS) {
+      localStorage.removeItem(key); // 90日を過ぎた記録は消す
+      return null;
+    }
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+/** 広告から来たときに呼ぶ（captureTrafficSource の中から） */
+function saveAdTouch(sp: URLSearchParams): void {
+  try {
+    const now = new Date().toISOString();
+    if (!readFresh<FirstAd>(FIRST_AD_KEY)) {
+      const first: FirstAd = {
+        at: now,
+        landing: (window.location.pathname + window.location.search).slice(0, 300),
+        kw: sp.get("kw")?.slice(0, 200) || undefined,
+        mt: sp.get("mt")?.slice(0, 20) || undefined,
+        cid: sp.get("cid")?.slice(0, 50) || undefined,
+      };
+      localStorage.setItem(FIRST_AD_KEY, JSON.stringify(first));
+    }
+    localStorage.setItem(LAST_AD_KEY, JSON.stringify({ at: now } satisfies LastAd));
+  } catch {
+    /* localStorage が使えない環境（プライベートブラウズ等）では記録しない */
+  }
+}
+
+/** 過去の広告訪問の記録（90日以内のもの）。問い合わせ行動の記録に添える */
+export function getAdHistory(): AdHistory {
+  if (typeof window === "undefined") return {};
+  const first = readFresh<FirstAd>(FIRST_AD_KEY);
+  const last = readFresh<LastAd>(LAST_AD_KEY);
+  const out: AdHistory = {};
+  if (first) {
+    out.firstAdAt = first.at;
+    if (first.kw) out.firstAdKeyword = first.kw;
+    if (first.mt) out.firstAdMatchType = first.mt;
+    if (first.landing) out.firstAdLanding = first.landing;
+    if (first.cid) out.firstAdCampaignId = first.cid;
+  }
+  if (last) out.lastAdAt = last.at;
+  return out;
+}
+
 /** ランディング時に呼ぶ。gclid / utm_* があれば保存（初回を優先して上書きしない）。 */
 export function captureTrafficSource(): void {
   if (typeof window === "undefined") return;
   try {
     const sp = new URLSearchParams(window.location.search);
+    // 広告から来た（クリックIDがある）なら、過去の広告訪問として localStorage にも残す
+    if (sp.get("gclid") || sp.get("gbraid") || sp.get("wbraid")) saveAdTouch(sp);
     const picked: TrafficSource = {};
     const gclid = sp.get("gclid");
     if (gclid) picked.gclid = gclid;

@@ -106,7 +106,8 @@ const label = inquiryOnly ? "お問い合わせ" : "予約";
     to: ADMIN_EMAIL,
     subject: `【新着${label}】${customerName}様より申し込みがありました`,
     text: `
-新しい${label}申し込みが入りました。管理画面で詳細を確認し、確定処理を行ってください。
+新しい${label}申し込みが入りました。
+※この申し込みはサイトのデータベースには保存していません（個人情報を残さないため）。内容はこのメールで確認してください。
 
 【予約内容】
 ------------------------------------------
@@ -134,7 +135,7 @@ ${notes || "なし"}
 ${bookingSourceBlock(source)}
 
 ------------------------------------------
-管理画面で確認：https://brightofhouse.jp/admin/bookings
+※空き状況（×・▲）は自動では変わりません。必要なら管理画面「カレンダー空き枠設定」で変更してください：https://brightofhouse.jp/admin/calendar
 `,
   });
 }

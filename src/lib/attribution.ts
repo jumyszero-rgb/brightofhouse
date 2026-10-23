@@ -4,7 +4,7 @@
 // 流入情報は leadTracking.ts がランディング時に sessionStorage へ保存したもの（メール通知と同じデータ）を使う。
 //  - tel: や LINE はページを離れるので、navigator.sendBeacon で送る（使えなければ fetch keepalive）
 //  - GA4 の phone_tap / line_click / generate_lead とは別に送る（GA4の反映待ちなしで見るため）
-import { getTrafficSource } from "@/lib/leadTracking";
+import { getAdHistory, getTrafficSource } from "@/lib/leadTracking";
 
 export type LeadType = "phone" | "line" | "form" | "booking";
 
@@ -32,6 +32,8 @@ export function trackLead(type: LeadType, extra: { phoneNumber?: string; booking
       utm_campaign: t.utm_campaign,
       utm_term: t.utm_term,
       device: window.innerWidth < 768 ? "mobile" : "desktop",
+      // 過去の広告訪問（ブラウザに残した記録・90日以内）。今回の訪問が広告でなくても送る
+      ...getAdHistory(),
     };
     const body = JSON.stringify(payload);
     const url = "/api/lead-event";
@@ -55,7 +57,12 @@ export function trackPageView(pathname: string): void {
     if (/^\/(admin|api)(\/|$)/.test(pathname)) return;
     if (new URLSearchParams(window.location.search).has("preview")) return;
     const t = getTrafficSource();
-    const body = JSON.stringify({ path: pathname, isAd: !!(t.gclid || t.gbraid || t.wbraid) });
+    const body = JSON.stringify({
+      path: pathname,
+      isAd: !!(t.gclid || t.gbraid || t.wbraid),
+      // スマホ／PC（問い合わせ行動の記録と同じ判定：画面幅768px未満をスマホ）
+      device: window.innerWidth < 768 ? "mobile" : "desktop",
+    });
     const url = "/api/pageview";
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
       if (navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))) return;

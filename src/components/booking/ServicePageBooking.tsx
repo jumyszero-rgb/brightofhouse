@@ -1,6 +1,7 @@
 // @/src/components/booking/ServicePageBooking.tsx
 "use client";
 
+import PrivacyStorageNote from "@/components/PrivacyStorageNote";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { format, addDays, startOfDay, eachHourOfInterval, setHours, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -111,6 +112,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
   const [minRules, setMinRules] = useState<MinRule[]>([]);
   // generate_lead の二重送信防止（同じ画面で2回送らない）
   const leadSentRef = useRef(false);
+  // スマホ：作業メニューの欄が画面の中ほど（上120px〜下35%を除いた帯）にある間だけ、下に「N件・合計・日時を選ぶ →」のバーを出す
+  const menuSectionRef = useRef<HTMLElement>(null);
+  const [menuInView, setMenuInView] = useState(false);
 
   const [customer, setCustomer] = useState({
     name: "", email: "", phone: "", zip: "", address: "", building: "", notes: "", contactMethods: ["お電話"] as string[],
@@ -348,6 +352,13 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     mains.some((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx) && !!m.from) ||
     mains.some((m, idx) => isFoldActive(m, idx) && (m.foldItems || []).some((fi) => selectedFoldItemIds.includes(fi.id) && !!fi.from)) ||
     mains.some((m, idx) => (m.options || []).some((o) => getQty(o.id) > 0 && isOptionActive(m, idx, o) && !!o.from));
+  // 選択中の件数（スマホ下部バー用。位置だけの見出し項目は数えない）
+  const selectionCount =
+    mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).length +
+    mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id) && !fi.groupOnly).length : sum, 0) +
+    mains.reduce((sum, m, idx) => sum + (m.options || []).filter(o => getQty(o.id) > 0 && isOptionActive(m, idx, o)).length, 0) +
+    legacyOptions.filter(o => !o.foldTitle && getQty(o.id) > 0).length +
+    legacyOptions.flatMap(o => (o.foldItems || []).filter(fi => getQty(fi.id) > 0)).length;
   // 合計時間計算
   const mainNoFoldMinMin = mains.filter((m, idx) => hasBaseSelection(m) && selectedMains.includes(idx)).reduce((sum, m) => sum + (m.durationMin || 0) * getUnitQty(m.id || "", m.maxQty), 0);
   const mainFoldMinMin = mains.reduce((sum, m, idx) => isFoldActive(m, idx) ? sum + (m.foldItems || []).filter(fi => selectedFoldItemIds.includes(fi.id)).reduce((s, fi) => s + (fi.durationMin || 0) * getUnitQty(fi.id, fi.maxQty), 0) : sum, 0);
@@ -566,6 +577,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     }
   };
 
+  useEffect(() => {
+    const el = menuSectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setMenuInView(false); return; }
+    const io = new IntersectionObserver(([e]) => setMenuInView(e.isIntersecting), { threshold: 0, rootMargin: "-120px 0px -35% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [inquiryOnly]);
+  const showStickyBar = !inquiryOnly && menuInView && selectionCount > 0 && !showConfirm;
+  // バーを出している間は、サイト共通のスマホ固定バー（電話・LINE・予約）を隠す（重ならないように）
+  useEffect(() => {
+    document.body.classList.toggle("bh-booking-bar", showStickyBar);
+    return () => document.body.classList.remove("bh-booking-bar");
+  }, [showStickyBar]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfDay(new Date()));
   const days = [...Array(7)].map((_, i) => addDays(currentWeekStart, i));
   const timeSlots = eachHourOfInterval({
@@ -642,6 +666,19 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     );
   };
 
+  // 価格の表示（名前の右に置く。通常価格は上に小さく）。スマホでも名前と同じ行に並べる
+  const priceBlock = (price: number, originalPrice?: number, from?: boolean, plus = false) =>
+    price > 0 ? (
+      <span className="shrink-0 text-right leading-tight">
+        {originalPrice != null && (
+          <span className="block text-[10px] text-slate-400"><span className="mr-0.5">通常</span><span className="line-through">¥{originalPrice.toLocaleString()}</span></span>
+        )}
+        <span className="font-bold text-blue-600 whitespace-nowrap">{plus ? "+" : ""}¥{price.toLocaleString()}{from && "〜"}</span>
+      </span>
+    ) : null;
+  const durationText = (min: number, max: number) =>
+    min > 0 || max > 0 ? (min === max ? `${min}分` : `${min}〜${max}分`) : "";
+
   // 小分類(foldItem)一覧の描画。中分類チェックで展開される場合・手入力の折り畳みグループの
   // どちらからも共用する。各小分類はさらに紐づく追加オプションをネストして表示する。
   const renderFoldItemsList = (main: MainService) => {
@@ -652,32 +689,23 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
         const fiOptions = (main.options || []).filter(o => o.parentFoldItemId === fi.id);
         return (
           <div key={fi.id}>
-            <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0 p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-4 h-4 accent-blue-600" />
-                <div>
-                  <span className="font-bold text-sm">{fi.title}</span>
-                  {(fi.durationMin > 0 || fi.durationMax > 0) && (
-                    <span className="text-xs text-slate-500 ml-2">
-                      ({fi.durationMin === fi.durationMax ? `${fi.durationMin}分` : `${fi.durationMin}〜${fi.durationMax}分`})
-                    </span>
+            <label className={`flex items-center justify-between gap-3 min-h-[48px] px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <input type="checkbox" checked={checked} onChange={() => toggleFoldItem(fi.id)} className="w-5 h-5 shrink-0 accent-blue-600" />
+                <div className="min-w-0">
+                  <span className="block font-bold text-sm leading-snug">{fi.title}</span>
+                  {durationText(fi.durationMin, fi.durationMax) && (
+                    <span className="block text-[11px] text-slate-500">{durationText(fi.durationMin, fi.durationMax)}</span>
                   )}
                 </div>
               </div>
-              {fi.price > 0 && (
-                <span className="text-sm pl-7 sm:pl-0">
-                  {fi.originalPrice != null && (
-                    <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{fi.originalPrice.toLocaleString()}</span></>
-                  )}
-                  <span className="font-bold text-blue-600">¥{fi.price.toLocaleString()}{fi.from && "〜"}</span>
-                </span>
-              )}
+              {priceBlock(fi.price, fi.originalPrice, fi.from)}
             </label>
             {checked && (fi.maxQty || 0) > 1 && (() => {
               const q = getUnitQty(fi.id, fi.maxQty);
               const qd = calcQtyDiscount(fi.price || 0, fi.qtyDiscount, q);
               return (
-                <div className="ml-8 mt-1 flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
+                <div className="ml-3 md:ml-8 mt-1 flex items-center gap-2 flex-wrap bg-blue-50 border border-blue-200 rounded-lg p-2">
                   <span className="text-xs font-bold text-blue-700">数量</span>
                   <button type="button" onClick={() => setUnitQty(fi.id, Math.max(1, q - 1))} className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center hover:bg-slate-300">−</button>
                   <span className="w-5 text-center font-bold text-xs">{q}</span>
@@ -694,11 +722,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 </div>
               );
             })()}
-            <div className="ml-8">{renderItemDetails(`fi:${fi.id}`, fi)}</div>
+            <div className="ml-3 md:ml-8">{renderItemDetails(`fi:${fi.id}`, fi)}</div>
 
             {/* このfoldItem(小分類)に紐づく追加オプション（チェック時のみ表示） */}
             {checked && fiOptions.length > 0 && (
-              <div className="ml-8 mt-2 mb-2 pl-3 border-l-4 border-indigo-200 space-y-1">
+              <div className="ml-2 md:ml-8 mt-2 mb-2 pl-2 md:pl-3 border-l-4 border-indigo-200 space-y-1">
                 <p className="text-[10px] font-bold text-indigo-600">┗ オプション</p>
                 {fiOptions.map(opt => renderOptionRow(opt))}
               </div>
@@ -706,7 +734,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
             {/* この項目の中の項目（ぶら下げた中分類の小分類など・チェック時のみ表示） */}
             {checked && children.length > 0 && (
-              <div className="ml-6 mt-2 mb-2 pl-3 border-l-4 border-blue-200 space-y-2">
+              <div className="ml-1 md:ml-6 mt-2 mb-2 pl-2 md:pl-3 border-l-4 border-blue-200 space-y-2">
                 <p className="text-[10px] font-bold text-blue-600">┗ 追加できる項目</p>
                 {children.map(c => renderFoldItem(c))}
               </div>
@@ -762,42 +790,33 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       const discount = calcSetDiscount(main, idx);
       return (
         <div key={main.id || `main-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
-            <div className="flex items-center gap-3">
+          <label className={`flex items-center justify-between gap-3 min-h-[52px] px-3 py-3 md:p-4 cursor-pointer transition-all ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+            <div className="flex items-center gap-3 min-w-0">
               <input
                 type="checkbox"
-                className="w-4 h-4 text-blue-600"
+                className="w-5 h-5 shrink-0 text-blue-600"
                 checked={checked}
                 onChange={(e) => {
                   if (e.target.checked) setSelectedMains([...selectedMains, idx]);
                   else setSelectedMains(selectedMains.filter(i => i !== idx));
                 }}
               />
-              <div>
-                <span className="font-bold">{main.title}</span>
-                {(main.durationMin > 0 || main.durationMax > 0) && (
-                  <span className="text-xs text-slate-500 ml-2">
-                    ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-                  </span>
-                )}
+              <div className="min-w-0">
+                <span className="block font-bold leading-snug">{main.title}</span>
+                <span className="flex items-center gap-2 flex-wrap">
+                  {durationText(main.durationMin, main.durationMax) && (
+                    <span className="text-[11px] text-slate-500">{durationText(main.durationMin, main.durationMax)}</span>
+                  )}
+                  {checked && selectedInThisMain.length > 0 && (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">+{selectedInThisMain.length}件追加</span>
+                  )}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 pl-7 sm:pl-0">
-              {checked && selectedInThisMain.length > 0 && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">+{selectedInThisMain.length}件追加</span>
-              )}
-              {main.price > 0 && (
-                <span>
-                  {main.originalPrice != null && (
-                    <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
-                  )}
-                  <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}{main.from && "〜"}</span>
-                </span>
-              )}
-            </div>
+            {priceBlock(main.price, main.originalPrice, main.from)}
           </label>
           {checked && (
-            <div className="p-4 pt-3 pl-10 space-y-2 border-t border-slate-100">
+            <div className="p-3 pt-2 pl-3 md:p-4 md:pt-3 md:pl-10 space-y-2 border-t border-slate-100">
               {renderMainDetails(main, main.id || `main-${idx}`)}
               <p className="text-[10px] font-bold text-slate-400">▼ 追加できる項目</p>
               {/* セット値引き案内（この中分類内での小分類選択個数に応じた値引き） */}
@@ -882,37 +901,28 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
     const flatKey = main.id || `main-${idx}`;
     return (
       <div key={flatKey}>
-        <label className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0 p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-          <div className="flex items-center gap-3">
+        <label className={`flex items-center justify-between gap-3 min-h-[52px] px-3 py-3 md:p-4 rounded-xl border cursor-pointer transition-all ${selectedMains.includes(idx) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+          <div className="flex items-center gap-3 min-w-0">
             <input
               type="checkbox"
-              className="w-4 h-4 text-blue-600"
+              className="w-5 h-5 shrink-0 text-blue-600"
               checked={selectedMains.includes(idx)}
               onChange={(e) => {
                 if (e.target.checked) setSelectedMains([...selectedMains, idx]);
                 else setSelectedMains(selectedMains.filter(i => i !== idx));
               }}
             />
-            <div>
-              <span className="font-bold">{main.title}</span>
-              {(main.durationMin > 0 || main.durationMax > 0) && (
-                <span className="text-xs text-slate-500 ml-2">
-                  ({main.durationMin === main.durationMax ? `${main.durationMin}分` : `${main.durationMin}〜${main.durationMax}分`})
-                </span>
+            <div className="min-w-0">
+              <span className="block font-bold leading-snug">{main.title}</span>
+              {durationText(main.durationMin, main.durationMax) && (
+                <span className="block text-[11px] text-slate-500">{durationText(main.durationMin, main.durationMax)}</span>
               )}
             </div>
           </div>
-          {main.price > 0 && (
-            <span className="pl-7 sm:pl-0">
-              {main.originalPrice != null && (
-                <><span className="text-[10px] text-slate-400 mr-0.5">通常</span><span className="text-slate-400 line-through mr-1">¥{main.originalPrice.toLocaleString()}</span></>
-              )}
-              <span className="font-bold text-blue-600">¥{main.price.toLocaleString()}{main.from && "〜"}</span>
-            </span>
-          )}
+          {priceBlock(main.price, main.originalPrice, main.from)}
         </label>
         {selectedMains.includes(idx) && (
-          <div className="ml-8 mr-4 mt-1 mb-2">
+          <div className="ml-3 mr-2 md:ml-8 md:mr-4 mt-1 mb-2">
             {renderMainDetails(main, flatKey)}
           </div>
         )}
@@ -960,7 +970,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
 
         {/* 1. メニュー選択 */}
         {!inquiryOnly && (
-        <section>
+        <section ref={menuSectionRef}>
           <h4 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800">
             <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
             作業メニューの選択
@@ -982,9 +992,11 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                   const savedAmount = calcGroupDiscount(groupId);
 
                   const groupOpen = !!openGroups[groupId];
+                  // この大分類で選んでいる分の小計（値引き前）
+                  const groupSubtotal = groupMembers.reduce((sum, { m, idx: i }) => sum + mainSelectedSubtotal(m, i), 0);
                   rendered.push(
-                    <div key={`group-${groupId}`} className="border-2 border-slate-200 rounded-xl p-3 bg-slate-50/60">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <div key={`group-${groupId}`} className={`border-2 rounded-xl overflow-hidden ${groupOpen ? "border-blue-300 bg-slate-50/60" : "border-slate-200 bg-white"}`}>
+                      <label className={`flex items-center gap-3 min-h-[52px] px-3 py-3 cursor-pointer select-none ${groupOpen ? "bg-blue-50" : "hover:bg-slate-50"}`}>
                         <input type="checkbox" checked={groupOpen} onChange={() => {
                           const willClose = groupOpen; // 現在開いている→閉じる操作
                           toggleGroup(groupId);
@@ -1003,15 +1015,21 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                               return next;
                             });
                           }
-                        }} className="w-4 h-4 accent-slate-600" />
-                        <span className="text-xs font-bold text-slate-500">📂 {main.groupTitle}</span>
-                        {selectedCount > 0 && (
-                          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">選択中{selectedCount}件</span>
-                        )}
+                        }} className="sr-only" />
+                        <span className="text-lg shrink-0" aria-hidden>📂</span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm md:text-base font-bold text-slate-800 leading-snug">{main.groupTitle}</span>
+                          {selectedCount > 0 && (
+                            <span className="text-[11px] font-bold text-blue-700">
+                              選択中{selectedCount}件{groupSubtotal > 0 && `・¥${groupSubtotal.toLocaleString()}`}
+                            </span>
+                          )}
+                        </span>
+                        <span className={`shrink-0 text-blue-600 text-sm font-bold transition-transform ${groupOpen ? "rotate-180" : ""}`} aria-hidden>▼</span>
                       </label>
 
                       {groupOpen && (
-                        <div className="mt-3">
+                        <div className="px-2 pb-2 md:px-3 md:pb-3 pt-2">
                           {/* まとめ割引の案内（大分類内の中分類を横断した選択個数による値引き） */}
                           {discount?.enabled && discount.rules?.length > 0 && (
                             <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-3">
@@ -1031,7 +1049,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                             </div>
                           )}
 
-                          <div className="space-y-2 pl-2 border-l-2 border-slate-200">
+                          <div className="space-y-2">
                             {groupMembers.map(({ m, idx: i }) => renderMain(m, i))}
                           </div>
                         </div>
@@ -1144,9 +1162,9 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
           </div>
         </section>
         )}
-        {/* 日程に関する選択（カレンダーの前） */}
+        {/* 日程に関する選択（カレンダーの前）。スマホの「日時を選ぶ →」の飛び先 */}
         {!inquiryOnly && (
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+          <div id="booking-step2" className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3 scroll-mt-20">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -1472,6 +1490,7 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
                 {minRuleViolations.map(v => <p key={v.categoryId}>⚠ {minRuleMessage(v)}</p>)}
               </div>
             )}
+            <PrivacyStorageNote />
             <button type="submit" disabled={loading || minRuleViolations.length > 0 || (!inquiryOnly && !selectedDate && !dateUndecided && !wantEstimate)} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 transition-all text-xl mb-2">
               {loading ? "送信中..." : "入力内容を確認する"}
             </button>
@@ -1528,6 +1547,15 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
               <button type="button" onClick={submitBooking} disabled={loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 disabled:bg-slate-300">{loading ? "送信中..." : "この内容で申し込む"}</button>
             </div>
           </div>
+        </div>
+      )}
+      {showStickyBar && (
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,30,46,0.10)] px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center gap-3">
+          <div className="flex-1 min-w-0 leading-tight">
+            <p className="text-[11px] text-slate-500">選択中 {selectionCount}件</p>
+            <p className="text-lg font-black text-blue-600 whitespace-nowrap">¥{totalPrice.toLocaleString()}{totalHasFrom && "〜"}<span className="text-[10px] font-bold text-slate-400 ml-1">税込</span></p>
+          </div>
+          <a href="#booking-step2" className="shrink-0 inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl bg-red-600 text-white font-black text-base shadow-md shadow-red-200 active:bg-red-700">日時を選ぶ →</a>
         </div>
       )}
     </div>

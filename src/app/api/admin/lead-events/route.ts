@@ -55,16 +55,20 @@ export async function GET(request: NextRequest) {
         .groupBy({
           by: ["path"],
           where: Object.keys(dayWhere).length ? { day: dayWhere } : {},
-          _sum: { views: true, adViews: true },
+          _sum: { views: true, adViews: true, mobileViews: true, desktopViews: true },
           orderBy: { _sum: { views: "desc" } },
           take: 200,
         })
         .catch(() => []), // テーブル追加前でも画面は出す
     ]);
-    const pages = (pageRows as { path: string; _sum: { views: number | null; adViews: number | null } }[]).map((r) => ({
+    const pages = (
+      pageRows as { path: string; _sum: { views: number | null; adViews: number | null; mobileViews: number | null; desktopViews: number | null } }[]
+    ).map((r) => ({
       path: r.path,
       views: r._sum.views || 0,
       adViews: r._sum.adViews || 0,
+      mobileViews: r._sum.mobileViews || 0,
+      desktopViews: r._sum.desktopViews || 0,
     }));
     return NextResponse.json({ events, campaignNames: toCampaignNames(settings?.campaignNames), pages });
   } catch (e: any) {

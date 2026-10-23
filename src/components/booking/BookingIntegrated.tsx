@@ -1,6 +1,7 @@
 // @/src/components/booking/BookingIntegrated.tsx
 "use client";
 
+import PrivacyStorageNote from "@/components/PrivacyStorageNote";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -115,6 +116,9 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
         await sendGenerateLead({ lead_type: "booking", lead_source: "booking-page" });
         alert("仮予約を承りました。担当者より折り返しご連絡いたします。");
         window.location.href = "/";
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err?.error || "送信エラーが発生しました。お手数ですがお電話でご連絡ください。");
       }
     } catch (e) { 
       alert("送信エラーが発生しました。"); 
@@ -346,6 +350,7 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
                 <input name="name" type="text" placeholder="お名前" required className="w-full p-3 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-black" />
                 <input name="email" type="email" placeholder="メールアドレス" required className="w-full p-3 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-black" />
                 <input name="tel" type="tel" placeholder="電話番号" required className="w-full p-3 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-black" />
+                <PrivacyStorageNote className="mb-3" />
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 

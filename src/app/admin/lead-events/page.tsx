@@ -29,7 +29,37 @@ type LeadEvent = {
   utmTerm: string | null;
   device: string | null;
   bookingId: string | null;
+  // 過去の広告訪問（ブラウザに残した記録・90日以内）
+  firstAdAt?: string | null;
+  firstAdKeyword?: string | null;
+  firstAdMatchType?: string | null;
+  firstAdLanding?: string | null;
+  firstAdCampaignId?: string | null;
+  lastAdAt?: string | null;
 };
+
+/** 広告との関係：今回広告から／前に広告で来て今回は別の経路から／広告を見た記録なし */
+type AdTouch = "ad" | "returning" | "none";
+const adTouchOf = (e: LeadEvent): AdTouch => (e.isAd ? "ad" : e.firstAdAt || e.lastAdAt ? "returning" : "none");
+const AD_TOUCH_LABEL: Record<AdTouch, string> = {
+  ad: "広告から来て問い合わせ",
+  returning: "前に広告で来て、今回は別の経路から問い合わせ",
+  none: "広告を見た記録なし",
+};
+const AD_TOUCH_COLOR: Record<AdTouch, string> = {
+  ad: "border-red-300 bg-red-50 text-red-700",
+  returning: "border-amber-300 bg-amber-50 text-amber-800",
+  none: "border-slate-200 bg-white text-slate-700",
+};
+/** 今回の流入元（広告以外）を4つにまとめる：Google検索／Googleマップ／直接／その他 */
+const SOURCE_BUCKETS = ["Google検索", "Googleマップ", "直接", "その他"] as const;
+const sourceBucket = (e: LeadEvent): (typeof SOURCE_BUCKETS)[number] => {
+  const s = classifySource({ isAd: false, referrer: e.referrer, utmSource: e.utmSource, utmMedium: e.utmMedium });
+  return s === "Google検索" || s === "Googleマップ" || s === "直接" ? s : "その他";
+};
+/** 「10/19」の形（日本時間） */
+const jstMd = (iso?: string | null) =>
+  iso ? new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric" }).format(new Date(iso)) : "";
 
 type Preset = "today" | "7d" | "month" | "custom";
 const TYPE_LABEL: Record<LeadEvent["type"], string> = { phone: "電話", line: "LINE", form: "フォーム", booking: "予約" };
@@ -93,7 +123,7 @@ export default function LeadEventsPage() {
   const [type, setType] = useState<"" | LeadEvent["type"]>("");
   const [events, setEvents] = useState<LeadEvent[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
-  const [pages, setPages] = useState<{ path: string; views: number; adViews: number }[]>([]);
+  const [pages, setPages] = useState<{ path: string; views: number; adViews: number; mobileViews?: number; desktopViews?: number }[]>([]);
   const [showAllPages, setShowAllPages] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -159,6 +189,33 @@ export default function LeadEventsPage() {
     return m;
   }, [events]);
   const totalViews = useMemo(() => pages.reduce((a, p) => a + p.views, 0), [pages]);
+  const totalMobile = useMemo(() => pages.reduce((a, p) => a + (p.mobileViews || 0), 0), [pages]);
+  const totalDesktop = useMemo(() => pages.reduce((a, p) => a + (p.desktopViews || 0), 0), [pages]);
+  const totalUnknown = Math.max(0, totalViews - totalMobile - totalDesktop);
+  // ページごとの問い合わせ件数をスマホ／PC別に（問い合わせ行動の記録の端末）
+  const leadsByPathDevice = useMemo(() => {
+    const m: Record<string, { mobile: number; desktop: number }> = {};
+    for (const e of events) {
+      let p = (e.pagePath || "").split("?")[0];
+      try { p = decodeURI(p); } catch { /* そのまま */ }
+      if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+      const v = (m[p] ||= { mobile: 0, desktop: 0 });
+      if (e.device === "mobile") v.mobile++;
+      else if (e.device === "desktop") v.desktop++;
+    }
+    return m;
+  }, [events]);
+  const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : "");
+
+  // 広告との関係（3区分）と、広告以外の内訳（今回の流入元）
+  const adTouchSummary = useMemo(() => {
+    const keys: AdTouch[] = ["ad", "returning", "none"];
+    return keys.map((k) => {
+      const list = events.filter((e) => adTouchOf(e) === k);
+      const bySource = SOURCE_BUCKETS.map((b) => ({ label: b, count: list.filter((e) => sourceBucket(e) === b).length }));
+      return { key: k, count: list.length, bySource };
+    });
+  }, [events]);
 
   const summary = useMemo(() => {
     const out = TYPES.map((t) => {
@@ -280,26 +337,92 @@ export default function LeadEventsPage() {
           ))}
         </div>
 
+        {/* 広告との関係（今回の訪問＋ブラウザに残した過去の広告訪問から判定） */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
+            <h2 className="font-bold text-gray-800">広告との関係</h2>
+            <p className="text-[11px] text-gray-500">
+              ※過去の広告訪問は、お客様のブラウザに90日間残した記録で判定しています。別のスマホ・PC・ブラウザで戻ってきた場合や、閲覧履歴を消した場合は「広告を見た記録なし」になります。
+              この機能を入れる前の記録は「前に広告で来た」かどうか分かりません。
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {adTouchSummary.map((a) => (
+              <div key={a.key} className={`rounded-xl border p-4 ${AD_TOUCH_COLOR[a.key]}`}>
+                <p className="text-xs font-bold leading-snug">{AD_TOUCH_LABEL[a.key]}</p>
+                <p className="text-3xl font-black mt-2">
+                  {a.count}
+                  <span className="text-sm font-bold ml-1">件</span>
+                  {events.length > 0 && <span className="text-xs font-bold ml-2 opacity-70">{Math.round((a.count / events.length) * 100)}%</span>}
+                </p>
+                {a.key !== "ad" && a.count > 0 && (
+                  <p className="text-[11px] mt-1 opacity-90">
+                    今回の流入元：{a.bySource.filter((b) => b.count > 0).map((b) => `${b.label} ${b.count}`).join("／")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {(() => {
+            const nonAd = events.filter((e) => !e.isAd);
+            if (!nonAd.length) return null;
+            return (
+              <div className="mt-3 overflow-x-auto">
+                <p className="text-xs font-bold text-gray-600 mb-1">広告以外（{nonAd.length}件）の内訳：今回の流入元 × 過去の広告訪問</p>
+                <table className="min-w-[420px] text-xs border">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="p-2 text-left">今回の流入元</th>
+                      <th className="p-2 text-right">前に広告で来た</th>
+                      <th className="p-2 text-right">広告の記録なし</th>
+                      <th className="p-2 text-right">合計</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SOURCE_BUCKETS.map((b) => {
+                      const rows = nonAd.filter((e) => sourceBucket(e) === b);
+                      const ret = rows.filter((e) => adTouchOf(e) === "returning").length;
+                      return (
+                        <tr key={b} className="border-t">
+                          <td className="p-2">{b}</td>
+                          <td className="p-2 text-right font-bold text-amber-700">{ret}</td>
+                          <td className="p-2 text-right">{rows.length - ret}</td>
+                          <td className="p-2 text-right">{rows.length}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+
         {/* 人気のページ（ページ表示の集計） */}
         <div className="bg-white rounded-xl shadow-sm p-4">
           <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
             <h2 className="font-bold text-gray-800">人気のページ</h2>
             <p className="text-xs text-gray-500">
               期間内のページ表示 合計 <span className="font-bold text-gray-800">{totalViews.toLocaleString()}</span> 回
-              （同じ人が何度見ても1回ずつ数えます）
+              （📱スマホ <span className="font-bold text-gray-800">{totalMobile.toLocaleString()}</span> {pct(totalMobile, totalViews)}
+              ／💻PC <span className="font-bold text-gray-800">{totalDesktop.toLocaleString()}</span> {pct(totalDesktop, totalViews)}
+              {totalUnknown > 0 && <>／端末の記録前 {totalUnknown.toLocaleString()}</>}）
+              ・同じ人が何度見ても1回ずつ数えます
             </p>
           </div>
           {pages.length === 0 ? (
             <p className="text-sm text-gray-500 py-4 text-center">この期間のページ表示の記録はありません</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[640px] w-full text-sm">
+              <table className="min-w-[760px] w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600 text-xs">
                   <tr>
                     <th className="p-2 text-right w-10">#</th>
                     <th className="p-2 text-left">ページ</th>
                     <th className="p-2 text-right">表示回数</th>
                     <th className="p-2 text-right">うち広告</th>
+                    <th className="p-2 text-right whitespace-nowrap">📱スマホ</th>
+                    <th className="p-2 text-right whitespace-nowrap">💻PC</th>
                     <th className="p-2 text-right">問い合わせ</th>
                     <th className="p-2 text-right">問い合わせ率</th>
                   </tr>
@@ -315,7 +438,22 @@ export default function LeadEventsPage() {
                         </td>
                         <td className="p-2 text-right font-bold">{p.views.toLocaleString()}</td>
                         <td className="p-2 text-right text-red-600">{p.adViews.toLocaleString()}</td>
-                        <td className="p-2 text-right">{leads || "-"}</td>
+                        <td className="p-2 text-right whitespace-nowrap">
+                          {(p.mobileViews || 0).toLocaleString()}
+                          <span className="text-[10px] text-gray-400 ml-1">{pct(p.mobileViews || 0, p.views)}</span>
+                        </td>
+                        <td className="p-2 text-right whitespace-nowrap">
+                          {(p.desktopViews || 0).toLocaleString()}
+                          <span className="text-[10px] text-gray-400 ml-1">{pct(p.desktopViews || 0, p.views)}</span>
+                        </td>
+                        <td className="p-2 text-right whitespace-nowrap">
+                          {leads || "-"}
+                          {leads > 0 && (
+                            <span className="block text-[10px] text-gray-400">
+                              📱{leadsByPathDevice[p.path]?.mobile || 0}／💻{leadsByPathDevice[p.path]?.desktop || 0}
+                            </span>
+                          )}
+                        </td>
                         <td className="p-2 text-right">{leads && p.views ? `${((leads / p.views) * 100).toFixed(1)}%` : "-"}</td>
                       </tr>
                     );
@@ -329,6 +467,7 @@ export default function LeadEventsPage() {
               )}
               <p className="text-[11px] text-gray-400 mt-2">
                 ※ 問い合わせは、そのページで電話・LINEのタップ、フォーム送信、予約があった件数です（上の「種類」の絞り込みに連動）。
+                スマホ／PCは画面の幅で判定しています（768px未満＝スマホ。タブレットは横幅によってPCに入ります）。この機能を入れる前の表示回数は、スマホ／PCのどちらにも入っていません。
               </p>
             </div>
           )}
@@ -349,12 +488,13 @@ export default function LeadEventsPage() {
                 <th className="p-3 text-left">キーワード</th>
                 <th className="p-3 text-left">マッチ</th>
                 <th className="p-3 text-left">端末</th>
+                <th className="p-3 text-left whitespace-nowrap">過去の広告訪問</th>
               </tr>
             </thead>
             <tbody>
               {events.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-500">
+                  <td colSpan={11} className="p-8 text-center text-gray-500">
                     {loading ? "読み込み中…" : "この期間の記録はありません"}
                   </td>
                 </tr>
@@ -375,6 +515,9 @@ export default function LeadEventsPage() {
                     <span className={e.isAd ? "font-bold text-red-600" : ""}>
                       {classifySource({ isAd: e.isAd, referrer: e.referrer, utmSource: e.utmSource, utmMedium: e.utmMedium })}
                     </span>
+                    {adTouchOf(e) === "returning" && (
+                      <span className="block mt-1 text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded w-fit">前に広告で来た人</span>
+                    )}
                     {e.utmCampaign && <span className="block text-[11px] text-gray-500">{e.utmCampaign}</span>}
                   </td>
                   <td className="p-3">{campaignLabel(e.campaignId, names) || "-"}</td>
@@ -388,6 +531,23 @@ export default function LeadEventsPage() {
                   <td className="p-3 break-all max-w-[200px]">{e.keyword || e.utmTerm || "-"}</td>
                   <td className="p-3 whitespace-nowrap">{matchTypeLabel(e.matchType) || "-"}</td>
                   <td className="p-3 whitespace-nowrap">{e.device === "mobile" ? "スマホ" : e.device === "desktop" ? "PC" : "-"}</td>
+                  <td className="p-3 min-w-[200px]">
+                    {e.firstAdAt ? (
+                      <div className={adTouchOf(e) === "returning" ? "text-amber-800" : "text-gray-600"}>
+                        <p className="font-bold">
+                          {jstMd(e.firstAdAt)} 広告で初回訪問
+                          {e.firstAdKeyword && <>（キーワード：{e.firstAdKeyword}{e.firstAdMatchType ? `・${matchTypeLabel(e.firstAdMatchType)}` : ""}）</>}
+                        </p>
+                        {e.firstAdCampaignId && <p className="text-[11px]">{campaignLabel(e.firstAdCampaignId, names)}</p>}
+                        {e.lastAdAt && jstMd(e.lastAdAt) !== jstMd(e.firstAdAt) && <p className="text-[11px]">最後に広告から：{jstMd(e.lastAdAt)}</p>}
+                        {e.firstAdLanding && <p className="text-[11px] font-mono break-all text-gray-400">{e.firstAdLanding.split("?")[0]}</p>}
+                      </div>
+                    ) : e.lastAdAt ? (
+                      <span className="text-amber-800 text-xs">最後に広告から：{jstMd(e.lastAdAt)}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

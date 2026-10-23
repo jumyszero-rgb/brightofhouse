@@ -9,6 +9,7 @@ import PopularPlans from "@/components/top/PopularPlans";
 import ServiceArea from "@/components/ServiceArea";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import SecurityNotice from "@/components/SecurityNotice";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -276,6 +277,8 @@ export default async function Home() {
       />
 
       <main className="bg-white text-[#0f1e2e]">
+        {/* 期間限定のお知らせ（2026-10-31まで・自動で消える） */}
+        <SecurityNotice />
         {/* ===== ヒーロー ===== */}
         <section className="relative overflow-hidden text-white">
           {/* 背景：admin画像があれば使用、無ければグラデーション */}
