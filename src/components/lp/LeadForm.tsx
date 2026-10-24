@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BRAND } from "@/lib/lpContent";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
 import { trackLead } from "@/lib/attribution";
+import LineLink from "@/components/LineLink";
 
 const TIMING_OPTIONS = [
   "なるべく早く",
@@ -126,14 +127,13 @@ export default function LeadForm({
       <form onSubmit={handleSubmit} className="p-5 md:p-7 space-y-4 text-slate-800">
         {/* LINEで相談（BRAND.lineUrl 設定時のみ表示） */}
         {BRAND.lineUrl && (
-          <a
+          <LineLink
             href={BRAND.lineUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition-colors"
+            className="flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600"
+            openingText="LINEを開いています…"
           >
             <span aria-hidden>💬</span> LINEで相談する（友だち追加）
-          </a>
+          </LineLink>
         )}
 
         <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">

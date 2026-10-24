@@ -14,6 +14,7 @@ import LpTemplate from "@/components/lp/LpTemplate";
 import { landingPageToLpContent } from "@/lib/lpRichContent";
 import LpBlocksRenderer from "@/components/lp/LpBlocksRenderer";
 import { getShortcodeContext, applyShortcodesWith } from "@/lib/shortcodes";
+import LineLink from "@/components/LineLink";
 
 const PHONE = "0120-792-684";
 const LINE_URL = "https://line.me/ti/p/RBwKccvQ1O";
@@ -290,14 +291,13 @@ export default async function LandingPageView({
               </div>
 
               <div className="flex flex-col md:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
-                <a
+                <LineLink
                   href={LINE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-3 w-full md:flex-1 bg-[#06C755] text-white font-black py-4 px-6 rounded-full shadow-lg hover:brightness-110 transition-all text-lg"
+                  className="flex items-center justify-center gap-3 w-full md:flex-1 bg-[#06C755] text-white font-black py-4 px-6 rounded-full shadow-lg hover:brightness-110 text-lg"
+                  openingText="LINEを開いています…"
                 >
                   <span className="text-2xl">LINE</span> で手軽に相談する
-                </a>
+                </LineLink>
 
                 <Link
                   href={lp.ctaLink || "/inquiry"}

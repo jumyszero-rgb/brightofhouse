@@ -9,6 +9,7 @@ import BookingCalendar from "@/components/BookingCalendar";
 import { useBooking, BookingCategory, BookingMenu, BookingSubMenu, BookingOption } from "@/hooks/useBooking";
 import { sendGenerateLead, trafficSourceFields } from "@/lib/leadTracking";
 import { trackLead } from "@/lib/attribution";
+import LineLink from "@/components/LineLink";
 
 type Props = {
   initialCategoryId?: string;
@@ -132,13 +133,22 @@ export default function BookingIntegrated({ initialCategoryId, initialMenuId }: 
       <div className="lg:col-span-2 space-y-8">
 
                 {/* LINE案内 */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4">
-          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border" />
+        <LineLink
+          className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4 hover:bg-green-100 cursor-pointer"
+          openingText={
+            <>
+              <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border shrink-0" />
+              <p className="font-bold text-green-700 text-sm">LINEを開いています…</p>
+            </>
+          }
+          ariaLabel="LINEでお問い合わせ（LINEを開く）"
+        >
+          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border shrink-0" />
           <div>
             <p className="font-bold text-green-700 text-sm">LINEでもお問い合わせ可能です</p>
-            <p className="text-xs text-slate-600 mt-1">スマホでQRコードを読み取ってお気軽にご相談ください。</p>
+            <p className="text-xs text-slate-600 mt-1">スマホは<span className="font-bold text-green-700">ここをタップ</span>するとLINEが開きます。パソコンの方はQRコードをスマホで読み取ってください。</p>
           </div>
-        </div>
+        </LineLink>
 
         
         {/* --- Step 1: 大分類選択 --- */}

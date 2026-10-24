@@ -14,8 +14,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import PhoneLink from "@/components/PhoneLink";
 import AfterHoursNote from "@/components/lp/AfterHoursNote";
-
-const LINE_URL = "https://line.me/ti/p/RBwKccvQ1O";
+import LineLink from "@/components/LineLink";
 
 type Target = { href: string; label: string; booking: boolean } | null;
 
@@ -55,14 +54,12 @@ export default function MobileActionBar() {
         </div>
 
         {/* 💬 LINE（いちばん目立たせる） */}
-        <a
-          href={LINE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <LineLink
           className={`${btn} bg-[#06C755] text-white text-base shadow-md shadow-green-200 hover:brightness-105`}
+          openingText={<span className="text-xs">LINEを開いています…</span>}
         >
           💬 LINE
-        </a>
+        </LineLink>
 
         {/* 📅 予約（カレンダーへ）／カレンダーが無いLPは「無料で相談」 */}
         <a

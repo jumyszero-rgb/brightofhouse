@@ -6,6 +6,7 @@ import PhoneLink from "@/components/PhoneLink";
 import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import { BRAND } from "@/lib/lpContent";
 import { MENU_BUTTON_DEFAULTS, type MenuButtonKey } from "@/lib/lpMenuButtons";
+import LineLink from "@/components/LineLink";
 
 type MasterItem = {
   title: string;
@@ -395,9 +396,9 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
                         <a href="#booking" className={`${btnBase} bg-blue-600 text-white hover:bg-blue-700`}>📅 {label("booking")}</a>
                       )}
                       {showLine && (
-                        <a href={BRAND.lineUrl} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-[#06C755] text-white hover:brightness-95`}>
+                        <LineLink href={BRAND.lineUrl} className={`${btnBase} bg-[#06C755] text-white hover:brightness-95`} openingText="LINEを開いています…">
                           {label("line")}
-                        </a>
+                        </LineLink>
                       )}
                       {showPhone && (
                         <PhoneLink className={`${btnBase} bg-white text-blue-700 border-2 border-blue-600 hover:bg-blue-50`} prefix="📞 " display={label("phone")} />
@@ -536,10 +537,10 @@ export default function LpBlocksRenderer({ blocks, resolved, bookingForms, linke
                       </p>
                       {BRAND.lineUrl && (
                         <>
-                          <a href={BRAND.lineUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#06c755] text-white font-black text-[15px] md:text-lg px-4 py-4 rounded-full shadow-lg hover:brightness-105 transition">
+                          <LineLink href={BRAND.lineUrl} className="flex items-center justify-center gap-2 bg-[#06c755] text-white font-black text-[15px] md:text-lg px-4 py-4 rounded-full shadow-lg hover:brightness-105" openingText={<span className="leading-snug">LINEを開いています…</span>}>
                             {LINE_ICON}
                             <span className="leading-snug">LINEで写真を送る</span>
-                          </a>
+                          </LineLink>
                           <p className="text-[11px] mt-1.5 text-center text-slate-500">お名前・住所の入力は不要です</p>
                         </>
                       )}

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { LazyLeadForm, LazyServicePageBooking } from "@/components/lp/LazyLpForms";
 import PhoneLink from "@/components/PhoneLink";
 import { BRAND, type LpContent } from "@/lib/lpContent";
+import LineLink from "@/components/LineLink";
 
 function Stars({ n = 5 }: { n?: number }) {
   return (
@@ -33,15 +34,14 @@ function LineCta({
   if (!BRAND.lineUrl) return null;
   return (
     <div>
-      <a
+      <LineLink
         href={BRAND.lineUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-[#06c755] text-white font-black text-[15px] md:text-lg px-4 py-4 rounded-full shadow-lg hover:brightness-105 transition"
+        className="flex items-center justify-center gap-2 bg-[#06c755] text-white font-black text-[15px] md:text-lg px-4 py-4 rounded-full shadow-lg hover:brightness-105"
+        openingText={<span className="leading-snug">LINEを開いています…</span>}
       >
         {LINE_ICON}
         <span className="leading-snug">{label}</span>
-      </a>
+      </LineLink>
       <p className={`text-[11px] mt-1.5 text-center ${tone === "dark" ? "text-white/90" : "text-slate-500"}`}>
         お名前・住所の入力は不要です
       </p>

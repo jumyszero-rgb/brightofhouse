@@ -8,6 +8,7 @@ import { ja } from "date-fns/locale";
 import { roundAmount, type RoundingMode } from "@/lib/bookingMenuToBookingData";
 import { trafficSourceFields, sendGenerateLead } from "@/lib/leadTracking";
 import { trackLead } from "@/lib/attribution";
+import LineLink from "@/components/LineLink";
 
 // parentFoldItemId：ぶら下げた中分類の下の小分類など「項目の中の項目」。親にチェックが入っているときだけ表示・計算する
 type FoldItem = { id: string; title: string; price: number; originalPrice?: number; from?: boolean; durationMin: number; durationMax: number; workContent?: string; comment?: string; cautionNote?: string; maxQty?: number; qtyDiscount?: QtyDiscount; parentFoldItemId?: string; groupOnly?: boolean };
@@ -944,13 +945,22 @@ export default function ServicePageBooking({ pageTitle, bookingData }: Props) {
       <div className="px-2 py-6 md:p-10 space-y-10">
 
         {/* LINE案内 */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-3 md:p-4 flex items-center gap-3 md:gap-4">
-          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border" />
+        <LineLink
+          className="bg-green-50 border border-green-200 rounded-xl p-3 md:p-4 flex items-center gap-3 md:gap-4 hover:bg-green-100 cursor-pointer"
+          openingText={
+            <>
+              <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border shrink-0" />
+              <p className="font-bold text-green-700 text-sm">LINEを開いています…</p>
+            </>
+          }
+          ariaLabel="LINEでお問い合わせ（LINEを開く）"
+        >
+          <img src="/images/line-qr.JPG" alt="LINE QRコード" className="w-20 h-20 rounded-lg border shrink-0" />
           <div>
             <p className="font-bold text-green-700 text-sm">LINEでもお問い合わせ可能です</p>
-            <p className="text-xs text-slate-600 mt-1">スマホでQRコードを読み取ってお気軽にご相談ください。</p>
+            <p className="text-xs text-slate-600 mt-1">スマホは<span className="font-bold text-green-700">ここをタップ</span>するとLINEが開きます。パソコンの方はQRコードをスマホで読み取ってください。</p>
           </div>
-        </div>
+        </LineLink>
 
         {/* 作業内容が決まっていない場合はメニュー選択自体を不要にする */}
         <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 md:p-4">
