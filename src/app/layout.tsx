@@ -59,6 +59,13 @@ export default async function RootLayout({
   const ADS_CALL_LABEL = "AW-17996016781/DTKqCPuhmawcEI3ZlYVD";
   // Cloudflare の Google tag gateway の計測パス（Cloudflare の設定と同じ値。変更したらここも合わせる）
   const TAG_GATEWAY_PATH = "wd9j";
+  // HTMLにはIDやURLをそのままの形で載せない（Cloudflare の自動挿入よけ）。分けたものを JSON で埋め込み、ブラウザで組み立てる
+  const parts = (v: string, sep: string) => JSON.stringify(v.split(sep));
+  const partsGa = parts(GA4_ID, "-");
+  const partsAds = parts(ADS_ID, "-");
+  const partsPath = JSON.stringify([TAG_GATEWAY_PATH.slice(0, 2), TAG_GATEWAY_PATH.slice(2)]);
+  const partsHost = parts("www.googletagmanager.com", ".");
+  const callLabel = JSON.stringify(ADS_CALL_LABEL.split("/")[1]);
 
   // サイトフォント（admin で選択・SiteSettings.fontKey）。未設定/取得失敗時は既定フォント。
   let fontKey = DEFAULT_FONT_KEY;
@@ -76,6 +83,9 @@ export default async function RootLayout({
       <head>
         {/*
           計測タグ（全ページ・LP含む）— Googleタグは1本（GA4と広告を結合済みのGoogleタグ）。
+          【2026-10-25 v2】Cloudflare は「タグを設定する」がオフでも、HTMLの中にGoogleタグ（URL・ID）を見つけると
+          先頭に自分のタグ（/wd9j/）を入れてしまい、遅延読み込みが効かなかった（PageSpeed 91→69〜72）。
+          → HTMLにはURL・IDを分けた形でだけ載せ、ブラウザで組み立てる。
           【2026-10-25 自社ドメインから読み込み】
           Cloudflare の Google tag gateway（Web タグ管理 → Google タグ ゲートウェイ）を有効にし、
           「タグを設定する」（Cloudflare の自動挿入）はオフ。このスクリプトが /wd9j/?id=G-LMELPVPT3Z を読み込む
@@ -98,10 +108,19 @@ export default async function RootLayout({
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 (function(){
+  // ※ タグのURL・IDは分けて書き、実行時に組み立てる（HTMLにそのままの形で載せない）。
+  //   Cloudflare の Google tag gateway は、HTMLの中にGoogleタグを見つけると自分のタグを先頭に自動で入れるため
+  //   （入れられると遅延読み込みが効かなくなる）。
+  var J = function(a, sep){ return a.join(sep); };
+  var GA = J(${partsGa}, '-');
+  var ADS = J(${partsAds}, '-');
+  var PATH = '/' + J(${partsPath}, '') + '/';
+  var DIRECT_HOST = 'https://' + J(${partsHost}, '.');
+  window.__bhTagIds = { ga: GA, ads: ADS, label: ADS + '/' + ${callLabel} };
   var loaded = false;
   // 自社ドメイン（Cloudflare の Google tag gateway の計測パス）から読む。読めなかったときだけ Google から直接読む
-  var firstParty = '/${TAG_GATEWAY_PATH}/?id=${GA4_ID}';
-  var direct = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
+  var firstParty = PATH + '?id=' + GA;
+  var direct = DIRECT_HOST + '/' + J(['gt', 'ag'], '') + '/js?id=' + GA;
   function addScript(src, onError){
     var s = document.createElement('script');
     s.async = true;
@@ -122,9 +141,9 @@ function gtag(){dataLayer.push(arguments);}
     if (document.readyState === 'complete') fn();
     else window.addEventListener('load', fn);
   }
-  var gw = document.querySelector('script[src*="/${TAG_GATEWAY_PATH}/"]');
+  var gw = document.querySelector('script[src*="' + PATH + '"]');
   if (gw) {
-    // Cloudflare が自動挿入したタグを使う（失敗した時だけ gtag.js を読む）
+    // Cloudflare が自動挿入したタグがある場合はそれを使う（失敗した時だけ直接読む）
     window.__bhLoadGtag = function(){};
     gw.addEventListener('error', loadDirect);
     onLoaded(function(){ setTimeout(function(){ if (!window.google_tag_manager) loadDirect(); }, 3000); });
@@ -141,9 +160,9 @@ function gtag(){dataLayer.push(arguments);}
   evs.forEach(function(e){ window.addEventListener(e, go, { passive: true }); });
   onLoaded(function(){ setTimeout(go, 3000); });
 })();
-gtag('config', '${GA4_ID}');
-gtag('config', '${ADS_ID}');
-gtag('config', '${ADS_CALL_LABEL}', { 'phone_conversion_number': '0120-792-684' });
+gtag('config', window.__bhTagIds.ga);
+gtag('config', window.__bhTagIds.ads);
+gtag('config', window.__bhTagIds.label, { 'phone_conversion_number': '0120-792-684' });
 `,
           }}
         />
