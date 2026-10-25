@@ -76,6 +76,11 @@ export default async function RootLayout({
       <head>
         {/*
           計測タグ（全ページ・LP含む）— Googleタグは1本（GA4と広告を結合済みのGoogleタグ）。
+          【2026-10-25 自社ドメインから読み込み】
+          Cloudflare の Google tag gateway（Web タグ管理 → Google タグ ゲートウェイ）を有効にし、
+          「タグを設定する」（Cloudflare の自動挿入）はオフ。このスクリプトが /wd9j/?id=G-LMELPVPT3Z を読み込む
+          → タグの読み込みも GA4・広告の送信も自社ドメイン（/wd9j/）経由になる。
+          /wd9j/ が読めなかったとき（ゲートウェイを無効にした等）だけ googletagmanager.com から直接読む。
           【2026-10-18 遅延読み込み】
           Googleタグ（約200KB）が画面を描くタイミングで動き、表示（LCP）と操作開始（TBT）を遅らせていた。
           → 画面が表示された後に読み込む。きっかけは次のどれか早いもの：
@@ -83,9 +88,9 @@ export default async function RootLayout({
              ・ページの読み込み完了（load）から3秒後
           ・読み込み前に送ったイベント（電話タップ・LINE・フォーム送信など）は dataLayer に積まれ、読み込み後にまとめて送られる
           ・window.__bhLoadGtag() で即時読み込みもできる（フォーム送信時に使用）
-          ・Cloudflare の Google tag gateway がタグを自動挿入している場合（/wd9j/ のスクリプトがある場合）は、
-            それがすでに読み込み中なので遅延はできない → 従来どおりの保険だけ動かす
-            ※ 遅延を効かせるには Cloudflare 側の自動挿入をオフにする
+          ・Cloudflare 側の「タグを設定する」をオンにして自動挿入された場合（/wd9j/ のスクリプトがHTMLにある場合）は、
+            それがすでに読み込み中なので遅延はできない → それを使い、失敗したときだけ直接読む
+            ※ 遅延を効かせるため、Cloudflare 側の「タグを設定する」はオフのままにする
         */}
         <script
           dangerouslySetInnerHTML={{
@@ -94,13 +99,24 @@ window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 (function(){
   var loaded = false;
+  // 自社ドメイン（Cloudflare の Google tag gateway の計測パス）から読む。読めなかったときだけ Google から直接読む
+  var firstParty = '/${TAG_GATEWAY_PATH}/?id=${GA4_ID}';
   var direct = 'https://www.googletagmanager.com/gtag/js?id=${GA4_ID}';
-  function loadTag(){
-    if (loaded) return; loaded = true;
+  function addScript(src, onError){
     var s = document.createElement('script');
     s.async = true;
-    s.src = direct;
+    s.src = src;
+    if (onError) s.onerror = onError;
     document.head.appendChild(s);
+  }
+  function loadTag(){
+    if (loaded) return; loaded = true;
+    addScript(firstParty, function(){ addScript(direct); });
+  }
+  var directLoaded = false;
+  function loadDirect(){
+    if (directLoaded) return; directLoaded = true;
+    addScript(direct);
   }
   function onLoaded(fn){
     if (document.readyState === 'complete') fn();
@@ -110,8 +126,8 @@ function gtag(){dataLayer.push(arguments);}
   if (gw) {
     // Cloudflare が自動挿入したタグを使う（失敗した時だけ gtag.js を読む）
     window.__bhLoadGtag = function(){};
-    gw.addEventListener('error', loadTag);
-    onLoaded(function(){ setTimeout(function(){ if (!window.google_tag_manager) loadTag(); }, 3000); });
+    gw.addEventListener('error', loadDirect);
+    onLoaded(function(){ setTimeout(function(){ if (!window.google_tag_manager) loadDirect(); }, 3000); });
     return;
   }
   // 遅延読み込み
