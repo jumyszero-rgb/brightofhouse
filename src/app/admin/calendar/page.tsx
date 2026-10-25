@@ -196,6 +196,7 @@ export default function AdminCalendarPage() {
             )}
             <button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, -7))} className="bg-white border px-4 py-2 rounded shadow-sm font-bold text-sm hover:bg-gray-50 transition-colors">◀ 前の週</button>
             <button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} className="bg-white border px-4 py-2 rounded shadow-sm font-bold text-sm hover:bg-gray-50 transition-colors">次の週 ▶</button>
+            <a href="/admin/calendar/week" target="_blank" rel="noopener" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors text-sm font-bold flex items-center">タブレット用（週表示）</a>
             <Link href="/admin" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm font-bold flex items-center">メニューへ戻る</Link>
           </div>
         </div>

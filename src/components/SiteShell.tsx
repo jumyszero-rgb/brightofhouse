@@ -23,6 +23,11 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLp = pathname?.startsWith("/lp");
 
+  // 画面いっぱいで使う管理画面（タブレット用の週表示カレンダー）：サイトのヘッダー・フッター等は出さない
+  if (pathname?.startsWith("/admin/calendar/week")) {
+    return <>{children}</>;
+  }
+
   if (isLp) {
     return (
       <>
